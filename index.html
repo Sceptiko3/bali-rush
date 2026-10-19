@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V207</title>
+<title>Bali Rush Completo V208</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V207', FECHA = '19-10-2026';
+var VERSION = 'Completo V208', FECHA = '19-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -99437,6 +99437,17 @@ mostrarAviso = function (s, ico) {
      nueve con su ✔.
    ACA.vivo = false → la autoescuela de la V206 (8 tramos, con el paquete
    y la abuela).
+   ----------------------------------------------------------------
+   V208 · con la V207 dijo: «a este le añadía tira de flores, pero ponlo
+   algo más pequeña que la que hay; la guía de las pruebas o más
+   transparente o algo, es que te tapa los cocos de la palmera».
+   Preguntado dónde la tira, marcó «En la carrerita».
+   - En la carrerita, una tira de flores corta (ACA.tira2: 10 flores; la
+     de la prueba 8 tiene 21). No es una prueba: no da ✔.
+   - El cartel de arriba, translúcido (ACA.fondo), con el texto bordeado
+     de claro para que se lea sobre la carretera; y casi invisible
+     (ACA.fantasma) mientras la palmera del coco o el coco que cae están
+     detrás de él, en la prueba del coco.
    ================================================================ */
 var ACA = { vivo: true, activo: false, boc: false,
   D: { n: 'Ubud', t: 'Autoescuela', dest: 'a la meta de la autoescuela', seed: 4401, tod: 'manana', inv: 0, secs: [
@@ -99465,7 +99476,9 @@ var ACA = { vivo: true, activo: false, boc: false,
   cono: { r: 4, h: 13, golpe: 8 },                                          // algo más grandes (V206: 2,5 · 8 · 5,2)
   sep: { calle: 85, zigzag: 235, chicane: 190, curva: 80 },                 // y más separados (V206: 70 · 165 · 170 · 65)
   nZig: 7, flores: 0.8, sello: 1.5,
-  perroY: 430, palmaY: 500 };
+  perroY: 430, palmaY: 500,
+  tira2: { n: 10, desde: 420, cada: 36 },                                  // V208: la tira corta de la carrerita
+  fondo: 0.6, fantasma: 0.2, fan: 0 };                                     // V208: el cartel, translúcido (y casi invisible con la palmera detrás)
 ACA.orig = { D: AES.D, pasos: AES.pasos, S: AES.S, cono: AES.cono, sep: AES.sep };
 function acaPon() {                                                        // al montar la autoescuela: la de ahora (o, con ACA.vivo = false, la de la V206)
   var o = ACA.vivo ? ACA : ACA.orig;
@@ -99504,6 +99517,14 @@ aesTrasMontar = function () {
   L.stat.sort(byY);
   AES.zz = L.stat.filter(function (s) { return s.t === 'aesCono' && s.zz != null; });
 };
+var flowerPass206 = flowerPass;
+flowerPass = function () {                                                // V208: después de la tira de la prueba 8, una corta en la carrerita
+  flowerPass206.apply(this, arguments);
+  if (!(ACA.vivo && AES.on)) return;
+  var sC = L.secs[AES.S.carrera], q = ACA.tira2, T = { n: 0, got: 0 }, k, y;
+  for (k = 0; k < q.n; k++) { y = sC.y0 + q.desde + k * q.cada; place('flor', y, Math.sin(k * 0.55) * hwAt(y) * 0.4, { tira: T }); T.n++; }
+  AES.tira2 = T;
+};
 ST.aesCono.flat = function (g, s) { if (!s.caido) { var q = AES.cono.r / 2.5; shadow(g, s.x, s.y, 3.6 * q, 2.4 * q, 0); } };   // la sombra, del tamaño del cono
 
 /* la palmera de la prueba: siempre suelta un coco, uno solo, donde vas a pasar (y la copa, casi en medio de la carretera) */
@@ -99534,7 +99555,7 @@ var startLevel206 = startLevel;
 startLevel = function (li) {
   acaPon();
   var r = startLevel206.apply(this, arguments);
-  ACA.activo = !!(ACA.vivo && AES.on && AES.st);
+  ACA.activo = !!(ACA.vivo && AES.on && AES.st); ACA.fan = 0;
   acaBocina(false);
   if (ACA.activo) {
     var A = AES.st;
@@ -99577,6 +99598,8 @@ update = function (dt) {
   update206(dt);
   if (!acaEn() || G.state !== 'play') { if (ACA.boc && !(acaEn() && G.state === 'pause')) acaBocina(false); return; }
   var A = AES.st, S = AES.S, sec = L.secs, i;
+  var pa = AES.palmaE, co = AES.cocoE, tapa = A.paso === S.coco && pa && ((!pa.dropped && P.y > pa.y - 650 && P.y < pa.y + 40) || (co && co.st === 'fall'));   // V208: la palmera o su coco, detrás del cartel
+  ACA.fan += ((tapa ? 1 : 0) - ACA.fan) * Math.min(1, dt * 6);
   if (A.sello) { A.sello.t -= dt; if (A.sello.t <= 0) A.sello = null; }
   if (!A.ok[S.parada]) { if (A.parado) acaNota(S.parada, 1); else if (A.pasada) acaNota(S.parada, -1); }   // 1 · frena (lo mira 582)
   if (!A.ok[S.zigzag]) acaConos(A);                                        // 2 · los conos
@@ -99628,7 +99651,9 @@ function acaCartel(g, A) {
   var lin = aesLineas(g, TT(TOUCH ? Sp.m : Sp.k), w - 20).slice(0, 2), h = 47 + lin.length * 15;
   AES.abajo = y + h;
   g.save(); g.translate(x + w / 2, y); g.scale(k, k); g.translate(-w / 2, 0);
-  rrect(g, 0, 0, w, h, 9, A.flash > 0 ? 'rgba(255,240,190,.97)' : 'rgba(255,248,226,.94)', '#5b3f22', 2.5);
+  var fan = ACA.fan || 0, fa = (A.flash > 0 ? Math.max(ACA.fondo, 0.85) : ACA.fondo) * (1 - fan) + ACA.fantasma * fan * 0.5;   // V208: translúcido; con la palmera detrás, casi nada
+  rrect(g, 0, 0, w, h, 9, (A.flash > 0 ? 'rgba(255,240,190,' : 'rgba(255,248,226,') + fa.toFixed(2) + ')', 'rgba(91,63,34,' + (0.8 - 0.55 * fan).toFixed(2) + ')', 2);
+  g.globalAlpha = 1 - 0.35 * fan; g.lineJoin = 'round';
   var yT = 12, x0 = w - 10 - tira, i, v;
   g.textAlign = 'center'; g.textBaseline = 'middle';
   for (i = 0; i < N; i++) {
@@ -99641,11 +99666,15 @@ function acaCartel(g, A) {
     else { g.fillStyle = 'rgba(91,63,34,.55)'; g.font = '900 9px ' + FONT; g.fillText('' + (i + 1), cx, yT + 1); }
   }
   g.textAlign = 'left'; g.textBaseline = 'top';
-  g.fillStyle = '#b3261e'; g.font = '900 11px ' + FONT; g.fillText('🛵 ' + TT('AUTOESCUELA') + ' ' + (A.paso + 1) + '/' + N, 10, 6, x0 - 16);
-  g.fillStyle = INK; g.font = '900 17px ' + FONT; g.fillText(Sp.ico + ' ' + TT(Sp.t), 10, 23, w - (va ? 96 : 20));
-  if (va) { g.textAlign = 'right'; g.font = '900 16px ' + FONT; g.fillStyle = va.c; g.fillText(va.t, w - 10, 24); g.textAlign = 'left'; }
-  g.fillStyle = INK; g.font = '800 12px ' + FONT; lin.forEach(function (l, i) { g.fillText(l, 10, 43 + i * 15); });
+  acaTexto(g, '🛵 ' + TT('AUTOESCUELA') + ' ' + (A.paso + 1) + '/' + N, 10, 6, x0 - 16, '900 11px ', '#b3261e');
+  acaTexto(g, Sp.ico + ' ' + TT(Sp.t), 10, 23, w - (va ? 96 : 20), '900 17px ', INK);
+  if (va) { g.textAlign = 'right'; acaTexto(g, va.t, w - 10, 24, 0, '900 16px ', va.c); g.textAlign = 'left'; }
+  lin.forEach(function (l, i) { acaTexto(g, l, 10, 43 + i * 15, 0, '800 12px ', INK); });
   g.restore(); g.textAlign = 'left'; g.textBaseline = 'top';
+}
+function acaTexto(g, t, x, y, mw, f, col) {                                // V208: texto con un borde claro, que se lea sobre la carretera con el cartel translúcido
+  g.font = f + FONT; g.lineWidth = 3.2; g.strokeStyle = 'rgba(255,250,236,.92)';
+  if (mw) { g.strokeText(t, x, y, mw); g.fillStyle = col; g.fillText(t, x, y, mw); } else { g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y); }
 }
 function acaSello(g, s) {                                                  // el sello grande al hacer una prueba
   var e = s.T - s.t, a = Math.min(1, s.t / 0.3), q = e < 0.25 ? 0.35 + 0.65 * Math.sin(e / 0.25 * Math.PI / 2) + 0.12 * Math.sin(e / 0.25 * Math.PI) : 1;
