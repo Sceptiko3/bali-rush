@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V205</title>
+<title>Bali Rush Completo V206</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V205', FECHA = '19-10-2026';
+var VERSION = 'Completo V206', FECHA = '19-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -105516,6 +105516,374 @@ function pkmClasi() {
     'Gana quien llegue más lejos.': ['Whoever gets furthest wins.', 'Yang paling jauh menang.'], 'Un golpe y te despiertas.': ['One hit and you wake up.', 'Sekali kena, kamu terbangun.'],
     'hasta la fila #': ['to row #', 'sampai baris #'], 'sin fin: quien llegue más lejos': ['endless: whoever gets furthest', 'tanpa akhir: yang paling jauh'],
     'Otra partida': ['Another game', 'Main lagi'], 'jugando…': ['playing…', 'masih main…']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza juegos/ciudad/614_taxi_multi.js*/
+/* ================================================================
+   V206 · EL MOTOTAXI, MULTIJUGADOR (POR LA WIFI)
+   Jose Javier (19-10-2026): «crea un multijugador de Pitik Nightmare y
+   del mototaxi».
+   Es la liga de los ojek (600 y 602) con personas:
+   - En la sala (598), quien crea elige «🛵 Mototaxi» y la jornada (los
+     cinco recorridos de la liga). Seis motos: los sitios que faltan los
+     llevan los conductores de la liga (al nivel que tiene en la liga
+     quien crea), desde su móvil; los demás los ven por la red.
+   - LAS MISMAS PARADAS PARA TODOS: quién espera en cada puesto y lo que
+     paga sale de una semilla que manda quien crea. La salida, en línea
+     por orden de moto (la 1 a la izquierda); cuenta atrás común (3, 2,
+     1, ¡YA!) y nadie se mueve antes.
+   - QUIÉN SE LLEVA CADA PASAJERO lo decide el móvil del que creó la
+     partida: al parar en un puesto (o con RECOGER), tu móvil se lo pide;
+     si nadie lo ha cogido antes, es tuyo (y lo ven todos); si no,
+     «¡Te lo han quitado!». En la meta, igual: el orden de llegada (6, 5,
+     4, 3, 2 y 1) lo cuenta ese móvil. Así, en todos, cada uno lleva lo
+     mismo y suma lo mismo.
+   - Cada móvil lleva su moto (con SUS mejoras) y manda dónde va 15 veces
+     por segundo; a los demás se les ve con su moto y su camisa, su
+     nombre, lo que llevan ganado y su pasajero detrás, y os apartáis al
+     tocaros. Si alguien se cae en su móvil, en los demás se le ve caer.
+   - Gana quien junte más frangipanis; si hay empate, quien acabó antes.
+     La tarjeta del final, con todos, se completa según llegan; quien
+     creó la partida vuelve a la sala con «Otra jornada». Si todos los
+     demás han llegado, el jefe cierra en 40 s, como siempre.
+   - Decidido sin él (como en las carreras): la liga no cambia (no sube
+     de nivel, ni propina del jefe, ni dorado); lo que cobras sí va al
+     bolsillo; no se pierden cascos; la máquina, sin goma; el tráfico es
+     el de cada móvil. Si quien creó la partida la deja, se acaba para
+     todos (es su móvil el que reparte los pasajeros).
+   TXM.vivo = false: el mototaxi no sale en el multijugador.
+   ================================================================ */
+var TXM = { vivo: true, on: false, sem: 1, niv: 1, pide: null, yoMeta: null, bMin: null, nb: 0, niv0: 0, libre0: false, nCae: 0, st0: '' };
+function txmVa() { return MUL.on && MUL.juego === 'taxi' && TXM.on; }
+function txmOn() { return txmVa() && !!(MIS && MIS.liga); }
+function txmR(s) { var L = MIS.liga.R, i; for (i = 0; i < L.length; i++) if (L[i].slot === s) return L[i]; return null; }
+function txmT() { return Math.round(Math.max(0, (performance.now() - MUL.salida) / 1000) * 100) / 100; }   // el reloj de la jornada, el de todos (desde el ¡YA!)
+if (TXM.vivo) MUL_J.taxi = {
+  ico: '🛵', nom: 'Mototaxi', ia: true, modo: 'city',
+  limpiaOp: function (op) { return { jor: mulEnt(op && op.jor, 1, LIGA_CIRC.length) }; },
+  opciones: function () {
+    var j = MUL.op.jor || 1;
+    return '<p class="mu-t">' + TT('Jornada') + '</p><div class="mu-cir">' + LIGA_CIRC.map(function (C, i) {
+      return '<button class="mu-c' + (i + 1 === j ? ' sel' : '') + '" data-act="mu:op:jor:' + (i + 1) + '"><b>' + (i + 1) + '</b>' + mulEsc(TT(C.n)) + '</button>';
+    }).join('') + '</div><p class="mu-nota">' + mulEsc(TT(LIGA_CIRC[j - 1].txt)) + '. ' + TT('Los que falten, los conductores de la liga (nivel #).').replace('#', ligaNivel()) + '</p>';
+  },
+  texto: function () { var j = MUL.op.jor || 1; return TT('Mototaxi') + ' · ' + TT('Jornada') + ' ' + j + ' · «' + mulEsc(TT(LIGA_CIRC[j - 1].n)) + '»'; },
+  salida: function () {
+    var J = {}, s, usadas = [], cols, n = 0;
+    for (s = 1; s <= RED.max; s++) if (MUL.jug[s] && !MUL.jug[s].ia && (s === 1 || (RED.conex[s] && RED.conex[s].vivo))) { J[s] = MUL.jug[s]; usadas.push(J[s].look.moto); }
+    cols = RIV.motos.filter(function (c) { return usadas.indexOf(c) < 0; });         // la máquina, con colores que no lleva ninguna persona (en la tabla, cada uno el suyo)
+    for (s = 1; s <= RED.max; s++) if (!J[s]) { J[s] = { nom: RIV.nom[(s - 2) % RIV.nom.length], ia: true, look: { moto: cols[n % cols.length], camisa: 0, tubo: 0, cabeza: 0, cinta: 0 } }; n++; }
+    MUL.jug = J;
+    var m = { t: 'go', juego: 'taxi', op: MUL.op, j: J, sem: 1 + Math.floor(Math.random() * 0xfffff), niv: ligaNivel(), en: 4200 };
+    redManda(m); this.arranca(m);
+  },
+  arranca: function (m) {
+    mulParaCamara();
+    MUL.libre0 = RIV.libre; MUL.niv0 = RIV.nivFijo; MUL.vivo0 = RIV.vivo;   // (lo que mulFinCarrera devuelve)
+    MUL.on = true; MUL.juego = 'taxi'; MUL.miFin = -1; MUL.est = {}; MUL.tx = 0; MUL.cortado = !!RED.perdido; MUL.nota = ''; MUL.ult = null;
+    TXM.on = true; TXM.sem = mulEnt(m.sem, 1, 0xfffff); TXM.niv = mulEnt(m.niv, 1, LIGA.nivMax); TXM.pide = null; TXM.yoMeta = null; TXM.bMin = null; TXM.nb = 0; TXM.nCae = 0; TXM.st0 = '';
+    TXM.niv0 = LIGA.nivFijo; TXM.libre0 = LIGA.libre; LIGA.nivFijo = TXM.niv; LIGA.libre = true;
+    var en = mulEnt(m.en, 0, 8000);
+    MUL.base = performance.now() - (RED.host ? 0 : (redMs(1) || 0) / 2); MUL.salida = MUL.base + en;   // (los demás: menos lo que ha tardado en llegar la salida)
+    if (typeof FAS !== 'undefined') FAS.activo = null;
+    if (typeof AES !== 'undefined') AES.pide = false;
+    G.enMenu = false; showPad(TOUCH); G.primo = false; G.marSolo = null; G.sub = 'ojek'; G.started = true;
+    startCity(MUL.op.jor || 1);                                                    // → ligaEmpieza (abajo: con la semilla y la parrilla de la partida)
+    G.state = 'play'; hideScr(); auInit(); if (AU.ok && SAVE.mus) musStart();
+  },
+  yoD: function () {
+    var b = P.state === 'crash' && P.bike, Lg = MIS && MIS.liga;
+    return [Math.round((b ? P.bike.x : P.x) * 10) / 10, Math.round((b ? P.bike.y : P.y) * 10) / 10, Math.round((P.h || 0) * 1000) / 1000, Math.round(P.speed || 0), P.state === 'crash' ? 1 : 0, Lg ? Lg.yo.k : 0, MUL.miFin];
+  },
+  extraE: function (E) {                                                         // los de la máquina, que van en este móvil
+    if (!MIS || !MIS.liga) return;
+    MIS.liga.R.forEach(function (R) {
+      if (R.net) return; var c = R.cae;
+      E[R.slot] = [Math.round((c ? c.b.x : R.x) * 10) / 10, Math.round((c ? c.b.y : R.y) * 10) / 10, Math.round(R.h * 1000) / 1000, Math.round(R.v), c ? 1 : 0, R.k, R.fin != null ? R.fin : -1];
+    });
+  }
+};
+
+/* ---------- empezar: la liga de siempre, con la semilla de la partida y cada uno en su sitio ---------- */
+var ligaQuiere614 = ligaQuiere;
+ligaQuiere = function () { return (txmVa() && G.sub === 'ojek') || ligaQuiere614(); };
+var ligaEmpieza614 = ligaEmpieza;
+ligaEmpieza = function (round) {
+  if (!txmVa()) { ligaEmpieza614(round); return; }
+  var r0 = Math.random; Math.random = mulberry(TXM.sem);                          // los pasajeros de cada parada (y lo que pagan), los mismos en todos los móviles
+  try { ligaEmpieza614(round); } finally { Math.random = r0; }
+  txmParrilla();
+};
+function txmParrilla() {
+  var Lg = MIS.liga, C = Lg.circ, si = lgCalle(C.sal[0]), sst = CITY.streets[si], gdir = C.sal[2], nc = sst.w >= 40 ? 6 : 3, otros = [], s;
+  function sitio(i) {                                                            // el sitio i de la salida (como en ligaEmpieza): la moto 1 en el 0, la 2 en el 1…
+    var s0 = C.sal[1] - gdir * Math.floor(i / nc) * LIGA.filaD, u = nc === 6 ? (i - 2.5) * Math.min(14.6, (sst.w - 8) / 2.5) : ((i % nc) - 1.2) * 14.6, q = lgLado(sst, s0, u * gdir);
+    return { s: s0, u: u, x: q.x, y: q.y, h: adiff(gdir > 0 ? q.ang : q.ang + Math.PI, 0) };
+  }
+  for (s = 1; s <= RED.max; s++) if (s !== RED.soy) otros.push(s);
+  Lg.yo.slot = RED.soy;
+  var me = sitio(RED.soy - 1);
+  P.si = si; P.s = me.s; P.dir = gdir; P.u = me.u; P.speed = 0; P.vx = 0; P.lastNode = -1; P.blend = null; placeP(0);
+  Lg.R.forEach(function (R, k) {
+    var sl = otros[k], j = MUL.jug[sl] || { ia: true, nom: '', look: R.look }, q = sitio(sl - 1), ia = !!j.ia, ii = (sl - 2 + RIV.nom.length * 4) % RIV.nom.length;
+    R.slot = sl; R.x = q.x; R.y = q.y; R.h = q.h; R.it.x = R.x; R.it.y = R.y;
+    R.hum = !ia; R.net = !(RED.host && ia);                                      // los de la máquina los mueve el móvil de quien creó la partida; los demás llegan por la red
+    R.nom = R.hum ? mulNom(sl) : (j.nom || RIV.nom[ii]);
+    R.look = { moto: j.look.moto, tubo: j.look.tubo, cabeza: j.look.cabeza, cinta: j.look.cinta, camisa: j.look.camisa }; R.col = COL_MOTO[R.look.moto] || R.col;
+    if (R.hum) { R.piel = SKG; R.vest = { camisa: COL_CAMISA[R.look.camisa] || '#2f86d6', udeng: '#f7f3ea', kamben: '#e8b04a' }; }
+    else { R.piel = PAL.skin[ii % PAL.skin.length]; R.vest = { camisa: RIV.camisa[ii], udeng: RIV.udeng[ii], kamben: RIV.kamben[ii] }; }
+    R.nuca = darken(R.piel, 0.88); R.cart = {}; R.cart0 = null; R.fig = null; R.vPrev = 0; R.ret = false;
+    if (MOTO3D) lgCarton(R, 'r', true);
+  });
+  Lg.R.sort(function (a, b) { return a.slot - b.slot; });
+  V.camX = P.x; V.camY = P.y; CAM.yaw = P.ht; CAM.gz = 0; if (typeof camCiudad === 'function') camCiudad(); camPlace();
+}
+/* las personas, el guiri de siempre: su moto, su camisa, Pitik en la cesta y su pasajero detrás */
+var lgOpc614 = lgOpc;
+lgOpc = function (R, o) {
+  if (!R.hum) return lgOpc614(R, o);
+  o.look = R.look; o.salto = -1;
+  o.pasajero = R.pas ? exvPaxQ(R.pas.type.id, R.pas.v3) || null : null; o.cesta = o.pasajero ? 'no' : 'pitik';
+  return o;
+};
+
+/* ---------- la salida: hasta el ¡YA! no se mueve nadie ---------- */
+var update614 = update;
+update = function (dt) {
+  var espera = txmOn() && G.mode === 'city' && G.state === 'play' && performance.now() < MUL.salida, g = IN.gas, b = IN.brake;
+  if (espera) { IN.gas = 0; IN.brake = 0; }
+  update614(dt);
+  if (espera) { IN.gas = g; IN.brake = b; if (P.state === 'ride') { P.speed = 0; P.vx = 0; } }
+  if (txmOn() && P) { if (P.state === 'crash' && TXM.st0 !== 'crash') TXM.nCae++; TXM.st0 = P.state; }   // tus caídas (los demás las ven: 💥 en la tabla)
+};
+var ligaTick614 = ligaTick;
+ligaTick = function (dt) {
+  if (!txmOn()) { ligaTick614(dt); return; }
+  var Lg = MIS.liga, now = performance.now(), i, e;
+  if (!Lg.ya && now >= MUL.salida) {                                              // ¡YA! (a la vez en todos; ligaTick lo daba al dar gas)
+    Lg.ya = true; pop('¡YA!', P.x + Math.sin(P.h) * 70, P.y + Math.cos(P.h) * 70, '#ffe27a', 1.5); SFX.pick(6);
+    for (i = TRAF.length - 1; i >= 0; i--) { e = TRAF[i]; if (Math.abs(e.x - P.x) > 760 || Math.abs(e.y - P.y) > 760 || e.jamC) continue; if (e.tmp || !trRecolocar(e)) TRAF.splice(i, 1); }
+  }
+  if (Lg.ya) { var c = Math.max(0, (now - MUL.salida) / 1000); Lg.t = Lg.yo.fin == null ? c - dt : c; }   // el reloj de todos (ligaTick le suma dt mientras no has llegado; y sigue para los que llegan después)
+  ligaTick614(dt);
+};
+/* el reloj de la calle, igualado con el del móvil 1 (como en Pitik Nightmare, 722) */
+redOye(function (pl, m) {
+  if (pl !== 1 || RED.host || m.t !== 'w' || typeof m.q !== 'number' || !isFinite(m.q) || !txmOn()) return;
+  var b = performance.now() - m.q - (redMs(1) || 0) / 2;
+  TXM.nb++; if (TXM.bMin == null || b < TXM.bMin) TXM.bMin = b;
+  if (TXM.nb >= 4 && Math.abs(TXM.bMin - MUL.base) < 1500) { var d = TXM.bMin - MUL.base; MUL.base += d; MUL.salida += d; }
+});
+
+/* ---------- los que llegan por la red: donde dicen, sin tirones ---------- */
+function txmPasoRed(R, dt) {
+  var Lg = MIS.liga, e = MUL.est[R.slot];
+  if (R.hum && !R.ret && R.fin == null && !MUL.jug[R.slot]) { R.ret = true; Lg.llegan++; }   // se ha ido de la partida
+  if (!e) { R.it.x = R.x; R.it.y = R.y; return; }
+  var d = e.d, edad = clamp((performance.now() - e.t) / 1000, 0, 0.5) + 1 / 20;    // donde estará ahora (y un poco más: lo que se queda atrás al suavizar)
+  if (d[6] === -2 && !R.ret && R.fin == null) { R.ret = true; Lg.llegan++; }      // ha dejado la jornada (o el jefe le ha cerrado)
+  if (d[4]) {                                                                    // se ha caído (en su móvil)
+    if (!R.cae) { R.v = Math.max(R.v, d[3]); lgCae(R, 'red'); }
+    if (R.cae) { if (R.cae.t + dt > LIGA.caeT - 0.05) R.cae.t = Math.max(0, LIGA.caeT - 0.05 - dt); lgCaeUpd(R, dt); }   // (se levanta cuando se levante en su móvil)
+    return;
+  }
+  var tx = d[0] + Math.sin(d[2]) * d[3] * edad, ty = d[1] + Math.cos(d[2]) * d[3] * edad;
+  if (R.cae) { R.cae = null; R.inv = 1.2; R.x = tx; R.y = ty; R.h = d[2]; R.lean = 0; }
+  if (Math.abs(tx - R.x) > 160 || Math.abs(ty - R.y) > 160) { R.x = tx; R.y = ty; R.h = d[2]; }
+  var k = expo(12, dt), h0 = R.h;
+  R.x += (tx - R.x) * k; R.y += (ty - R.y) * k; R.h = adiff(R.h + adiff(d[2], R.h) * k, 0);
+  R.w += (adiff(R.h, h0) / Math.max(dt, 1e-3) - R.w) * expo(8, dt);
+  R.v = d[3];
+  R.lean += (clamp(R.w * R.v / MAN.inclina, -0.5, 0.5) - R.lean) * expo(10, dt);
+  R.giro = clamp(R.w * 0.35, -0.35, 0.35) * (1 - 0.55 * Math.min(1, R.v / MAXV));
+  R.gas = R.v > R.vPrev + 0.4; R.frena = R.v < R.vPrev - 1.5 && R.v > 4; R.vPrev = R.v;
+  R.rod += R.v * dt; if (R.inv > 0) R.inv -= dt; if (R.bote > 0) R.bote -= dt;
+  R.it.x = R.x; R.it.y = R.y;
+}
+var lgPaso614 = lgPaso;
+lgPaso = function (R, dt) { if (txmOn() && R.net) { txmPasoRed(R, dt); return; } lgPaso614(R, dt); };
+var lgCae614 = lgCae;
+lgCae = function (R, por) { if (txmOn() && R.net && por !== 'red') return; lgCae614(R, por); };   // a los que llegan por la red solo los tira su móvil
+var lgChoques614 = lgChoques;
+lgChoques = function (dt) {                                                      // los de la red no chocan aquí con el tráfico ni con lo de la calle (lo hacen en su móvil); con las motos, como una moto quieta: los demás se apartan de ellos
+  if (!txmOn()) { lgChoques614(dt); return; }
+  var A = MIS.liga.R, ap = A.map(function (R) { var a = R.aparcado; if (R.net) R.aparcado = true; return a; });
+  try { lgChoques614(dt); } finally { A.forEach(function (R, i) { R.aparcado = ap[i]; }); }
+};
+
+/* ---------- quién se lleva cada pasajero: lo decide el móvil de quien creó la partida ---------- */
+var lgYoPara614 = lgYoPara;
+lgYoPara = function (b) {
+  if (!txmOn()) { lgYoPara614(b); return; }
+  var Lg = MIS.liga, Y = Lg.yo, k = Y.k, now = performance.now();
+  if (Y.fin != null || k >= Lg.est.length) return;
+  if (!RED.host) {                                                               // se lo pides (y esperas la respuesta: unos milisegundos)
+    if (TXM.pide && now - TXM.pide.t < 1500) return;
+    TXM.pide = { k: k, i: b ? b.i : -1, t: now };
+    redMandaA(1, { t: 'tx', q: 'toma', k: k, i: b ? b.i : -1, tf: b ? 0 : txmT() });
+    return;
+  }
+  if (b) { if (b.por) return; lgYoPara614(b); redManda({ t: 'tx', q: 'bay', k: k, i: b.i, s: RED.soy }); return; }
+  var n = Lg.metaN || 0, tf = txmT();                                            // tú, en la meta
+  TXM.yoMeta = { tf: tf, n: n };
+  redManda({ t: 'tx', q: 'bay', k: k, i: -1, s: RED.soy, tf: tf, n: n });
+  lgYoPara614(null);
+};
+var lgAlPuesto614 = lgAlPuesto;
+lgAlPuesto = function (R) {                                                      // los de la máquina (en el móvil de quien creó la partida): lo que cogen, a todos
+  if (!txmOn() || !RED.host || R.net) { lgAlPuesto614(R); return; }
+  var Lg = MIS.liga, k0 = R.k, b = R.bay, ne = Lg.est.length;
+  lgAlPuesto614(R);
+  if (R.k === k0) return;                                                        // (se lo habían quitado en el último momento)
+  if (k0 < ne - 1) redManda({ t: 'tx', q: 'bay', k: k0, i: b.i, s: R.slot });
+  else { R.fin = Math.round(R.fin * 100) / 100; redManda({ t: 'tx', q: 'bay', k: k0, i: -1, s: R.slot, tf: R.fin, n: Math.max(0, (Lg.metaN || 1) - 1) }); }
+};
+function txmToma(pl, k, i, tf) {                                                 // otro móvil pide un pasajero (o llega a la meta)
+  var Lg = MIS.liga, R = txmR(pl), ne = Lg.est.length, E = Lg.est[k];
+  var no = function () { redMandaA(pl, { t: 'tx', q: 'no', k: k, i: i }); };
+  if (!R || !E || R.k !== k || R.fin != null) { no(); return; }
+  if (k < ne - 1) {
+    var b = E.bays[i]; if (!b || b.por || !b.pax) { no(); return; }
+    txmAplica(k, i, pl, 0, 0); redManda({ t: 'tx', q: 'bay', k: k, i: i, s: pl }); return;
+  }
+  var n = Lg.metaN || 0, t = Math.round(clamp(tf, 0, 36000) * 100) / 100;
+  txmAplica(k, -1, pl, t, n); redManda({ t: 'tx', q: 'bay', k: k, i: -1, s: pl, tf: t, n: n });
+}
+function txmAplica(k, i, s, tf, n) {                                             // lo que ha decidido el móvil 1: en todos, igual
+  var Lg = MIS.liga, ne = Lg.est.length, E = Lg.est[k], ult = k === ne - 1, R, b, w;
+  if (!E) return;
+  if (s === RED.soy) {                                                           // tú (la respuesta a lo que pediste)
+    var Y = Lg.yo; if (Y.k !== k || Y.fin != null) return;
+    TXM.pide = null;
+    if (!ult) { b = E.bays[i]; if (b) lgYoPara614(b); }
+    else { TXM.yoMeta = { tf: tf, n: n }; lgYoPara614(null); }
+    return;
+  }
+  R = txmR(s); if (!R || R.fin != null) return;
+  var cerca = d2(R.x, R.y, P.x, P.y) < 420;
+  if (R.pas) { R.pts += R.pas.val; R.hist.push(R.pas.val); if (cerca) pop(R.nom + ' +' + R.pas.val, R.x, R.y + 44, '#ffffff', 0.9); R.pas = null; }   // baja quien llevaba: cobra
+  R.cart0 = R.cart; R.cart = {};
+  if (!ult) {
+    b = E.bays[i]; if (!b || !b.pax) return;
+    b.por = R; w = MIS.wait.indexOf(b.w); if (w >= 0) MIS.wait.splice(w, 1);
+    R.pas = { type: b.pax.type, v3: b.pax.v3, val: b.val }; R.k = k + 1;
+    if (cerca) { SFX.pick(2); if (b.val >= 5) pop(R.nom + ': ' + TT('¡el de #!').replace('#', b.val), b.px, b.py + 60, '#ffe27a', 0.95); }
+    return;
+  }
+  R.fin = tf; R.k = ne; if (!R.ret) Lg.llegan++;                                 // en la meta: sus puntos por orden de llegada (602)
+  var p = R.metaP = lgrMetaPts(n); (Lg.metaQ = Lg.metaQ || [])[n] = R.col; Lg.metaN = Math.max(Lg.metaN || 0, n + 1);
+  R.pts += p; R.hist.push('🏁' + p);
+  if (cerca) pop(R.nom + ' 🏁 +' + p, R.x, R.y + 60, '#ffe27a', 0.95);
+}
+redOye(function (pl, m) {
+  if (m.t !== 'tx' || !txmOn()) return;
+  if (RED.host) { if (m.q === 'toma' && pl > 1) txmToma(pl, mulEnt(m.k, 0, 9), mulEnt(m.i, -1, 5), +m.tf || 0); return; }
+  if (pl !== 1) return;
+  if (m.q === 'bay') txmAplica(mulEnt(m.k, 0, 9), mulEnt(m.i, -1, 5), mulEnt(m.s, 1, RED.max), clamp(+m.tf || 0, 0, 36000), mulEnt(m.n, 0, 5));
+  else if (m.q === 'no' && TXM.pide && TXM.pide.k === m.k && TXM.pide.i === m.i) { TXM.pide = null; if (m.i >= 0) avisar('¡Te lo han quitado! Elige otro', '🙋'); }
+});
+
+/* ---------- el final: tus puntos de la meta (los que te ha dado el móvil 1) y la tarjeta con todos ---------- */
+var ligaFin614 = ligaFin;
+ligaFin = function (tiempo) {
+  if (!txmOn()) { ligaFin614(tiempo); return; }
+  var Lg = MIS.liga, Y = Lg.yo, q = TXM.yoMeta;
+  if (Lg.fin) return; Lg.fin = true;
+  if (tiempo || !q) { MUL.miFin = -2; return; }
+  Y.fin = q.tf; MUL.miFin = Y.fin;
+  var p = Y.metaP = lgrMetaPts(q.n); (Lg.metaQ = Lg.metaQ || [])[q.n] = Y.col; Lg.metaN = Math.max(Lg.metaN || 0, q.n + 1);
+  Y.pts += p; Y.hist.push('🏁' + p); G.fl += p;
+  pop('🏁 +' + p, P.x, P.y + 70, '#ffe27a', 1.3);
+  P.state = 'finish'; SFX.win(); petals(P.x, P.y + 40, 30); pop('¡Meta!', P.x, P.y + 40, '#ffe27a', 1.4);
+  setTimeout(function () { if (MIS && MIS.liga === Lg && !G.card) showCityEnd('ok'); }, 1500);
+};
+var showCityEnd614 = showCityEnd;
+showCityEnd = function (why) { if (txmOn()) { txmTarjeta(why); return; } showCityEnd614(why); };
+function txmTarjeta(why) {
+  var Lg = MIS.liga;
+  if (!Lg.fin && !(Lg.cierre && MIS.left <= 0)) return;
+  if (!Lg.fin) { Lg.fin = true; MUL.miFin = -2; }                                // el jefe ha cerrado y no has llegado
+  if (G.card) return; G.card = true; pokiStop(); guardaFlores(G.fl);
+  var ok = why === 'ok';
+  card('<h2 class="stk' + (ok ? '' : ' ko') + '">' + (ok ? '🏁 ' + TT('¡Meta!') : TT('¡El jefe ha cerrado el turno!')) + '</h2>' +
+    '<p class="lg-sub">🛵 ' + mulTexto() + '</p>' +
+    '<div class="mu-res">' + txmClasi() + '</div>' +
+    '<p class="mu-flo">✿ +' + G.fl + ' ' + TT('frangipanis al bolsillo') + '</p>' +
+    '<div class="acc">' + (RED.host ? '<button class="b1" data-act="mu:vuelta">' + TT('Otra jornada') + '</button>' : '<p class="mu-esp">' + TT('Esperando a que <b>#</b> elija la siguiente…').replace('#', mulEsc(mulNom(1))) + '</p>') +
+    '<div class="row"><button class="b3" data-act="mu:sal">' + TT('Salir de la partida') + '</button></div></div>', 'win mu-win');
+  clearInterval(MUL.tm);
+  MUL.tm = setInterval(function () { var r = document.querySelector('#scr .mu-res'); if (!r || !txmOn()) { clearInterval(MUL.tm); return; } r.innerHTML = txmClasi(); }, 600);
+}
+function txmOrden() {                                                            // todos: el que más frangipanis lleva, primero; si empatan, el que llegó antes
+  var Lg = MIS.liga, Y = Lg.yo, A = [{ yo: true, s: RED.soy, nom: TT('Tú'), col: Y.col, pts: Y.pts, hist: Y.hist, fin: Y.fin, ret: MUL.miFin === -2, k: TXM.nCae || 0, hum: true }];
+  Lg.R.forEach(function (R) { A.push({ s: R.slot, nom: R.nom, col: R.col, pts: R.pts, hist: R.hist, fin: R.fin, ret: !!R.ret, k: R.nCae, hum: !!R.hum }); });
+  A.sort(function (a, b) { return b.pts - a.pts || (a.fin == null ? 1 : 0) - (b.fin == null ? 1 : 0) || (a.fin != null && b.fin != null ? a.fin - b.fin : 0) || a.s - b.s; });
+  return A;
+}
+function txmClasi() {
+  var A = txmOrden(), mi = 0, todos = A.every(function (a) { return a.fin != null || a.ret; }), h;
+  A.forEach(function (a, i) { if (a.yo) mi = i + 1; });
+  h = '<p class="lg-sub mu-pos">' + (['', '🥇', '🥈', '🥉'][mi] || '🏁') + ' <b>' + TT(LIGA_PUESTO[mi] || '') + '</b> · ' + rivOrd(mi) + ' ' + TT('de') + ' ' + A.length + (todos ? '' : ' · ' + TT('por ahora')) + '</p>' +
+    '<table class="lg-tab"><tr><th></th><th></th><th>' + TT('Carreras') + '</th><th>✿</th><th>' + TT('Tiempo') + '</th></tr>';
+  A.forEach(function (a, q) {
+    h += '<tr class="' + (a.yo ? 'yo' : '') + (q === 0 && todos ? ' p1' : '') + '"><td>' + (q + 1) + '</td><td class="n"><i style="background:' + a.col + '"></i>' + (a.hum ? '' : '🤖 ') + mulEsc(a.nom) + (a.k ? ' <u>💥</u>' : '') +
+      '</td><td class="h">' + (a.hist.length ? a.hist.join(' + ') : '–') + '</td><td class="t">' + a.pts + '</td><td class="m">' + (a.fin != null ? lgTiempo(a.fin) : a.ret ? TT('sin llegar') : TT('en carrera…')) + '</td></tr>';
+  });
+  return h + '</table>';
+}
+/* la cuenta atrás, en grande (y sin el «Dale al GAS para salir»: aquí se sale a la vez) */
+var cityHUD614 = cityHUD;
+cityHUD = function (g) {
+  if (!txmOn()) { cityHUD614(g); return; }
+  var Lg = MIS.liga, ya = Lg.ya; Lg.ya = true;
+  try { cityHUD614(g); } finally { Lg.ya = ya; }
+  var r = (MUL.salida - performance.now()) / 1000, txt = null, k = 1, n;
+  if (r > 3) txt = TT('¡Preparados!');
+  else if (r > 0) { n = Math.ceil(r); txt = '' + n; k = 1 + 0.4 * (r - Math.floor(r)); if (MUL.ult !== n) { MUL.ult = n; SFX.pick(2); } }
+  g.save(); g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.strokeStyle = INK;
+  if (MUL.cortado) { g.font = '900 12px ' + FONT; g.lineWidth = 3.5; var c = '📶 ' + TT('Se ha cortado la conexión con la moto 1.'); g.strokeText(c, V.w / 2, V.h * 0.27); g.fillStyle = '#ffb3a3'; g.fillText(c, V.w / 2, V.h * 0.27); }
+  if (txt) {
+    g.translate(V.w / 2, V.h * 0.36); g.scale(k, k);
+    g.font = '900 ' + (txt.length > 2 ? 34 : 92) + 'px ' + FONT; g.lineWidth = txt.length > 2 ? 7 : 13;
+    g.strokeText(txt, 0, 0); g.fillStyle = '#ffe27a'; g.fillText(txt, 0, 0);
+  }
+  g.restore();
+};
+/* la pausa: si la deja quien creó la partida, se acaba la jornada para todos (es su móvil el que reparte los pasajeros) */
+var pauseGame614 = pauseGame;
+pauseGame = function () {
+  pauseGame614();
+  if (!txmOn() || !RED.host) return;
+  var n = document.querySelector('#scr .card.pause .mu-nota'); if (n) n.textContent = TT('Si la dejas, se acaba la jornada para todos.');
+};
+var menuAct614 = menuAct;
+menuAct = function (a) {
+  if (a === 'mu:deja' && txmOn() && RED.host) { redManda({ t: 'vuelta' }); mulVuelta(); mulSala(); return true; }
+  return menuAct614(a);
+};
+var mulFinCarrera614 = mulFinCarrera;
+mulFinCarrera = function () {
+  if (TXM.on) { TXM.on = false; LIGA.nivFijo = TXM.niv0; LIGA.libre = TXM.libre0; TXM.pide = null; TXM.yoMeta = null; lgrBoton(false); }
+  mulFinCarrera614();
+};
+/* para las pruebas: quién se ha llevado cada pasajero (por número de moto), lo que lleva cada uno y cuándo llegó */
+window.__TXM = { estado: function () {
+  if (!MIS || !MIS.liga) return null;
+  var Lg = MIS.liga, sl = function (o) { return !o ? 0 : o === Lg.yo ? RED.soy : o.slot || -1; }, pts = {}, hist = {}, fin = {};
+  pts[RED.soy] = Lg.yo.pts; hist[RED.soy] = Lg.yo.hist.join('+'); fin[RED.soy] = Lg.yo.fin;
+  Lg.R.forEach(function (R) { pts[R.slot] = R.pts; hist[R.slot] = R.hist.join('+'); fin[R.slot] = R.fin; });
+  return { bays: Lg.est.slice(0, -1).map(function (E) { return E.bays.map(function (b) { return sl(b.por); }); }), vals: Lg.est.slice(0, -1).map(function (E) { return E.bays.map(function (b) { return b.val + (b.pax ? b.pax.type.id + b.pax.v3 : ''); }).join(','); }), pts: pts, hist: hist, fin: fin, k: Lg.yo.k, ya: Lg.ya, t: Lg.t, metaN: Lg.metaN || 0 };
+} };
+(function () {
+  var css = document.createElement('style');
+  css.textContent = '.mu-win .mu-pos{margin:0 0 6px;font-size:14px}.mu-win .mu-pos b{color:#ffe27a}.mu-win .lg-tab{margin-top:2px}';
+  document.head.appendChild(css);
+  var N = {
+    'Mototaxi': ['Bike taxi', 'Ojek'],
+    'Los que falten, los conductores de la liga (nivel #).': ['Empty places go to the league drivers (level #).', 'Kursi kosong diisi pengemudi liga (level #).'],
+    'Otra jornada': ['Another round', 'Babak lagi'], 'sin llegar': ['didn\'t finish', 'tidak sampai'], 'por ahora': ['so far', 'sementara'],
+    'Si la dejas, se acaba la jornada para todos.': ['If you leave, the round ends for everyone.', 'Kalau kamu keluar, babak ini selesai untuk semua.']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
