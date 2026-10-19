@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V204</title>
+<title>Bali Rush Completo V205</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V204', FECHA = '19-10-2026';
+var VERSION = 'Completo V205', FECHA = '19-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -104812,7 +104812,12 @@ window.addEventListener('pagehide', function () { for (var n in RED.conex) { try
      lo dice y da la dirección de la web.
    MUL.vivo = false: la tarjeta «Pronto» de la V190.
    ================================================================ */
-var MUL = { vivo: true, on: false, vista: 'ini', li: -1, elige: -1, niv: 1, jug: {}, est: {}, salida: 0, tx: 0, miFin: -1, cortado: false, nota: '', qr: '', cam: null, tm: 0 };
+var MUL = { vivo: true, on: false, juego: 'carrera', op: {}, vista: 'ini', li: -1, elige: -1, niv: 1, jug: {}, est: {}, salida: 0, tx: 0, miFin: -1, cortado: false, nota: '', qr: '', cam: null, tm: 0 };
+/* V205: los juegos del multijugador (cada pieza apunta el suyo): ico, nom, ia (si hay máquina), modo (G.mode mientras se juega),
+   opciones() (lo que elige quien crea: HTML), texto() (lo elegido, para los demás), limpiaOp(op), salida() (dar la salida), arranca(m) (al llegar «go»),
+   yoD() (dónde vas: 7 números), extraE(E) (lo que añade el móvil 1 de su máquina) */
+var MUL_J = { carrera: { ico: '🏁', nom: 'Carrera de ofrendas', ia: true, modo: 'level' } };
+function mulJ() { return MUL_J[MUL.juego] || MUL_J.carrera; }
 function mulEsc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function mulEnt(v, a, b) { v = Math.round(+v || 0); return v < a ? a : v > b ? b : v; }
 function mulYo() {
@@ -104839,7 +104844,11 @@ function mulFila(s) {
   else est = TT('máquina');
   return '<div class="mu-f' + (yo ? ' yo' : '') + (hum ? '' : ' ia') + '"><i style="background:' + c + '"></i><b>' + (hum ? '' : '🤖 ') + mulEsc(hum ? mulNom(s) : RIV.nom[(s - 2) % RIV.nom.length]) + '</b><small>' + TT('Moto') + ' ' + s + (est ? ' · ' + est : '') + '</small></div>';
 }
-function mulLista() { var h = '', s; for (s = 1; s <= RED.max; s++) h += mulFila(s); return h; }
+function mulLista() { var h = '', s, ia = mulJ().ia; for (s = 1; s <= RED.max; s++) if (ia || s === RED.soy || (MUL.jug[s] && !MUL.jug[s].ia)) h += mulFila(s); return h; }
+function mulTexto() {                                                 // lo que ha elegido quien crea, dicho para los demás
+  if (MUL.juego !== 'carrera' && MUL_J[MUL.juego] && MUL_J[MUL.juego].texto) return MUL_J[MUL.juego].texto();
+  var li = MUL.elige; return TT('Carrera de ofrendas') + (li >= 0 && LEVELS[li] ? ' · ' + (posDe(li) + 1) + ' · ' + mulEsc(LEVELS[li].n) : '');
+}
 function mulPinta() {
   if (MUL.on) return;
   var h = fasCab('👥 ' + TT('Multijugador'), 'menu'), v = MUL.vista;
@@ -104871,13 +104880,16 @@ function mulPinta() {
     h += '<div class="mu-lista">' + mulLista() + '</div>';
     if (RED.host) {
       MUL.elige = li = mulEligeDefecto();
-      h += '<p class="mu-t">' + TT('Circuito') + '</p><div class="mu-cir">' + C.map(function (l) { return '<button class="mu-c' + (l === li ? ' sel' : '') + '" data-act="mu:li:' + l + '"><b>' + (posDe(l) + 1) + '</b>' + mulEsc(LEVELS[l].n) + '</button>'; }).join('') + '</div>' +
-        (MUL.nota ? '<p class="mu-aviso">' + mulEsc(MUL.nota) + '</p>' : '') +
-        '<button class="b1" data-act="mu:go">' + TT('¡A correr!') + '</button>' +
+      var JJ = Object.keys(MUL_J);
+      if (JJ.length > 1) h += '<p class="mu-t">' + TT('Juego') + '</p><div class="mu-cir mu-jue">' + JJ.map(function (k) { return '<button class="mu-c' + (k === MUL.juego ? ' sel' : '') + '" data-act="mu:j:' + k + '"><b>' + MUL_J[k].ico + '</b>' + TT(MUL_J[k].nom) + '</button>'; }).join('') + '</div>';
+      if (MUL.juego === 'carrera') h += '<p class="mu-t">' + TT('Circuito') + '</p><div class="mu-cir">' + C.map(function (l) { return '<button class="mu-c' + (l === li ? ' sel' : '') + '" data-act="mu:li:' + l + '"><b>' + (posDe(l) + 1) + '</b>' + mulEsc(LEVELS[l].n) + '</button>'; }).join('') + '</div>';
+      else h += mulJ().opciones();
+      h += (MUL.nota ? '<p class="mu-aviso">' + mulEsc(MUL.nota) + '</p>' : '') +
+        '<button class="b1" data-act="mu:go">' + TT(MUL.juego === 'carrera' ? '¡A correr!' : '¡A jugar!') + '</button>' +
         '<div class="row"><button class="b2" data-act="mu:otra"' + (redLibre() ? '' : ' disabled') + '>+ ' + TT('Otra moto') + '</button><button class="b3" data-act="mu:sal">' + TT('Salir de la partida') + '</button></div>';
     } else {
-      h += '<p class="mu-esp">' + (RED.perdido ? '⚠ ' + TT('Se ha cortado la conexión con la moto 1.') : TT('Esperando a que <b>#</b> elija circuito y dé la salida…').replace('#', mulEsc(mulNom(1)))) +
-        (li >= 0 && LEVELS[li] ? '<br><small>' + TT('Circuito') + ': ' + (posDe(li) + 1) + ' · ' + mulEsc(LEVELS[li].n) + '</small>' : '') + '</p>' +
+      h += '<p class="mu-esp">' + (RED.perdido ? '⚠ ' + TT('Se ha cortado la conexión con la moto 1.') : TT('Esperando a que <b>#</b> elija y dé la salida…').replace('#', mulEsc(mulNom(1)))) +
+        '<br><small>' + mulJ().ico + ' ' + mulTexto() + '</small></p>' +
         '<button class="b3" data-act="mu:sal">' + TT('Salir de la partida') + '</button>';
     }
   }
@@ -104911,7 +104923,7 @@ function mulCamara(vd) {
     var BD = window.BarcodeDetector;
     if (BD && BD.getSupportedFormats) BD.getSupportedFormats().then(function (f) { if (f.indexOf('qr_code') >= 0) C.det = new BD({ formats: ['qr_code'] }); }).catch(function () {});
     mulMira(C);
-  }, function () { mulNotaCam(TT('Sin permiso para la cámara: dáselo en el navegador y vuelve a probar.')); });
+  }, function () { if (MUL.cam === C) mulNotaCam(TT('Sin permiso para la cámara: dáselo en el navegador y vuelve a probar.')); });
 }
 function mulNotaCam(t) { MUL.nota = t; var n = document.querySelector('#scr .mu-cam + .mu-nota'); if (n) n.textContent = t; }
 function mulMira(C) {
@@ -104952,7 +104964,8 @@ function mulUnete(txt) {                                             // con la o
   });
   if (MUL.vista === 'resp') mulPinta();                               // (redUnete ya ha puesto tu número de moto: la tarjeta sale con «Preparando…»)
 }
-function mulSala() { if (RED.host) redManda({ t: 'sala', j: MUL.jug, li: MUL.elige }); }
+function mulSala() { if (RED.host) redManda({ t: 'sala', j: MUL.jug, li: MUL.elige, juego: MUL.juego, op: MUL.op }); }
+function mulPonJuego(k, op) { MUL.juego = MUL_J[k] ? k : 'carrera'; var J = mulJ(); MUL.op = J.limpiaOp ? J.limpiaOp(op || {}) : {}; }
 function mulOtra() {
   MUL.nota = ''; MUL.vista = 'qr'; MUL.qr = '';
   redOferta(function (err, txt) {
@@ -104977,8 +104990,9 @@ redOye(function (pl, m) {
     return;
   }
   if (pl !== 1) return;
-  if (m.t === 'sala') { MUL.jug = mulLimpiaTodos(m.j); MUL.elige = typeof m.li === 'number' ? m.li : -1; if (!MUL.on && MUL.vista === 'sala') mulPinta(); else mulRefresca(); }
-  else if (m.t === 'go') { MUL.jug = mulLimpiaTodos(m.j); mulArranca(mulEnt(m.li, 0, LEVELS.length - 1), mulEnt(m.niv, 1, RIV.nivMax), mulEnt(m.en, 0, 8000)); }
+  if (m.t === 'sala') { MUL.jug = mulLimpiaTodos(m.j); MUL.elige = typeof m.li === 'number' ? m.li : -1; mulPonJuego(m.juego, m.op); if (!MUL.on && MUL.vista === 'sala') mulPinta(); else mulRefresca(); }
+  else if (m.t === 'go' && m.juego && m.juego !== 'carrera' && MUL_J[m.juego]) { MUL.jug = mulLimpiaTodos(m.j); mulPonJuego(m.juego, m.op); MUL_J[m.juego].arranca(m); }
+  else if (m.t === 'go') { MUL.juego = 'carrera'; MUL.jug = mulLimpiaTodos(m.j); mulArranca(mulEnt(m.li, 0, LEVELS.length - 1), mulEnt(m.niv, 1, RIV.nivMax), mulEnt(m.en, 0, 8000)); }
   else if (m.t === 'w' && m.e && typeof m.e === 'object') {
     var med = (redMs(1) || 0) / 2, ed = m.a && typeof m.a === 'object' ? m.a : {};
     for (s in m.e) if (+s !== RED.soy && +s >= 1 && +s <= RED.max && mulD(m.e[s])) MUL.est[+s] = { d: m.e[s], t: now - med - clamp(+ed[s] || 0, 0, 500) };   // lo que pasa por la moto 1 llega con lo que llevaba allí
@@ -104988,6 +105002,7 @@ redOye(function (pl, m) {
 
 /* ---------- la salida ---------- */
 function mulDaSalida() {                                             // quien creó la partida: a correr
+  if (MUL.juego !== 'carrera') { mulJ().salida(); return; }
   var li = MUL.elige = mulEligeDefecto(); if (li == null || li < 0) return;
   var J = {}, s, mio = MUL.jug[1].look.moto, cols = RIV.motos.filter(function (c) { return c !== mio; }), niv = rivPiso(li);
   for (s = 1; s <= RED.max; s++) {
@@ -105008,7 +105023,7 @@ function mulArranca(li, niv, en) {
   G.enMenu = false; showPad(TOUCH); G.started = false;
   startLevel(li);
   G.started = true; G.state = 'play'; hideScr(); auInit(); if (AU.ok && SAVE.mus) musStart(); showIntro(li);
-  MUL.salida = performance.now() + en;
+  MUL.salida = performance.now() + en - (RED.host ? 0 : (redMs(1) || 0) / 2);   // (los demás: menos lo que ha tardado en llegar la salida)
 }
 var rivCrea204 = rivCrea;
 rivCrea = function () {
@@ -105089,16 +105104,18 @@ update = function (dt) {
   if (espera) IN.gas = 0;
   update204(dt);
   if (espera) { IN.gas = gas; if (P.state === 'ride') { P.speed = 0; P.vx = 0; P.x = MUL.px; P.y = P.py = MUL.py; P.a = 0; } G.time = 0; }
-  if (MUL.on && G.mode === 'level' && redEnPartida() && (MUL.tx += dt) >= 1 / 15) { MUL.tx = 0; mulManda(); }
+  if (MUL.on && G.mode === mulJ().modo && redEnPartida() && (MUL.tx += dt) >= 1 / 15) { MUL.tx = 0; mulManda(); }
 };
 function mulYoD() {
   var th = Math.atan(slopeAt(P.y)) + (P.a || 0) * 0.9, b = P.state === 'crash' && P.bike;
   return [Math.round((b ? P.bike.y : P.y) * 10) / 10, Math.round((b ? P.bike.x : P.x) * 10) / 10, Math.round(th * 1000) / 1000, Math.round(P.speed || 0), 0, P.state === 'crash' ? 1 : 0, MUL.miFin >= 0 ? Math.round(MUL.miFin * 100) / 100 : MUL.miFin];
 }
 function mulManda() {
-  if (!RED.host) { redMandaA(1, { t: 'p', d: mulYoD() }, true); return; }
-  var E = { 1: mulYoD() }, A = {}, s, now = performance.now();
+  var yo = MUL.juego === 'carrera' ? mulYoD() : mulJ().yoD();
+  if (!RED.host) { redMandaA(1, { t: 'p', d: yo }, true); return; }
+  var E = { 1: yo }, A = {}, s, now = performance.now();
   for (s in MUL.est) if (+s !== 1 && now - MUL.est[s].t < 3000) { E[s] = MUL.est[s].d; A[s] = Math.round(now - MUL.est[s].t); }
+  if (MUL.juego !== 'carrera') { if (mulJ().extraE) mulJ().extraE(E); redManda({ t: 'w', e: E, a: A, q: Math.round(now - (MUL.base || now)) }, true); return; }   // q: el reloj de la partida en el móvil 1 (para que los demás lo igualen)
   RIV.L.forEach(function (R) { if (!R.net) E[R.slot] = [Math.round(R.y * 10) / 10, Math.round(R.x * 10) / 10, Math.round(R.th * 1000) / 1000, Math.round(R.v), 0, R.cae ? 1 : 0, R.fin != null ? Math.round((R.tf || 0) * 100) / 100 : -1]; });
   redManda({ t: 'w', e: E, a: A }, true);
 }
@@ -105126,7 +105143,7 @@ koLevel = function () { if (MUL.on) { P.hp = 1; respawn(); return; } koLevel204(
 var finishLevel204 = finishLevel;
 finishLevel = function () {
   if (!MUL.on) { finishLevel204(); return; }
-  MUL.miFin = G.time;
+  MUL.miFin = Math.round(G.time * 100) / 100;
   var K = ['st', 'u', 'pts', 'tm', 'fl', 'pos', 'rivL', 'rivS', 'rivW', 'fas'], copia = {};
   K.forEach(function (k) { copia[k] = SAVE[k] === undefined ? undefined : JSON.parse(JSON.stringify(SAVE[k])); });
   finishLevel204();
@@ -105193,6 +105210,8 @@ menuAct = function (a) {
   if (p[1] === 'otra') { mulOtra(); return true; }
   if (p[1] === 'lee') { MUL.nota = ''; MUL.vista = 'cam'; mulPinta(); return true; }
   if (p[1] === 'sala') { mulParaCamara(); MUL.nota = ''; MUL.vista = 'sala'; mulPinta(); return true; }
+  if (p[1] === 'j') { if (RED.host && MUL_J[p[2]]) { mulPonJuego(p[2], MUL.op); SFX.pick(4); mulSala(); mulPinta(); } return true; }
+  if (p[1] === 'op') { if (RED.host && mulJ().limpiaOp) { var o = {}; for (var k in MUL.op) o[k] = MUL.op[k]; o[p[2]] = +p[3]; MUL.op = mulJ().limpiaOp(o); SFX.pick(2); mulSala(); mulPinta(); } return true; }
   if (p[1] === 'li') { var l = +p[2]; if (mulCircuitos().indexOf(l) >= 0) { MUL.elige = l; SFX.pick(l % 8); mulSala(); mulPinta(); } return true; }
   if (p[1] === 'go') { if (RED.host) mulDaSalida(); return true; }
   if (p[1] === 'vuelta') { if (RED.host) { redManda({ t: 'vuelta' }); mulVuelta(); mulSala(); } return true; }
@@ -105280,9 +105299,249 @@ window.__MUL = { get M() { return MUL; }, get R() { return RED; }, lee: function
     'Esperando a que <b>#</b> elija la siguiente…': ['Waiting for <b>#</b> to pick the next one…', 'Menunggu <b>#</b> memilih berikutnya…'],
     'retirado': ['retired', 'mundur'], 'en carrera…': ['racing…', 'masih balapan…'],
     'Los demás siguen corriendo.': ['The others keep racing.', 'Yang lain tetap balapan.'], 'Dejar la carrera': ['Leave the race', 'Tinggalkan balapan'],
+    'Juego': ['Game', 'Permainan'], 'Carrera de ofrendas': ['Offering race', 'Balapan sesaji'], '¡A jugar!': ['Let\'s play!', 'Ayo main!'],
+    'Esperando a que <b>#</b> elija y dé la salida…': ['Waiting for <b>#</b> to choose and start…', 'Menunggu <b>#</b> memilih dan memulai…'],
     'En partida': ['In a game', 'Dalam permainan'], 'Por la wifi': ['Over wifi', 'Lewat wifi'], '¡Preparados!': ['Get ready!', 'Bersiap!'], 'Preparando el código…': ['Preparing the code…', 'Menyiapkan kode…']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza juegos/pesadilla/722_pesadilla_multi.js*/
+/* ================================================================
+   V205 · PITIK NIGHTMARE, MULTIJUGADOR (POR LA WIFI)
+   Jose Javier (19-10-2026): «crea un multijugador de Pitik Nightmare
+   (…) el que la crea puede elegir el número de fila, 30, 40… hasta 120
+   o a quien llegue más lejos como está ahora».
+   - En la sala (598), quien crea elige «🌙 Pitik Nightmare» y la meta:
+     30, 40, … 120 filas, o «Sin fin» (gana quien llegue más lejos).
+   - LA MISMA CALLE PARA TODOS: la calle sale de una semilla que manda
+     quien crea (pkxGenera ya iba con mulberry), y lo que pasa por ella
+     (motos, coches, troncos) depende solo del tiempo (pkxX): con un
+     reloj común desde la salida, en todos los móviles pasa lo mismo a
+     la vez. Cada uno juega su Pitik en su móvil (los toques y los
+     golpes, los suyos) y ve a los demás en la calle, con su color y su
+     nombre (como en las carreras: el del registro, o «Pitik N»).
+   - Cuenta atrás común; hasta el ¡YA! no se salta. La pesadilla sube a
+     la vez para todos.
+   - Con meta: la cinta de cuadros 🏁 en su fila; al cruzarla, «¡META!» y
+     se para tu reloj. Gana el primero en llegar; un golpe y te
+     despiertas (como siempre): quedas con tus filas. Sin fin: un golpe
+     y te despiertas; gana quien llegue más lejos.
+   - Arriba a la derecha, cómo vais (el puesto de cada uno y sus filas).
+     Al acabar, la tarjeta con el orden de todos, que se completa según
+     terminan; quien creó la partida vuelve a la sala con «Otra partida».
+   - Los frangipanis van al bolsillo y tu récord cuenta, como siempre.
+   PKM.vivo = false: Pitik Nightmare no sale en el multijugador.
+   ================================================================ */
+var PKM = { vivo: true, maxR: 0, tRow: 0, metas: [30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 0], v: {}, cols: ['#ffd23f', '#5fb4ff', '#ff7aa8', '#7ee08a', '#c79bff', '#ffa94d'] };
+function pkmCol(s) { return PKM.cols[(s - 1) % PKM.cols.length]; }
+function pkmNom(s) { var j = MUL.jug[s]; return j && j.nom ? j.nom : 'Pitik ' + s; }
+function pkmOn() { return MUL.on && MUL.juego === 'pkx' && !!PKQ; }
+if (PKM.vivo) MUL_J.pkx = {
+  ico: '🌙', nom: 'Pitik Nightmare', ia: false, modo: 'pkx',
+  limpiaOp: function (op) { var m = mulEnt(op && op.meta, 0, 120); return { meta: PKM.metas.indexOf(m) >= 0 ? m : 0 }; },
+  opciones: function () {
+    var m = MUL.op.meta || 0;
+    return '<p class="mu-t">' + TT('Meta') + '</p><div class="mu-cir">' + PKM.metas.map(function (n) {
+      return '<button class="mu-c' + (n === m ? ' sel' : '') + '" data-act="mu:op:meta:' + n + '">' + (n ? '<b>' + n + '</b>' + TT('filas') : '<b>∞</b>' + TT('Sin fin')) + '</button>';
+    }).join('') + '</div><p class="mu-nota">' + (m ? TT('Gana el primero en llegar a la fila #.').replace('#', m) : TT('Gana quien llegue más lejos.')) + ' ' + TT('Un golpe y te despiertas.') + '</p>';
+  },
+  texto: function () { var m = MUL.op.meta || 0; return 'Pitik Nightmare · ' + (m ? TT('hasta la fila #').replace('#', m) : TT('sin fin: quien llegue más lejos')); },
+  salida: function () {
+    var J = {}, s; for (s = 1; s <= RED.max; s++) if (MUL.jug[s] && !MUL.jug[s].ia && (s === 1 || (RED.conex[s] && RED.conex[s].vivo))) J[s] = MUL.jug[s];
+    MUL.jug = J;
+    var m = { t: 'go', juego: 'pkx', op: MUL.op, sem: 1 + Math.floor(Math.random() * 0xfffff), en: 4200, j: J };
+    redManda(m); this.arranca(m);
+  },
+  arranca: function (m) {
+    mulParaCamara();
+    MUL.libre0 = RIV.libre; MUL.niv0 = RIV.nivFijo; MUL.vivo0 = RIV.vivo;   // (lo que mulFinCarrera devuelve)
+    MUL.on = true; MUL.juego = 'pkx'; MUL.miFin = -1; MUL.est = {}; MUL.tx = 0; MUL.cortado = !!RED.perdido; MUL.nota = ''; PKM.v = {}; PKM.maxR = 0; PKM.tRow = 0; PKM.bMin = null; PKM.nb = 0;
+    var en = mulEnt(m.en, 0, 8000);
+    MUL.base = performance.now() - (RED.host ? 0 : (redMs(1) || 0) / 2); MUL.salida = MUL.base + en;   // (los demás: menos lo que ha tardado en llegar la salida)
+    if (typeof FAS !== 'undefined') FAS.activo = null;
+    pkxStart();
+    var Q = PKQ; Q.rn = mulberry(mulEnt(m.sem, 1, 0xfffff) + 7); Q.gen = 0; Q.filas = {}; pkxGenera(40); Q.est = 'cuenta';
+    auInit(); if (AU.ok && SAVE.mus) musStart();
+  },
+  yoD: function () {
+    var Q = PKQ; if (!Q) return [0, 0, 0, 0, 1, 0, -1];
+    var p = Q.p, rf = p.hop ? lerp(p.hop.r0, p.hop.r1, Math.min(1, p.hop.t)) : p.r;
+    var est = Q.fin ? (Q.fin.tipo === 'meta' ? 2 : 1) : 0;
+    return [Math.round(p.x * 10) / 10, Math.round(rf * 100) / 100, Math.round(p.z * 10) / 10, Math.round(p.h * 100) / 100, est, Math.max(0, Q.maxR - 2), est === 2 ? MUL.miFin : PKM.tRow];   // el último: con meta, cuándo llegó; si no, cuándo llegó a su fila más lejana (para desempatar)
+  }
+};
+/* el reloj de la calle, igualado con el del móvil 1: cada mensaje suyo dice cuánto lleva; lo que tarda en llegar solo puede retrasarlo,
+   así que la mejor cuenta es la que deja la salida más temprano (la que menos ha tardado) */
+redOye(function (pl, m) {
+  if (pl !== 1 || RED.host || m.t !== 'w' || typeof m.q !== 'number' || !isFinite(m.q) || !pkmOn()) return;
+  var b = performance.now() - m.q - (redMs(1) || 0) / 2;
+  PKM.nb = (PKM.nb || 0) + 1; if (PKM.bMin == null || b < PKM.bMin) PKM.bMin = b;
+  if (PKM.nb >= 4 && Math.abs(PKM.bMin - MUL.base) < 1500) { var d = PKM.bMin - MUL.base; MUL.base += d; MUL.salida += d; }
+});
+/* hasta el ¡YA! no se salta */
+var pkxPide722 = pkxPide;
+pkxPide = function (dir) { if (pkmOn() && PKQ.est === 'cuenta') return; pkxPide722(dir); };
+/* el reloj, el de todos; la salida; la meta */
+var pkxUpdate722 = pkxUpdate;
+pkxUpdate = function (dt) {
+  var on = pkmOn(), Q = PKQ, now = performance.now();
+  if (on) {
+    if (Q.est === 'cuenta' && now >= MUL.salida) { Q.est = 'juego'; pop(TT('¡YA!'), 0, (Q.p.r + 2) * PKX.C, '#ffe27a', 1.4); SFX.pick(7); }
+    if (G.state === 'play') Q.t = Math.max(0, (now - MUL.base) / 1000) - dt;      // pkxUpdate le suma dt: queda en el reloj de todos
+  }
+  pkxUpdate722(dt);
+  if (!on || !PKQ) return;
+  Q = PKQ;
+  if (Q.maxR !== PKM.maxR) { PKM.maxR = Q.maxR; PKM.tRow = Math.round(Math.max(0, now - MUL.salida) / 10) / 100; }
+  if (!Q.fin && MUL.op.meta && Q.maxR - 2 >= MUL.op.meta) {                       // ¡meta!
+    Q.fin = { tipo: 'meta', t: 0 }; MUL.miFin = Math.round((now - MUL.salida) / 10) / 100;   // (redondeado como se manda: el mismo tiempo en todas las tarjetas)
+    SFX.win(); petals(Q.p.x, Q.p.r * PKX.C + 30, 24); pop(TT('¡META!'), Q.p.x, Q.p.r * PKX.C + 26, '#ffe27a', 1.5);
+  }
+  var k = expo(16, dt), s, d, R;                                                  // los demás, sin tirones
+  for (s in MUL.est) {
+    d = MUL.est[s].d; R = PKM.v[s];
+    if (!R) R = PKM.v[s] = { x: d[0], rf: d[1], z: d[2], h: d[3], muerto: 0 };
+    if (Math.abs(d[1] - R.rf) > 3) { R.x = d[0]; R.rf = d[1]; }
+    R.x += (d[0] - R.x) * k; R.rf += (d[1] - R.rf) * k; R.z = d[2]; R.h = d[3];
+    R.muerto = d[4] === 1 ? R.muerto + dt : 0;
+  }
+};
+/* la meta: Pitik, contento (no despierto) */
+var pkxPitik722 = pkxPitik;
+pkxPitik = function (g) {
+  var Q = PKQ, f = Q && Q.fin;
+  if (f && f.tipo === 'meta') { Q.fin = null; try { pkxPitik722(g); } finally { Q.fin = f; } return; }
+  pkxPitik722(g);
+};
+/* los demás Pitik, en su fila (después de lo de esa fila, como el tuyo) */
+var pkxCosas722 = pkxCosas;
+pkxCosas = function (g, F, r) {
+  pkxCosas722(g, F, r);
+  if (!pkmOn()) return;
+  for (var s in PKM.v) { var R = PKM.v[s], e = MUL.est[s]; if (!e || Math.round(R.rf) !== r || R.muerto > 2.5) continue; pkmPitik(g, +s, R, e.d); }
+};
+function pkmPitik(g, s, R, d) {
+  var C = PKX.C, y = R.rf * C, col = pkmCol(s), o = { t: G.t + s * 0.7, k: PKX.kPitik, anda: false }, hop = Math.abs(R.rf - Math.round(R.rf)) > 0.06;
+  glow(g, R.x, y, 7, col, 0.45); shadow(g, R.x, y, 4.2, 2.8, 0);
+  if (hop) o.salto = 0.7;
+  if (d[4] === 1) { o.est = 'ko'; o.estrellas = R.muerto; o.salto = 0; } else if (d[4] === 2) o.est = 'feliz';
+  var v0 = PTR.vivo, e0 = PTR.estilo, a0 = K3.alfa; PTR.vivo = true; PTR.estilo = 'redondo'; K3.alfa = 0.88;
+  try { scr(g); pitik3D(g, R.x, y, R.z, R.h, o); } finally { PTR.vivo = v0; PTR.estilo = e0; K3.alfa = a0; }
+  var p = pkxP(R.x, y, 30); scr(g);
+  g.save(); g.font = '900 11px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 3.4; g.strokeStyle = INK;
+  var t = pkmNom(s); g.strokeText(t, p[0], p[1]); g.fillStyle = col; g.fillText(t, p[0], p[1]); g.restore();
+}
+/* la cinta de la meta, en su fila */
+var pkxRecord722 = pkxRecord;
+pkxRecord = function (g, X) {
+  pkxRecord722(g, X);
+  if (!pkmOn() || !MUL.op.meta) return;
+  var C = PKX.C, y = (MUL.op.meta + 2 - 0.5) * C, n = 18, i, a, b;
+  for (i = 0; i < n; i++) {                                                       // cuadros blancos y negros, dos filas
+    var x0 = -X + (2 * X) * i / n, x1 = -X + (2 * X) * (i + 1) / n;
+    pkxQuad(g, pkxP(x0, y - 2.2), pkxP(x1, y - 2.2), pkxP(x1, y), pkxP(x0, y), i % 2 ? '#111' : '#f4f4f4');
+    pkxQuad(g, pkxP(x0, y), pkxP(x1, y), pkxP(x1, y + 2.2), pkxP(x0, y + 2.2), i % 2 ? '#f4f4f4' : '#111');
+  }
+  a = pkxP(-PKX.cols * C, y + 2, 0); g.save(); g.font = '900 13px ' + FONT; g.textAlign = 'left'; g.textBaseline = 'bottom'; g.lineJoin = 'round'; g.lineWidth = 3.5; g.strokeStyle = INK;
+  b = '🏁 ' + TT('META') + ' · ' + MUL.op.meta; g.strokeText(b, a[0], a[1] - 3); g.fillStyle = '#ffffff'; g.fillText(b, a[0], a[1] - 3); g.restore();
+};
+/* cómo vais: el orden (y, para la tarjeta del final, lo mismo con más detalle) */
+function pkmOrden() {
+  var Q = PKQ, e0 = Q && Q.fin ? (Q.fin.tipo === 'meta' ? 2 : 1) : 0, A = [{ s: RED.soy, yo: true, nom: TT('Tú'), n: Q ? Math.max(0, Q.maxR - 2) : 0, est: e0, tm: e0 === 2 ? MUL.miFin : PKM.tRow }], s, d;
+  for (s = 1; s <= RED.max; s++) {
+    if (s === RED.soy || !MUL.jug[s] || MUL.jug[s].ia) continue;
+    d = MUL.est[s] ? MUL.est[s].d : null;
+    A.push({ s: s, nom: pkmNom(s), n: d ? d[5] : 0, est: d ? d[4] : 0, tm: d ? d[6] : -1, sin: !d });
+  }
+  A.sort(function (a, b) {
+    if (a.est === 2 && b.est === 2) return a.tm - b.tm;
+    if (a.est === 2) return -1; if (b.est === 2) return 1;
+    if (b.n !== a.n) return b.n - a.n;
+    if (a.tm !== b.tm) return a.tm - b.tm;                                       // empate a filas: quien llegó antes a esa fila
+    return a.s - b.s;
+  });
+  return A;
+}
+var pkxHUD722 = pkxHUD;
+pkxHUD = function (g) {
+  pkxHUD722(g);
+  if (!pkmOn()) return;
+  var Q = PKQ, r = (MUL.salida - performance.now()) / 1000, A = pkmOrden(), i, a, y, t;
+  g.save(); g.lineJoin = 'round'; g.strokeStyle = INK;
+  g.textAlign = 'right'; g.textBaseline = 'middle'; g.font = '900 12px ' + FONT; g.lineWidth = 3.5;   // cómo vais (arriba a la derecha, bajo la pausa)
+  for (i = 0; i < A.length; i++) {
+    a = A[i]; y = 72 + i * 17; t = (i + 1) + 'º ' + a.nom + ' · ' + (a.est === 2 ? '🏁' : a.n) + (a.est === 1 ? ' 💤' : '');
+    g.strokeText(t, V.w - 10, y); g.fillStyle = a.yo ? '#ffe27a' : pkmCol(a.s); g.fillText(t, V.w - 10, y);
+  }
+  if (MUL.op.meta) { g.textAlign = 'center'; t = '🏁 ' + TT('Meta') + ': ' + MUL.op.meta; g.strokeText(t, V.w / 2, 102); g.fillStyle = '#ffffff'; g.fillText(t, V.w / 2, 102); }
+  if (MUL.cortado) { g.textAlign = 'center'; t = '📶 ' + TT('Se ha cortado la conexión con la moto 1.'); g.strokeText(t, V.w / 2, 122); g.fillStyle = '#ffb3a3'; g.fillText(t, V.w / 2, 122); }
+  if (Q.est === 'cuenta') {                                                        // la cuenta atrás
+    var n = Math.ceil(Math.max(0, r)), k = 1 + 0.4 * (r - Math.floor(r)); t = r > 3 ? TT('¡Preparados!') : '' + n;
+    if (r <= 3 && MUL.ult !== n) { MUL.ult = n; SFX.pick(2); }
+    g.textAlign = 'center'; g.translate(V.w / 2, V.h * 0.4); g.scale(t.length > 2 ? 1 : k, t.length > 2 ? 1 : k);
+    g.font = '900 ' + (t.length > 2 ? 34 : 92) + 'px ' + FONT; g.lineWidth = t.length > 2 ? 7 : 13; g.strokeText(t, 0, 0); g.fillStyle = '#ffe27a'; g.fillText(t, 0, 0);
+  }
+  g.restore(); g.textAlign = 'left'; g.textBaseline = 'top';
+};
+/* el final: la tarjeta con todos (se completa según terminan) */
+var pkxFin722 = pkxFin;
+pkxFin = function () {
+  if (!pkmOn()) { pkxFin722(); return; }
+  if (G.card) return; G.card = true;
+  var Q = PKQ, n = Math.max(0, Q.maxR - 2), rec0 = Q.rec;
+  SAVE.pkx = SAVE.pkx || { rec: 0, n: 0 }; if (n > rec0) SAVE.pkx.rec = n; SAVE.pkx.fl = (SAVE.pkx.fl || 0) + Q.fl;
+  G.fl = Q.fl; guardaFlores(G.fl); writeSave(); pokiStop(); pkxBotones(false);
+  card('<h2 class="stk">' + TT(Q.fin && Q.fin.tipo === 'meta' ? '¡META!' : '¡Te has despertado!') + '</h2><p class="sub2">🌙 ' + mulTexto() + '</p>' +
+    '<div class="mu-res">' + pkmClasi() + '</div>' +
+    '<p class="mu-flo">✿ +' + Q.fl + ' ' + TT('frangipanis al bolsillo') + (n > rec0 && rec0 > 0 ? ' · 🏆 ' + TT('¡Nuevo récord!') : '') + '</p>' +
+    '<div class="acc">' + (RED.host ? '<button class="b1" data-act="mu:vuelta">' + TT('Otra partida') + '</button>' : '<p class="mu-esp">' + TT('Esperando a que <b>#</b> elija la siguiente…').replace('#', mulEsc(mulNom(1))) + '</p>') +
+    '<div class="row"><button class="b3" data-act="mu:sal">' + TT('Salir de la partida') + '</button></div></div>', 'win mu-win');
+  clearInterval(MUL.tm);
+  MUL.tm = setInterval(function () { var r = document.querySelector('#scr .mu-res'); if (!r || !MUL.on) { clearInterval(MUL.tm); return; } r.innerHTML = pkmClasi(); }, 600);
+};
+function pkmClasi() {
+  var A = pkmOrden(), mi = 0, h;
+  A.forEach(function (a, i) { if (a.yo) mi = i + 1; });
+  h = '<div class="clasi p' + mi + ' mu-cl"><div class="cl-p"><i>' + (['', '🥇', '🥈', '🥉'][mi] || '🌙') + '</i><b>' + TT(RIV_TIT[mi] || '') + '</b><small>' + rivOrd(mi) + ' ' + TT('de') + ' ' + A.length + '</small></div><ol>';
+  A.forEach(function (a) {
+    h += '<li' + (a.yo ? ' class="yo"' : '') + '><i style="background:' + pkmCol(a.s) + '"></i>' + mulEsc(a.nom) +
+      ' <em>' + (a.est === 2 ? '🏁 ' + fmtT(a.tm) + '.' + Math.floor((a.tm % 1) * 10) : a.n + ' ' + TT(a.n === 1 ? 'fila' : 'filas') + (a.est === 1 ? ' 💤' : ' · ' + TT('jugando…'))) + '</em></li>';
+  });
+  return h + '</ol></div>';
+}
+(function () {
+  var N = {
+    'Meta': ['Finish', 'Finis'], 'META': ['FINISH', 'FINIS'], '¡META!': ['FINISH!', 'FINIS!'], 'Sin fin': ['Endless', 'Tanpa akhir'],
+    'Gana el primero en llegar a la fila #.': ['The first to reach row # wins.', 'Yang pertama sampai baris # menang.'],
+    'Gana quien llegue más lejos.': ['Whoever gets furthest wins.', 'Yang paling jauh menang.'], 'Un golpe y te despiertas.': ['One hit and you wake up.', 'Sekali kena, kamu terbangun.'],
+    'hasta la fila #': ['to row #', 'sampai baris #'], 'sin fin: quien llegue más lejos': ['endless: whoever gets furthest', 'tanpa akhir: yang paling jauh'],
+    'Otra partida': ['Another game', 'Main lagi'], 'jugando…': ['playing…', 'masih main…']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza nucleo/613_todo_abierto.js*/
+/* ================================================================
+   V205 · POR AHORA, TODO ABIERTO
+   Jose Javier (19-10-2026), tras probar el multijugador: «pon abiertas
+   todas las pantallas para jugar por ahora».
+   Todas las carreras (en el mapa, en las fases y para elegir en el
+   multijugador), las pantallas del menú (taxi, paseo libre, reparto,
+   el primo, encargos…), los bonus y los pasos de las fases se pueden
+   jugar sin haber ganado lo de antes. No toca el guardado: la
+   historia sigue apuntando lo que de verdad has hecho («Continuar»
+   sigue llevando a lo que toca) y, al apagarlo, todo vuelve a estar
+   como estaba. No da las herramientas de creador.
+   Los vídeos de la historia siguen como estaban.
+   ABRE.vivo = false: cada cosa se abre a su tiempo, como en la V204.
+   ================================================================ */
+var ABRE = { vivo: true };
+(function () {
+  var nivelAbierto204 = nivelAbierto, reqAbierto204 = reqAbierto, fasAbierto204 = fasAbierto, bonusAbierto204 = bonusAbierto, pkAbierta204 = pkAbierta;
+  nivelAbierto = function (li) { return (ABRE.vivo && !!LEVELS[li]) || nivelAbierto204(li); };
+  reqAbierto = function (id) { return ABRE.vivo || reqAbierto204(id); };
+  fasAbierto = function (id) { return ABRE.vivo || fasAbierto204(id); };
+  bonusAbierto = function (id) { return ABRE.vivo || bonusAbierto204(id); };
+  pkAbierta = function (n) { return ABRE.vivo || pkAbierta204(n); };
 })();
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
