@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V206</title>
+<title>Bali Rush Completo V207</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V206', FECHA = '19-10-2026';
+var VERSION = 'Completo V207', FECHA = '19-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -99406,6 +99406,378 @@ mostrarAviso = function (s, ico) {
   var m = /\+ *(\d+(?:\.\d+)?)px/.exec(el.style.top || ''), ya = m ? +m[1] : 80;   // donde lo puso el espejo (569), o el de siempre (80)
   if (VEL.abajo + 8 > ya) el.style.top = 'calc(env(safe-area-inset-top,0px) + ' + Math.round(VEL.abajo + 8) + 'px)';
 };
+/*#pieza juegos/carreras/599_autoescuela_calienta.js*/
+/* ================================================================
+   V207 · LA AUTOESCUELA, UN PRECALENTAMIENTO (más clara, con ✔)
+   Jose Javier (19-10-2026): «Mejora la autoescuela "un precalentamiento
+   siempre es bueno", que sea más claro: frena, pasa los conos algo más
+   grandes y separados (cuentes los conos), pita al perro!! salga como
+   check, esquiva un coco check, gana la carrera; lo de recoger paquetes
+   y personas ya está en el otro […]; que ponga la parte de ya sé
+   conducir para quien quiera saltárselo». Preguntado qué pruebas
+   quedan: «esas 5, curvas, flores, esquiva objetos quizás». Y luego:
+   «y el cruce, que sale en la primera pantalla solo».
+   Nueve pruebas; cada una, al hacerla, da su ✔ (o su ✘):
+     1 Frena (antes de la raya) · 2 Pasa los conos (más grandes, más
+     separados y contados: 3/7, en zigzag y sin tocarlos) · 3 Pita al
+     perro (dormido en la carretera) · 4 Esquiva un coco (la palmera lo
+     suelta donde vas) · 5 El cruce (el de la carrera 1, con tráfico) ·
+     6 Esquiva obstáculos (baches, piedras y conos, sin tocar nada) ·
+     7 Curvas (sin tocar los conos ni caerte) · 8 Recoge flores (el 80 %)
+     · 9 Gana la carrera (contra Putu y Nengah).
+   - Fuera el paquete y la abuela (están en el carnet de la ciudad).
+   - Arriba, el cartel: la prueba en grande, qué hacer, cómo va (3/7) y
+     una tira con las nueve: ✔ verde, ✘ roja, la de ahora marcada. Al
+     hacer cada una, un sello grande en medio. En la del perro, el botón
+     TIN TIN brilla.
+   - En la autoescuela solo está lo de cada prueba: sin vacas, ofrendas
+     en el suelo, palmeras ni perros de más (en la carrerita, como antes).
+   - La tarjeta de antes: «Un precalentamiento siempre es bueno», las
+     nueve pruebas y «Ya sé conducir ▶» (a la carrera 1). Al final, las
+     nueve con su ✔.
+   ACA.vivo = false → la autoescuela de la V206 (8 tramos, con el paquete
+   y la abuela).
+   ================================================================ */
+var ACA = { vivo: true, activo: false, boc: false,
+  D: { n: 'Ubud', t: 'Autoescuela', dest: 'a la meta de la autoescuela', seed: 4401, tod: 'manana', inv: 0, secs: [
+    { len: 850, th: 'arrozal', curv: 0, hill: 0, g: [['aesParada']] },                                          // 1 frena
+    { len: 1900, th: 'arrozal', curv: 0, hill: 3, g: [['aesZigzag']] },                                         // 2 conos
+    { len: 760, th: 'pueblo', curv: 0, hill: 2, g: [['perrosDeco']] },                                          // 3 el perro (se pone en aesTrasMontar)
+    { len: 900, th: 'arrozal', curv: 0, hill: 2, g: [] },                                                       // 4 el coco (la palmera, en aesTrasMontar)
+    { len: 1100, th: 'pueblo', curv: 0, hill: 2, g: [['cruce'], ['perrosDeco']] },                              // 5 el cruce
+    { len: 1500, th: 'pueblo', curv: 0.1, hill: 2, g: [['aesObst'], ['perrosDeco']] },                          // 6 obstáculos
+    { len: 1800, th: 'arrozal', curv: 0.6, giro: 1.45, hill: 6, g: [['aesCurvas']] },                           // 7 curvas
+    { len: 1000, th: 'arrozal', curv: 0.15, hill: 4, g: [['aesFlores']] },                                     // 8 flores
+    { len: 1500, th: 'arrozal', curv: 0.3, hill: 8, g: [['palmeras', 0.4]] },                                   // 9 la carrerita
+    { len: 500, th: 'pueblo', curv: 0, g: [['meta'], ['penjor']] }] },
+  pasos: [
+    { id: 'frena', ico: '🛑', t: 'Frena', m: 'GAS para arrancar. Luego FRENO hasta pararte antes de la raya blanca', k: '↑ para arrancar. Luego ↓ hasta pararte antes de la raya blanca', bien: '¡Bien parado!', mal: '¡Te has pasado la raya!' },
+    { id: 'conos', ico: '🔶', t: 'Pasa los conos', m: 'En zigzag: uno por un lado y el siguiente por el otro, sin tocarlos', k: 'En zigzag (← →): uno por un lado y el siguiente por el otro, sin tocarlos' },
+    { id: 'perro', ico: '🐕', t: 'Pita al perro', m: 'Hay un perro dormido en la carretera: ¡pítale con TIN TIN!', k: 'Hay un perro dormido en la carretera: ¡pítale con Espacio!', bien: '¡Le has pitado!', mal: '¡Había que pitarle!' },
+    { id: 'coco', ico: '🥥', t: 'Esquiva un coco', m: 'La palmera suelta un coco donde vas: mira su sombra y ¡apártate!', k: 'La palmera suelta un coco donde vas: mira su sombra y ¡apártate (← →)!', bien: '¡Esquivado!', mal: '¡Coco en la cabeza!' },
+    { id: 'cruce', ico: '🚦', t: 'El cruce', m: '¡Despacito! Frena antes y mete la rueda poco a poco: te dejan pasar', k: '¡Despacito! Frena (↓) antes y mete la rueda poco a poco: te dejan pasar', bien: '¡Cruce superado!', mal: '¡Al suelo en el cruce!' },
+    { id: 'obst', ico: '🪨', t: 'Esquiva obstáculos', m: 'Baches, piedras y conos: pásalos sin tocar ninguno', k: 'Baches, piedras y conos (← →): pásalos sin tocar ninguno', bien: '¡Sin tocar nada!' },
+    { id: 'curvas', ico: '↪️', t: 'Curvas', m: 'Frena ANTES de la curva, gira dentro y acelera al salir', k: 'Frena (↓) ANTES de la curva, gira dentro y acelera (↑) al salir', bien: '¡Curvas limpias!' },
+    { id: 'flores', ico: '🌸', t: 'Recoge flores', m: 'Pasa por encima de la tira de flores: coge casi todas', k: 'Pasa por encima de la tira de flores (← →): coge casi todas' },
+    { id: 'carrera', ico: '🏁', t: 'Gana la carrera', m: '¡Putu y Nengah salen a tu lado! Llega el primero a la meta', k: '¡Putu y Nengah salen a tu lado! Llega el primero a la meta', bien: '¡Carrera ganada!' }
+  ],
+  S: { parada: 0, zigzag: 1, perro: 2, coco: 3, cruce: 4, esq: 5, curvas: 6, flores: 7, carrera: 8 },
+  cono: { r: 4, h: 13, golpe: 8 },                                          // algo más grandes (V206: 2,5 · 8 · 5,2)
+  sep: { calle: 85, zigzag: 235, chicane: 190, curva: 80 },                 // y más separados (V206: 70 · 165 · 170 · 65)
+  nZig: 7, flores: 0.8, sello: 1.5,
+  perroY: 430, palmaY: 500 };
+ACA.orig = { D: AES.D, pasos: AES.pasos, S: AES.S, cono: AES.cono, sep: AES.sep };
+function acaPon() {                                                        // al montar la autoescuela: la de ahora (o, con ACA.vivo = false, la de la V206)
+  var o = ACA.vivo ? ACA : ACA.orig;
+  AES.D = o.D; AES.pasos = o.pasos; AES.S = o.S; AES.cono = o.cono; AES.sep = o.sep;
+}
+function acaEn() { return ACA.activo && AES.on && !!AES.st && G.mode === 'level'; }
+
+/* ---------- montar: los conos del zigzag numerados, el perro, la palmera y nada más que lo de las pruebas ---------- */
+var genZigzag206 = GEN.aesZigzag;
+GEN.aesZigzag = function (S) {
+  if (!(ACA.vivo && AES.on)) return genZigzag206(S);
+  for (var k = 0; k < ACA.nZig; k++) place('aesCono', S.y0 + 220 + k * AES.sep.zigzag, 0, { zz: k });
+};
+var aesTrasMontar206 = aesTrasMontar;
+aesTrasMontar = function () {
+  if (!(ACA.vivo && AES.on)) return aesTrasMontar206();
+  var S = AES.S, C = AES.curvas, sC = L.secs[S.carrera], k;
+  function enCarrera(y) { return y > sC.y0 - 100; }
+  L.obras = [];                                                            // sin tramos en obras ni sus conos de adorno
+  L.deco.ground = L.deco.ground.filter(function (d) { return d.s !== BB.cono; });
+  L.stat = L.stat.filter(function (s) { return s.t !== 'ofrenda' || enCarrera(s.y); });   // ni ofrendas en el suelo (en la carrerita, sí)
+  var FUERA = { influ: 1, cobra: 1, palma: 1, vaca: 1, perroZ: 1, perroC: 1, gallo: 1, mono: 1 };
+  L.dyn = L.dyn.filter(function (o) { return !FUERA[o.t] || (o.t !== 'influ' && o.t !== 'cobra' && enCarrera(o.y)); });   // solo lo de cada prueba
+  var yP = L.secs[S.perro].y0 + ACA.perroY, yC = L.secs[S.coco].y0 + ACA.palmaY;
+  AES.perroE = addDyn('perroZ', yP, { u: -hwAt(yP) * 0.12, block: true, dk: false, aes: true });   // el perro, dormido en tu carril
+  AES.palmaE = addDyn('palma', yC, { side: 1, mono: false, v: 0, aes: true });                     // la palmera, con la copa sobre la carretera
+  AES.cocoE = null; AES.cruceE = null;
+  L.dyn.forEach(function (o) { if (o.t === 'cruce') AES.cruceE = o; });
+  L.dyn.sort(function (a, b) { return a.ay - b.ay; });
+  if (C) L.giros.forEach(function (q) {                                    // las curvas: tres conos por fuera y bordillos rojos y blancos (como en la V153)
+    if (q.y < C[0] + 150 || q.y > C[1] - 200) return;
+    for (k = 0; k < 3; k++) { var y = q.y + 70 + k * AES.sep.curva; place('aesCono', y, -q.lado * (hwAt(y) - 9), {}); }
+    for (var s2 = -1; s2 <= 1; s2 += 2) for (var y2 = q.y - 180; y2 < q.y + 240; y2 += 60) place('aesPiano', y2, s2 * hwAt(y2), { lado: s2, len: 60, fase: Math.round(y2 / 10) });
+  });
+  for (k = 0; k < AES.pasos.length; k++) { var y0 = L.secs[k].y0 + (k ? 40 : 160); place('aesTablero', y0, hwAt(y0) + GUT + 5, { n: k + 1 }); }   // el número de cada prueba, a la derecha
+  L.stat.sort(byY);
+  AES.zz = L.stat.filter(function (s) { return s.t === 'aesCono' && s.zz != null; });
+};
+ST.aesCono.flat = function (g, s) { if (!s.caido) { var q = AES.cono.r / 2.5; shadow(g, s.x, s.y, 3.6 * q, 2.4 * q, 0); } };   // la sombra, del tamaño del cono
+
+/* la palmera de la prueba: siempre suelta un coco, uno solo, donde vas a pasar (y la copa, casi en medio de la carretera) */
+var palmaInit206 = ET.palma.init, palmaUpd206 = ET.palma.upd;
+ET.palma.init = function (e) {
+  palmaInit206(e);
+  if (!e.aes) return;
+  e.drop = true; e.gordo = false; e.lean = -e.side * (hwAt(e.y) * 0.86 + GUT + 7);
+};
+ET.palma.upd = function (e, dt) {
+  if (!e.aes) return palmaUpd206(e, dt);
+  e.x = cxAt(e.y) + e.base;
+  var d = e.y - P.y, caida = Math.sqrt(2 * (e.h - 6) / 190);
+  if (!e.dropped && P.state === 'ride' && d > 0 && d / Math.max(P.speed, 60) < caida + 0.04) {
+    e.dropped = true;
+    var copa = e.x + e.lean, tt = d / Math.max(P.speed, 60), tx = clamp(P.x + (P.vx || 0) * tt * 0.6, copa - 60, copa + 60);
+    AES.cocoE = { t: 'coco', x: copa, y: e.y, z: e.h - 6, vz: 0, vxF: (tx - copa) / caida, st: 'fall', gordo: false, espera: 0, aes: true };
+    G.act.push(AES.cocoE);
+    pop(TT('¡Coco!'), copa, e.y + 40, '#ffe27a', 1.1);
+  }
+  if (e.y < P.y - 300) e.dead = true;
+};
+var jolt206 = jolt;
+jolt = function () { if (acaEn()) AES.st.jolts = (AES.st.jolts || 0) + 1; return jolt206.apply(this, arguments); };   // los baches cuentan como golpe
+
+/* ---------- empezar ---------- */
+var startLevel206 = startLevel;
+startLevel = function (li) {
+  acaPon();
+  var r = startLevel206.apply(this, arguments);
+  ACA.activo = !!(ACA.vivo && AES.on && AES.st);
+  acaBocina(false);
+  if (ACA.activo) {
+    var A = AES.st;
+    A.ok = AES.pasos.map(function () { return 0; }); A.val = []; A.ent = {}; A.sello = null; A.jolts = 0;   // ok: 1 ✔ · −1 ✘ · 0 por hacer
+    A.zzOk = 0; A.zzN = 0; A.zzUlt = 0;
+  }
+  return r;
+};
+
+/* ---------- cada fotograma: cada prueba, su ✔ ---------- */
+function acaNota(i, v, val, txt) {
+  var A = AES.st; if (A.ok[i]) return;
+  A.ok[i] = v; if (val != null) A.val[i] = val;
+  var p = AES.pasos[i];
+  A.sello = { t: ACA.sello, T: ACA.sello, ok: v > 0, txt: txt || TT(v > 0 ? p.bien || p.t : p.mal || p.t) };
+  if (v > 0) { SFX.heal(); sparkle(P.x, P.y + 20, 14); } else SFX.eh();
+}
+function acaDe(n, N) { return n + ' ' + TT('de') + ' ' + N; }
+function acaGolpes(n) { return n === 1 ? TT('1 golpe') : n + ' ' + TT('golpes'); }
+function acaConos(A) {                                                    // el zigzag: cada cono que pasas por su lado y sin tocarlo, cuenta
+  var Z = AES.zz || [], i, s, N = Z.length;
+  for (i = 0; i < N; i++) {
+    s = Z[i]; if (s.juzgado) continue;
+    if (P.y < s.y + 3) break;                                             // aún no lo has pasado
+    s.juzgado = true; A.zzN++;
+    var lado = P.x < s.x ? -1 : 1, bien = !s.caido && (!A.zzUlt || lado === -A.zzUlt);   // el primero, por donde quieras; luego, cada uno por el otro lado
+    A.zzUlt = lado;
+    if (bien) { A.zzOk++; pop(A.zzOk + ' / ' + N, s.x, s.y + 22, '#8ff29a', 1.15); SFX.pick(Math.min(7, 1 + A.zzOk)); }
+    else if (!s.caido) pop(TT('¡Por el otro lado!'), s.x, s.y + 22, '#ffb199', 1);
+  }
+  A.val[AES.S.zigzag] = A.zzOk + '/' + N;
+  if (N && A.zzN >= N) acaNota(AES.S.zigzag, A.zzOk === N ? 1 : -1, A.zzOk + '/' + N, A.zzOk === N ? '¡' + acaDe(N, N) + '!' : acaDe(A.zzOk, N) + ' ' + TT('conos'));
+}
+function acaBocina(on) {                                                  // en la prueba del perro, el TIN TIN brilla
+  on = !!on; if (on === ACA.boc) return; ACA.boc = on;
+  var h = document.querySelector('.pb.horn'); if (h) h.classList.toggle('aca-pita', on);
+}
+var update206 = update;
+update = function (dt) {
+  update206(dt);
+  if (!acaEn() || G.state !== 'play') { if (ACA.boc && !(acaEn() && G.state === 'pause')) acaBocina(false); return; }
+  var A = AES.st, S = AES.S, sec = L.secs, i;
+  if (A.sello) { A.sello.t -= dt; if (A.sello.t <= 0) A.sello = null; }
+  if (!A.ok[S.parada]) { if (A.parado) acaNota(S.parada, 1); else if (A.pasada) acaNota(S.parada, -1); }   // 1 · frena (lo mira 582)
+  if (!A.ok[S.zigzag]) acaConos(A);                                        // 2 · los conos
+  var e = AES.perroE;                                                      // 3 · el perro
+  if (e && !A.ok[S.perro]) { if (e.honked && !e.hurt) acaNota(S.perro, 1); else if (e.hurt || (P.state === 'ride' && P.y > e.y + 12)) acaNota(S.perro, -1); }
+  acaBocina(A.paso === S.perro && !A.ok[S.perro]);
+  var c = AES.cocoE;                                                       // 4 · el coco
+  if (!A.ok[S.coco]) { if (c && c.bk) acaNota(S.coco, -1); else if (c && c.st === 'roll') acaNota(S.coco, 1); else if (!c && P.y > sec[S.coco].y1) acaNota(S.coco, -1); }
+  var x = AES.cruceE;                                                      // 5 · el cruce
+  if (x && !A.ok[S.cruce] && (x.done || P.y > x.y + 150)) acaNota(S.cruce, x.crashed ? -1 : 1);
+  [S.esq, S.curvas].forEach(function (k) {                                // 6 y 7 · obstáculos y curvas: sin tocar nada en todo el tramo
+    var s = sec[k], n;
+    if (A.ent[k] == null) { if (P.y >= s.y0) A.ent[k] = A.conos + A.caidas + A.jolts; return; }
+    if (A.ok[k]) return;
+    n = A.conos + A.caidas + A.jolts - A.ent[k]; A.val[k] = n ? acaGolpes(n) : '0';
+    if (P.y > s.y1) acaNota(k, n ? -1 : 1, A.val[k], n ? acaGolpes(n) : null);
+  });
+  var T = AES.tira;                                                        // 8 · las flores
+  if (T && T.n && !A.ok[S.flores]) {
+    A.val[S.flores] = T.got + '/' + T.n;
+    if (P.y > sec[S.flores].y1) { i = T.got >= Math.ceil(T.n * ACA.flores) ? 1 : -1; acaNota(S.flores, i, A.val[S.flores], (i > 0 ? '¡' : '') + acaDe(T.got, T.n) + ' ' + TT('flores') + (i > 0 ? '!' : '')); }
+  }
+};
+var finishLevel206 = finishLevel;
+finishLevel = function () {
+  finishLevel206.apply(this, arguments);
+  if (!acaEn()) return;
+  var A = AES.st, n = RIV.L.length + 1;                                    // 9 · la carrerita
+  acaBocina(false);
+  acaNota(AES.S.carrera, A.pos === 1 ? 1 : -1, rivOrd(A.pos) + ' / ' + n, A.pos === 1 ? null : TT('Llegaste') + ' ' + rivOrd(A.pos));
+};
+
+/* ---------- el cartel de arriba (en lugar del de 582) y el sello ---------- */
+function acaVa(A) {                                                        // a la derecha del título: cómo va la prueba de ahora
+  var S = AES.S, i = A.paso, v = A.ok[i];
+  if (i === S.zigzag) return { t: '🔶 ' + A.zzOk + '/' + (AES.zz || []).length, c: v < 0 ? '#b3261e' : '#2e7d32' };
+  if (i === S.flores && AES.tira) return { t: '🌸 ' + AES.tira.got + '/' + AES.tira.n, c: v < 0 ? '#b3261e' : '#2e7d32' };
+  if ((i === S.esq || i === S.curvas) && !v && A.val[i] && A.val[i] !== '0') return { t: '💥 ' + A.val[i], c: '#b3261e' };
+  if (v) return { t: v > 0 ? '✔' : '✘', c: v > 0 ? '#2e7d32' : '#b3261e' };
+  return null;
+}
+function acaCartel(g, A) {
+  var N = AES.pasos.length, Sp = AES.pasos[A.paso], E = typeof espSitio === 'function' && SAVE.espejo !== 0 ? espSitio() : [0, 0, 0, 0];
+  var w = Math.min(V.w - 20, 420), x = (V.w - w) / 2, y = (E[3] ? E[1] + E[3] + 10 : 40) + (V.w > V.h ? 0 : 6);
+  if (typeof VEL !== 'undefined' && VEL.vivo && VEL.abajo && x < VEL.der) y = Math.max(y, VEL.abajo + 4);   // que no tape el velocímetro ni el reloj
+  var k = A.flash > 0 ? 1 + 0.05 * Math.sin(A.flash * 9) * Math.min(1, A.flash) : 1;
+  var va = acaVa(A), r = 7.5, dx = 19, tira = N * dx;                     // la tira con las nueve, arriba a la derecha (pequeña: lo de lejos de la carretera queda justo debajo del cartel)
+  g.font = '800 12px ' + FONT;
+  var lin = aesLineas(g, TT(TOUCH ? Sp.m : Sp.k), w - 20).slice(0, 2), h = 47 + lin.length * 15;
+  AES.abajo = y + h;
+  g.save(); g.translate(x + w / 2, y); g.scale(k, k); g.translate(-w / 2, 0);
+  rrect(g, 0, 0, w, h, 9, A.flash > 0 ? 'rgba(255,240,190,.97)' : 'rgba(255,248,226,.94)', '#5b3f22', 2.5);
+  var yT = 12, x0 = w - 10 - tira, i, v;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (i = 0; i < N; i++) {
+    var cx = x0 + dx * (i + 0.5), cur = i === A.paso; v = A.ok[i];
+    g.beginPath(); g.arc(cx, yT, cur ? r + 1.5 : r, 0, TAU);
+    g.fillStyle = v > 0 ? '#2e9e5b' : v < 0 ? '#d64b3b' : cur ? '#ffffff' : 'rgba(91,63,34,.10)'; g.fill();
+    g.lineWidth = cur ? 2.2 : 1.2; g.strokeStyle = cur ? '#b3261e' : v ? 'rgba(0,0,0,.22)' : 'rgba(91,63,34,.35)'; g.stroke();
+    if (v) { g.fillStyle = '#ffffff'; g.font = '900 ' + Math.round(r * 1.35) + 'px ' + FONT; g.fillText(v > 0 ? '✔' : '✘', cx, yT + 1); }
+    else if (cur) { g.font = Math.round(r * 1.3) + 'px ' + FONT; g.fillText(AES.pasos[i].ico, cx, yT + 1); }
+    else { g.fillStyle = 'rgba(91,63,34,.55)'; g.font = '900 9px ' + FONT; g.fillText('' + (i + 1), cx, yT + 1); }
+  }
+  g.textAlign = 'left'; g.textBaseline = 'top';
+  g.fillStyle = '#b3261e'; g.font = '900 11px ' + FONT; g.fillText('🛵 ' + TT('AUTOESCUELA') + ' ' + (A.paso + 1) + '/' + N, 10, 6, x0 - 16);
+  g.fillStyle = INK; g.font = '900 17px ' + FONT; g.fillText(Sp.ico + ' ' + TT(Sp.t), 10, 23, w - (va ? 96 : 20));
+  if (va) { g.textAlign = 'right'; g.font = '900 16px ' + FONT; g.fillStyle = va.c; g.fillText(va.t, w - 10, 24); g.textAlign = 'left'; }
+  g.fillStyle = INK; g.font = '800 12px ' + FONT; lin.forEach(function (l, i) { g.fillText(l, 10, 43 + i * 15); });
+  g.restore(); g.textAlign = 'left'; g.textBaseline = 'top';
+}
+function acaSello(g, s) {                                                  // el sello grande al hacer una prueba
+  var e = s.T - s.t, a = Math.min(1, s.t / 0.3), q = e < 0.25 ? 0.35 + 0.65 * Math.sin(e / 0.25 * Math.PI / 2) + 0.12 * Math.sin(e / 0.25 * Math.PI) : 1;
+  var cx = V.w / 2, cy = Math.max((AES.abajo || 0) + 64, V.h * 0.34), R = 30;
+  g.save(); g.globalAlpha = a; g.translate(cx, cy); g.scale(q, q);
+  g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fillStyle = s.ok ? '#2e9e5b' : '#d64b3b'; g.fill(); g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
+  g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 34px ' + FONT; g.fillText(s.ok ? '✔' : '✘', 0, 2);
+  g.font = '900 16px ' + FONT; var tw = Math.min(V.w - 30, g.measureText(s.txt).width + 26);
+  rrect(g, -tw / 2, R + 8, tw, 30, 15, s.ok ? 'rgba(46,158,91,.96)' : 'rgba(214,75,59,.96)', '#ffffff', 2);
+  g.fillStyle = '#ffffff'; g.fillText(s.txt, 0, R + 24, tw - 16);
+  g.restore(); g.textAlign = 'left'; g.textBaseline = 'top';
+}
+var drawHUD206 = drawHUD;
+drawHUD = function (g) {
+  var A = AES.st;
+  if (!acaEn()) return drawHUD206(g);
+  var p0 = A.paso; A.paso = -1;                                            // el cartel de 582, no (va este)
+  try { drawHUD206(g); } finally { A.paso = p0; }
+  if (A.paso < 0) return;
+  if (P.state !== 'finish') acaCartel(g, A);
+  if (A.sello) acaSello(g, A.sello);
+};
+
+/* ---------- las tarjetas: la de antes, la de la llegada, la presentación y la del aviso ---------- */
+(function () {
+  var css = document.createElement('style');
+  css.textContent = '@keyframes acaBrilla{50%{box-shadow:0 0 0 7px rgba(255,226,122,.95),0 0 18px 6px rgba(255,200,60,.8)}}' +
+    '.pb.horn.aca-pita{animation:acaBrilla .7s ease-in-out infinite}' +
+    '.aca-lista{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 10px}' +
+    '.aca-ch{position:relative;background:#fffaf0;border:2px solid #5b3f22;border-radius:10px;padding:5px 3px 6px;text-align:center;font-weight:800;font-size:12.5px;line-height:1.12;color:var(--ink)}' +
+    '.aca-ch i{display:block;font-style:normal;font-size:20px;line-height:1.15}.aca-ch u{display:block;text-decoration:none;font-weight:900;font-size:12px;color:#5b3f22;margin-top:1px}' +
+    '.aca-ch.ok{background:#e1f4e5;border-color:#2e7d32}.aca-ch.mal{background:#fdeae2;border-color:#c0392b}' +
+    '.aca-ch b{position:absolute;top:-7px;right:-5px;width:20px;height:20px;border-radius:50%;color:#fff;font-size:12px;line-height:20px;border:2px solid #fff}' +
+    '.aca-ch.ok b{background:#2e9e5b}.aca-ch.mal b{background:#d64b3b}' +
+    '.aca-dice{font-weight:900;font-style:italic}';
+  document.head.appendChild(css);
+})();
+function acaChips(A) {                                                     // las nueve pruebas, de tres en tres (con su ✔ al final)
+  return '<div class="aca-lista">' + AES.pasos.map(function (p, i) {
+    var v = A ? A.ok[i] : 0, val = A && A.val[i] != null && A.val[i] !== '0' ? '<u>' + A.val[i] + '</u>' : '';
+    return '<div class="aca-ch' + (v > 0 ? ' ok' : v < 0 ? ' mal' : '') + '"><i>' + p.ico + '</i>' + TT(p.t) + val + (v ? '<b>' + (v > 0 ? '✔' : '✘') + '</b>' : '') + '</div>';
+  }).join('') + '</div>';
+}
+var aesReady206 = aesReady;
+aesReady = function () {
+  if (!ACA.vivo) return aesReady206();
+  card('<div class="logo"><span>' + TT('AUTO') + '</span><span>' + TT('ESCUELA') + '</span></div>' +
+    '<p class="lead"><span class="aca-dice">«' + TT('Un precalentamiento siempre es bueno') + '»</span>, ' + TT('dice Wayan. Nueve pruebas cortas: cada una que hagas bien, ✔. Aquí no se pierden cascos.') + '</p>' +
+    acaChips(null) +
+    '<button class="b1" data-act="go">' + TT('¡A calentar!') + '</button><button class="b3" data-act="aes:saltar">' + TT('Ya sé conducir') + ' ▶</button>' + botonMenu(), 'ready');
+};
+var aesOferta206 = aesOferta;
+aesOferta = function () {
+  if (!ACA.vivo) return aesOferta206();
+  G.enMenu = false;
+  card('<div class="logo"><span>' + TT('AUTO') + '</span><span>' + TT('ESCUELA') + '</span></div>' +
+    '<p class="lead">' + TT('Antes de tu primera carrera, un precalentamiento siempre es bueno: Wayan te espera en su circuito con nueve pruebas cortas. Unos tres minutos.') + '</p>' +
+    acaChips(null) +
+    '<button class="b1" data-act="aes:go">🛵 ' + TT('¡A la autoescuela!') + '</button><button class="b3" data-act="aes:saltar">' + TT('Ya sé conducir') + ' ▶</button>' + botonMenu(), 'ready');
+};
+var showWin206 = showWin;
+showWin = function () {
+  if (!acaEn()) return showWin206.apply(this, arguments);
+  acaBocina(false);
+  var A = AES.st, N = AES.pasos.length, n = A.ok.filter(function (v) { return v > 0; }).length;
+  card('<h2 class="stk">🎓 ' + TT('¡Aprobado!') + '</h2><p class="lead">' + TT('Calentamiento hecho') + ': <b>' + n + ' / ' + N + ' ✔</b></p>' +
+    acaChips(A) +
+    '<div class="res"><p class="tot"><span>' + TT('Flores al bolsillo') + '</span><b class="bla">❀ ' + bolsillo() + '</b></p></div>' +
+    '<p class="lg-prop">' + TT(n >= N ? '¡Matrícula de honor! Wayan está orgullosa.' : 'Wayan dice: repite las pruebas con ✘ cuando quieras.') + '</p>' +
+    '<div class="acc"><button class="b1" data-act="aes:carrera">' + TT('A la primera carrera') + ' ▶</button><button class="b3" data-act="aes:otra">↻ ' + TT('Otra vez') + '</button>' + botonMenu() + '</div>', 'win');
+};
+var showIntro206 = showIntro;
+showIntro = function (li) {
+  if (!(ACA.vivo && AES.on)) return showIntro206(li);
+  var el = $('intro');
+  el.innerHTML = '<small>🛵 ' + TT('Antes de la primera carrera') + '</small><b>' + TT('Autoescuela de Wayan') + '</b><span>' + TT('Un precalentamiento siempre es bueno') + '</span>';
+  el.classList.remove('hide', 'out'); void el.offsetWidth; el.classList.add('in');
+  clearTimeout(ACA.tmI); ACA.tmI = setTimeout(function () { el.classList.add('out'); setTimeout(function () { el.classList.add('hide'); }, 450); }, 2400);
+};
+
+/* ---------- «Ya sé conducir»: a la carrera 1 (en la historia, como su paso) ---------- */
+var menuAct206 = menuAct;
+menuAct = function (a) {
+  if (ACA.vivo && AES.vivo && a === 'aes:saltar') {
+    if (SAVE.escuela !== 1) SAVE.escuela = 2;                              // la autoescuela ya hecha sigue hecha
+    writeSave(); AES.on = false; ACA.activo = false; acaBocina(false);
+    if (typeof FAS !== 'undefined' && FAS && FAS.vivo) return fasJugar('c1');
+    return menuAct206('nivel:0');
+  }
+  return menuAct206(a);
+};
+/* lo que dice de la autoescuela la fase y el mapa de antes */
+var fasSub206 = fasSub;
+fasSub = function (id) { return id === 'escuela' && ACA.vivo ? TT('Un precalentamiento: frenar, conos, el perro, un coco, el cruce, curvas, flores y una carrerita') : fasSub206.apply(this, arguments); };
+var mapaPanel206 = mapaPanel;
+mapaPanel = function () {
+  var h = mapaPanel206.apply(this, arguments);
+  return ACA.vivo ? h.split(TT('Aprende a llevar la moto: conos, curvas, recoger cosas y personas, y una carrerita')).join(TT('Un precalentamiento: frenar, conos, el perro, un coco, el cruce, curvas, flores y una carrerita')) : h;
+};
+
+/* ---------- los textos, en inglés e indonesio ---------- */
+(function () {
+  var N = {
+    'Frena': ['Brake', 'Rem'], 'Pasa los conos': ['Weave the cones', 'Lewati kerucut'], 'Pita al perro': ['Honk at the dog', 'Klakson anjingnya'], 'Esquiva un coco': ['Dodge a coconut', 'Hindari kelapa'],
+    'El cruce': ['The crossing', 'Persimpangan'], 'Esquiva obstáculos': ['Dodge obstacles', 'Hindari rintangan'], 'Recoge flores': ['Collect flowers', 'Kumpulkan bunga'], 'Gana la carrera': ['Win the race', 'Menangkan balapan'],
+    'AUTOESCUELA': ['DRIVING SCHOOL', 'SEKOLAH MOTOR'],
+    'En zigzag: uno por un lado y el siguiente por el otro, sin tocarlos': ['Slalom: one on one side, the next on the other, without touching them', 'Zig-zag: satu dari satu sisi, berikutnya dari sisi lain, tanpa menyentuhnya'],
+    'En zigzag (← →): uno por un lado y el siguiente por el otro, sin tocarlos': ['Slalom (← →): one on one side, the next on the other, without touching them', 'Zig-zag (← →): satu dari satu sisi, berikutnya dari sisi lain, tanpa menyentuhnya'],
+    'Hay un perro dormido en la carretera: ¡pítale con TIN TIN!': ['A dog is asleep on the road: honk with TIN TIN!', 'Ada anjing tidur di jalan: klakson dengan TIN TIN!'],
+    'Hay un perro dormido en la carretera: ¡pítale con Espacio!': ['A dog is asleep on the road: honk with Space!', 'Ada anjing tidur di jalan: klakson dengan Spasi!'],
+    'La palmera suelta un coco donde vas: mira su sombra y ¡apártate!': ['The palm drops a coconut where you\'re heading: watch its shadow and move aside!', 'Pohon kelapa menjatuhkan kelapa ke arahmu: lihat bayangannya dan menghindar!'],
+    'La palmera suelta un coco donde vas: mira su sombra y ¡apártate (← →)!': ['The palm drops a coconut where you\'re heading: watch its shadow and move aside (← →)!', 'Pohon kelapa menjatuhkan kelapa ke arahmu: lihat bayangannya dan menghindar (← →)!'],
+    '¡Despacito! Frena antes y mete la rueda poco a poco: te dejan pasar': ['Nice and slow! Brake before it and edge your wheel in: they\'ll let you through', 'Pelan-pelan! Rem dulu dan majukan roda sedikit demi sedikit: mereka akan memberi jalan'],
+    '¡Despacito! Frena (↓) antes y mete la rueda poco a poco: te dejan pasar': ['Nice and slow! Brake (↓) before it and edge your wheel in: they\'ll let you through', 'Pelan-pelan! Rem (↓) dulu dan majukan roda sedikit demi sedikit: mereka akan memberi jalan'],
+    'Baches, piedras y conos: pásalos sin tocar ninguno': ['Potholes, rocks and cones: get past without touching any', 'Lubang, batu, dan kerucut: lewati tanpa menyentuh satu pun'],
+    'Baches, piedras y conos (← →): pásalos sin tocar ninguno': ['Potholes, rocks and cones (← →): get past without touching any', 'Lubang, batu, dan kerucut (← →): lewati tanpa menyentuh satu pun'],
+    'Pasa por encima de la tira de flores: coge casi todas': ['Ride over the trail of flowers: get nearly all of them', 'Lindas deretan bunga: ambil hampir semuanya'],
+    'Pasa por encima de la tira de flores (← →): coge casi todas': ['Ride over the trail of flowers (← →): get nearly all of them', 'Lindas deretan bunga (← →): ambil hampir semuanya'],
+    '¡Putu y Nengah salen a tu lado! Llega el primero a la meta': ['Putu and Nengah pull up beside you! Get to the finish first', 'Putu dan Nengah di sampingmu! Sampai finis duluan'],
+    '¡Le has pitado!': ['You honked!', 'Kamu mengklakson!'], '¡Había que pitarle!': ['You had to honk!', 'Harusnya diklakson!'], '¡Esquivado!': ['Dodged!', 'Berhasil menghindar!'], '¡Coco en la cabeza!': ['Coconut on the head!', 'Kelapa kena kepala!'],
+    '¡Cruce superado!': ['Crossing done!', 'Persimpangan lewat!'], '¡Al suelo en el cruce!': ['Down at the crossing!', 'Jatuh di persimpangan!'], '¡Sin tocar nada!': ['Didn\'t touch a thing!', 'Tidak menyentuh apa pun!'], '¡Curvas limpias!': ['Clean bends!', 'Tikungan mulus!'],
+    '¡Carrera ganada!': ['Race won!', 'Balapan menang!'], 'Llegaste': ['You came', 'Kamu finis'], '1 golpe': ['1 hit', '1 tabrakan'], 'golpes': ['hits', 'tabrakan'], 'conos': ['cones', 'kerucut'], 'flores': ['flowers', 'bunga'],
+    '¡Por el otro lado!': ['The other side!', 'Dari sisi lain!'], '¡Coco!': ['Coconut!', 'Kelapa!'],
+    'Un precalentamiento siempre es bueno': ['A warm-up is always a good idea', 'Pemanasan selalu bagus'],
+    'dice Wayan. Nueve pruebas cortas: cada una que hagas bien, ✔. Aquí no se pierden cascos.': ['says Wayan. Nine short tests: each one you get right, ✔. You can\'t lose helmets here.', 'kata Wayan. Sembilan ujian singkat: setiap yang berhasil, ✔. Di sini helm tidak berkurang.'],
+    '¡A calentar!': ['Let\'s warm up!', 'Ayo pemanasan!'], 'Ya sé conducir': ['I can already ride', 'Aku sudah bisa'],
+    'Antes de tu primera carrera, un precalentamiento siempre es bueno: Wayan te espera en su circuito con nueve pruebas cortas. Unos tres minutos.': ['Before your first race, a warm-up is always a good idea: Wayan is waiting on her practice track with nine short tests. About three minutes.', 'Sebelum balapan pertamamu, pemanasan selalu bagus: Wayan menunggu di sirkuitnya dengan sembilan ujian singkat. Sekitar tiga menit.'],
+    'Calentamiento hecho': ['Warm-up done', 'Pemanasan selesai'], 'Wayan dice: repite las pruebas con ✘ cuando quieras.': ['Wayan says: retry the ✘ tests whenever you like.', 'Kata Wayan: ulangi ujian ✘ kapan saja.'],
+    'Un precalentamiento: frenar, conos, el perro, un coco, el cruce, curvas, flores y una carrerita': ['A warm-up: braking, cones, the dog, a coconut, the crossing, bends, flowers and a little race', 'Pemanasan: rem, kerucut, anjing, kelapa, persimpangan, tikungan, bunga, dan balapan kecil']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
 /*#pieza juegos/ciudad/604_carnet_ciudad.js*/
 /* ================================================================
    V155 · EL CARNET EN LA CIUDAD (la autoescuela de Wayan, 2.ª parte)
