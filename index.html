@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V218</title>
+<title>Bali Rush Completo V219</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V218', FECHA = '20-10-2026';
+var VERSION = 'Completo V219', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -105019,7 +105019,7 @@ zonaNueva = function (li) { var h = zonaNueva157(li); return FAS.vivo ? '' : h; 
    Se usan desde nucleo/612_red_wifi.js: QRL.lee(datos, ancho, alto)
    y QRL.hace(texto) → { n, oscuro(fila, col) }.
    ================================================================ */
-var QRL_NIV = 'L';                                                         // V218: la corrección del QR (antes, M)
+var QRL_NIV = 'L';                                                         // V219: la corrección del QR (antes, M)
 var QRL = (function () {
   var module = { exports: {} }, exports = module.exports, define;
   /* ---- jsQR 1.4.0 ---- */
@@ -105031,7 +105031,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   var haceQR = module.exports;
   return {
     lee: function (d, w, h, inv) { try { var r = leeQR(d, w, h, { inversionAttempts: inv || 'dontInvert' }); return r && r.data ? r.data : null; } catch (e) { return null; } },
-    hace: function (txt, niv) { var c = haceQR(0, niv || QRL_NIV); c.addData(txt); c.make(); return { n: c.getModuleCount(), oscuro: function (r, k) { return c.isDark(r, k); } }; }   // (V218: nivel L por defecto —en una pantalla no se estropea—: menos cuadritos y más grandes, se lee mejor)
+    hace: function (txt, niv) { var c = haceQR(0, niv || QRL_NIV); c.addData(txt); c.make(); return { n: c.getModuleCount(), oscuro: function (r, k) { return c.isDark(r, k); } }; }   // (V219: nivel L por defecto —en una pantalla no se estropea—: menos cuadritos y más grandes, se lee mejor)
   };
 })();
 /*#pieza nucleo/612_red_wifi.js*/
@@ -105293,7 +105293,7 @@ function mulPinta() {
       '<a class="mu-web" href="' + RED.web + '" target="_blank" rel="noopener">' + RED.web.replace(/^https:\/\//, '').replace(/\/$/, '') + '</a>' +
       '<p class="mu-nota">' + TT('Sin cuentas: los móviles se unen por la wifi con un código QR.') + '</p></div>' +
       '<button class="b2" data-act="menu">‹ ' + TT('Volver') + '</button>';
-  } else if ((!redEnPartida() && v !== 'cam') || v === 'ini') {         // (V218: sin el «&& v !== 'cam'», «Unirme» volvía aquí y la cámara no salía nunca)
+  } else if ((!redEnPartida() && v !== 'cam') || v === 'ini') {         // (V219: sin el «&& v !== 'cam'», «Unirme» volvía aquí y la cámara no salía nunca)
     MUL.vista = 'ini';
     h += '<div class="mu-caja"><i class="mu-ic">📶</i><p>' + TT('Los móviles, en la <b>misma wifi</b> (o uno compartiendo datos). Uno crea la partida y los demás se unen con un código QR.') + '</p>' +
       '<p class="mu-nota">' + TT('Carreras de 6: los que falten los lleva la máquina. Cada uno corre con su moto y sus mejoras.') + '</p></div>' +
@@ -107869,9 +107869,55 @@ var ABRE = { vivo: true };
   bonusAbierto = function (id) { return ABRE.vivo || bonusAbierto204(id); };
   pkAbierta = function (n) { return ABRE.vivo || pkAbierta204(n); };
 })();
+/*#pieza nucleo/625_musica_sin_solapes.js*/
+/* ================================================================
+   V218 · LA MÚSICA DEL JUEGO SE CALLA CUANDO SUENA OTRA MÚSICA
+   Jose Javier (20-10-2026), con la V217: «pero se superpone una
+   música con otra». La música nueva (027, MAV: el MP3 en bucle) no
+   para nunca desde que empieza, y hay sitios que traen su propia
+   música; sonaban las dos a la vez:
+   - LOS VÍDEOS (el reproductor de 150: la intro, los de antes de cada
+     carrera, el warung, el anuncio de 7AM, los finales…): cada uno
+     lleva su gamelán (cineMusica) y sus golpes de música.
+   - EL MAKEPUNG (260): el jegog marca el compás de la carrera
+     (kbRitmo), a otro tempo.
+   - EL ZOO DEL QUAD (330): el tambor de la persecución del cazador.
+   Mientras suena una de esas, la del juego se apaga en un momento y,
+   al acabar, vuelve poco a poco por donde iba (el bucle sigue
+   corriendo por debajo, sin volver a empezar). El botón «Música» de
+   la pausa sigue mandando sobre todo (AU.mus, 025).
+   MSC.vivo = false → como la V217 (todo a la vez).
+   ================================================================ */
+var MSC = { vivo: true, calla: false, baja: 0.08, sube: 0.6 };              // baja, sube: lo que tarda en apagarse y en volver (s)
+function mscOtra() {                                                         // ¿está sonando otra música?
+  if (typeof CINE !== 'undefined' && CINE.on) return true;
+  if (G.state !== 'play') return false;
+  if (G.mode === 'kerbau' && typeof KB !== 'undefined' && KB && KB.fase !== 'intro' && KB.fase !== 'fin') return true;
+  if (G.mode === 'quad' && typeof QUAD !== 'undefined' && QUAD && QUAD.zoo && QUAD.zoo.caz && QUAD.zoo.caz.st === 'va') return true;
+  return false;
+}
+function mscAplica(ya) {
+  if (!MSC.vivo || !AU.ok || typeof MAV === 'undefined' || !MAV.g) return;
+  var q = mscOtra(); if (q === MSC.calla && !ya) return;
+  MSC.calla = q;
+  var g = MAV.g.gain, t = aT();
+  g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+  g.setTargetAtTime(q ? 0 : MAV.gan, t, (q ? MSC.baja : MSC.sube) / 3);
+}
+var mavSuena625 = mavSuena;
+mavSuena = function () {                                                     // si empieza mientras suena otra, empieza callada
+  mavSuena625();
+  if (MSC.vivo && MAV.g && mscOtra()) { MAV.g.gain.value = 0; MSC.calla = true; }
+};
+var showCine625 = showCine;
+showCine = function () { var r = showCine625.apply(this, arguments); mscAplica(); return r; };
+var cineSalir625 = cineSalir;
+cineSalir = function () { var r = cineSalir625.apply(this, arguments); mscAplica(); return r; };
+var auFrame625 = auFrame;
+auFrame = function () { auFrame625(); mscAplica(); };
 /*#pieza nucleo/615_multi_facil.js*/
 /* ================================================================
-   V218 · EL MULTIJUGADOR, MÁS FÁCIL DE UNIR (Y DE VOLVER)
+   V219 · EL MULTIJUGADOR, MÁS FÁCIL DE UNIR (Y DE VOLVER)
    Jose Javier (20-10-2026): «el multijugador es raro, tienes que rebuscar añadir moto para que te salga lo del QR; además, si te sale y
    quieres echar otra partida, a quien se lo compartiste no puede volver; darle a unirse a una partida no le funciona».
    (1) EL QR, A LA PRIMERA: al «Crear partida» sale ya el código para la moto 2 (antes había que buscar «+ Otra moto» en la sala). En la
