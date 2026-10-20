@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V213</title>
+<title>Bali Rush Completo V214</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V213', FECHA = '20-10-2026';
+var VERSION = 'Completo V214', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -106515,7 +106515,9 @@ function tseDescr() {                                                        // 
 /* ---------- pintar una señal: el poste (o los dos) y la chapa, en su sitio y girada ---------- */
 function tseRumbo(d) { var cx = typeof cxAt === 'function' && L ? cxAt(d.y) : d.x + 1; return d.x > cx ? Math.PI + TSE.gira : Math.PI - TSE.gira; }   // de cara a quien llega, algo hacia la carretera
 ESN.fn.senal3d = function (g, d, zg, fa) {
-  var s = d.s, dd = proj(d.x, d.y, zg);
+  var s = d.s, dd;
+  if (!TSE.vivo && !s.dosCaras) { bill(g, s, d.x, d.y, 0, d.sc || 1, 0, false, fa); return; }   // (TSE.vivo = false: como antes)
+  dd = proj(d.x, d.y, zg);
   if (dd < 16 || PX < -200 || PX > V.w + 200) return;
   var al = fa * (1 - fogK(dd)); if (al <= 0.02) return;
   shadow(g, d.x, d.y, 3 * (d.sc || 1), 2 * (d.sc || 1), 0); scr(g);
@@ -106532,6 +106534,7 @@ ESN.fn.senal3d = function (g, d, zg, fa) {
   });
   k3Fn(frente ? dF : dE, function () {
     if (frente) { plano(sil.c, e0, e1, e2); plano(tex.c, f0, f1, f2); }
+    else if (s.dosCaras) { plano(sil.c, f0, f1, f2); plano(tex.c, e1, e0, k3(-t, -a, H - b)); }   // (un letrero por las dos caras: por detrás, al derecho)
     else { plano(tex.c, f0, f1, f2); plano(sil.c, e0, e1, e2); }
   });
   k3Pinta(g);
@@ -106606,6 +106609,119 @@ ST.piedra.draw = function (g, s) {
   if (s.v === 'estatua' && !(BB.estatua && BB.estatua.mod)) { tsePiedra0(g, s); return; }
   if (!d || d.x !== s.x) d = s._tse = s.v === 'estatua' ? { s: BB.estatua, x: s.x, y: s.y, sc: 1.19 } : { s: tseModelos().bloque, x: s.x, y: s.y, sc: s.r / 7.5 };   // (siempre el mismo: la foto de lejos se guarda en él)
   ESN.fn.modelo(g, d, zg, 1);
+};
+/*#pieza juegos/ciudad/620_ciudad_3d.js*/
+/* ================================================================
+   V214 · LO QUE SEGUÍA PLANO EN LA CIUDAD, EN 3D
+   Jose Javier (20-10-2026): «algunos detalles todavía no tienen 3D».
+   De la lista de lo que seguía plano marcó también «Cosas de la
+   ciudad»:
+   - LOS CARTELES DE LOS SITIOS (signSprite: el warung, la panadería
+     7AM, el 7PM, la escuela, tus terrenos, los de la liga…, y el
+     «HATI-HATI · PROYEK» de las obras de las carreras): dos postes de
+     madera y la tabla azul de verdad, con su letrero por las dos caras,
+     atravesada a su calle para que se lea viniendo de un lado y del
+     otro (ESN.fn.senal3d, de 618).
+     Y el rombo del cruce de los atascos (BB.signCruce), como en las
+     carreras.
+   - LOS PUESTOS DEL PASEO LIBRE (7AM y 7PM): eran una caja con lo que
+     se vende visto desde arriba encima y un tejadillo sobre cuatro
+     palos. Ahora, el mostrador de madera con su frente, lo que se vende
+     encima (los cruasanes; los platos con el pescado y el arroz), los
+     cuatro postes y el tejado a dos aguas, de cara a la calle.
+   - LOS COCOS DE LA PALMERA que se asoma a la calle: eran tres círculos;
+     ahora, cocos con volumen colgando de su racimo.
+   T3C.vivo = false (antes de entrar en la ciudad): como la V213.
+   ================================================================ */
+var T3C = { vivo: true };
+
+/* ---------- los carteles: dos postes y la tabla, con su letrero ---------- */
+var signSprite620 = signSprite;
+signSprite = function (txt) {
+  var s = signSprite620(txt);
+  if (!T3C.vivo) return s;
+  var sr = SR; SR = 6;
+  try {
+    s.tex = mk(43, 12, function (g) {
+      g.translate(0, 6.5);
+      rrect(g, -21, -12, 42, 11, 1.2, '#1f5a8a', INK, 1.2);
+      g.fillStyle = '#ffffff'; g.font = '900 ' + (txt.length > 11 ? 4.4 : 5.4) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(txt, 0, -6.4);
+    });
+  } finally { SR = sr; }
+  s.esc = 'senal3d'; s.a = 21.5; s.b = 6; s.H = 19.5; s.postes = [-14, 14]; s.pr = 0.95; s.palo = '#6b4a2a'; s.espalda = '#8a6a44'; s.grueso = 0.9; s.dosCaras = true;   // (el letrero, por las dos caras)
+  return s;
+};
+var tseSenal620 = ESN.fn.senal3d;
+ESN.fn.senal3d = function (g, d, zg, fa) {
+  if (!T3C.vivo && d.s.dosCaras) { bill(g, d.s, d.x, d.y, 0, d.sc || 1, 0, false, fa); return; }   // (T3C.vivo = false: como antes)
+  if (d.h3 == null && !L && typeof nearestStreet === 'function' && CITY) {     // en la ciudad: atravesado a su calle (se lee desde los dos lados, como los de verdad); el del cruce, de cara a quien llega
+    var q = nearestStreet(d.x, d.y), p = pointAt(CITY.streets[q.si], q.s); d.h3 = p.ang;
+  }
+  tseSenal620(g, d, zg, fa);
+};
+
+/* ---------- los puestos del paseo libre ---------- */
+function t3cPuesto3D(g, x, y, z, ang, id, o) {
+  o = o || {};
+  var k = o.k || 1, noche = id !== '7am', mad = noche ? '#3a3a3e' : '#b98a4a', te = noche ? '#26262a' : '#f2d9b0', ri = noche ? '#e0b04a' : '#b98a4a', i, d;
+  k3Abre(x, y, z, ang, 0, 0, k);
+  for (i = 0; i < 4; i++) { var pu = i < 2 ? 7 : -7, pv = i % 2 ? 10 : -10; k3Tubo(k3(pu, pv, 0), k3(pu, pv, 13.2), 0.55, 0.5, noche ? '#4a4a50' : '#7a5530', { borde: 0.6, vol: 0.3 }); }   // los postes
+  k3Bloque([-5.5, 5.5, -11.5, 11.5, 0], [-5.5, 5.5, -11.5, 11.5, 6], mad, { top: noche ? '#55555c' : '#c99a5a', deco: function (cara, c) {   // el mostrador
+    if (cara === 'frente') { vQuad(c, 0.04, 0.96, 0.18, 0.86, noche ? '#45454c' : '#a57a42'); for (var q = 1; q < 6; q++) vQuad(c, q / 6 - 0.006, q / 6 + 0.006, 0.18, 0.86, 'rgba(40,25,10,.35)'); vQuad(c, 0, 1, 0.9, 1, ri); }
+    else vQuad(c, 0, 1, 0.9, 1, ri);
+  } });
+  if (!noche) for (i = 0; i < 5; i++) k3Curva(k3(1 + (i % 2) * 2.2, -8 + i * 4, 6.4), k3(2 + (i % 2) * 2.2, -7 + i * 4, 7.8), k3(1 + (i % 2) * 2.2, -6 + i * 4, 6.4), 0.9, 0.8, '#e0a24a', { vol: 0.5, borde: 0.5 });   // los cruasanes
+  else for (d = -1; d <= 1; d += 2) {                                         // los platos: el pescado y el arroz
+    k3Bloque([-2.6, 2.6, d * 5 - 3.4, d * 5 + 3.4, 6], [-2.6, 2.6, d * 5 - 3.4, d * 5 + 3.4, 6.5], '#fbfbf7', { top: '#ffffff', borde: 0.5 });
+    if (d < 0) k3Curva(k3(0.2, -7.4, 7), k3(0.6, -5, 7.6), k3(0.2, -2.6, 7), 1.1, 0.5, '#8fa3b8', { vol: 0.5, borde: 0.5 });
+    else k3Bola(k3(0.3, 5, 7.2), 1.6, '#fbfbf7', { vol: 0.4, borde: 0.5 });
+  }
+  var ca = 13.2, cr = 17.6, e = 8.6, l = 11.8;                                  // el tejado a dos aguas: la cumbrera a lo ancho (v)
+  k3Poli([k3(-e, -l, ca), k3(-e, l, ca), k3(0, l, cr), k3(0, -l, cr)], te, { borde: 0.8 });
+  k3Poli([k3(e, -l, ca), k3(0, -l, cr), k3(0, l, cr), k3(e, l, ca)], te, { borde: 0.8 });
+  k3Poli([k3(-e, -l, ca), k3(0, -l, cr), k3(e, -l, ca)], ri, { borde: 0.7 });
+  k3Poli([k3(-e, l, ca), k3(e, l, ca), k3(0, l, cr)], ri, { borde: 0.7 });
+  k3Tubo(k3(0, -l - 0.4, cr), k3(0, l + 0.4, cr), 0.5, 0.5, ri, { borde: 0.6, vol: 0.2 });
+  k3Pinta(g);
+}
+var libPuesto620 = libPuesto;
+libPuesto = function (id) {
+  var R = libPuesto620(id);
+  if (!T3C.vivo || typeof ER3 === 'undefined' || !ER3.vivo || !ESN.vivo) return R;
+  if (R.t3c) return R.t3c;
+  var F = Math.PI - 0.35, m = k3Carton(46, 40, 4, function (g) { t3cPuesto3D(g, 0, 0, 0, F, id, { k: 1.5 }); }, 3);
+  m.pie = 0; m.esc = 'modelo'; m.k = 'bb'; m.sombra = 0;
+  m.mod = function (g, d, zg) { if (d.h3 == null) d.h3 = c5HaciaCalle(d); t3cPuesto3D(g, d.x, d.y, zg, d.h3, id, { k: (d.sc || 1) * 0.88 }); };
+  R.t3c = { mostrador: m, tejado: { esc: 't3cNada', k: 'bb', c: R.tejado.c, w: R.tejado.w, h: R.tejado.h } };   // (el tejado ya va en el modelo)
+  return R.t3c;
+};
+ESN.fn.t3cNada = function () {};
+
+/* ---------- los cocos de la palmera que se asoma a la calle ---------- */
+var palmaDraw620 = palmaDraw;
+palmaDraw = function (g, o) {
+  if (!T3C.vivo || !C5.vivo || !ESN.vivo || typeof ER3 === 'undefined' || !ER3.vivo) { palmaDraw620(g, o); return; }
+  var dr = o.dropped; o.dropped = true;                                         // (la copa, como siempre; los cocos, aquí)
+  try { palmaDraw620(g, o); } finally { o.dropped = dr; }
+  if (o.dropped) return;
+  var dd = proj(o.cx, o.cy, 84); if (dd < 12) return;
+  scr(g); K3.alfa = 1 - fogK(dd);
+  try {
+    k3Abre(o.cx, o.cy, 0, 0, 0, 0, 1);
+    for (var q = 0; q < 3; q++) {
+      var cg = q === 1, v = (q - 1) * 4.6, w = 84 - (q % 2) * 3 - (cg ? 1.6 : 0), r = cg ? 3.4 : 2.7;
+      k3Tubo(k3(-2, v * 0.4, 88), k3(-2, v, w + r * 0.8), 0.45, 0.4, '#7d6a3a', { borde: 0.5, vol: 0 });   // el racimo
+      k3Bola(k3(-2, v, w), r, cg ? '#7a5a34' : '#6f9a3c', { vol: 0.7, borde: 0.8 });
+    }
+    k3Pinta(g);
+  } finally { K3.alfa = 1; }
+};
+var genCity620 = genCity;
+genCity = function () {                                                          // el rombo del cruce de los atascos, como en las carreras
+  var r = genCity620.apply(this, arguments);
+  if (T3C.vivo && typeof tseDescr === 'function' && TSE.vivo && CITY && CITY.items) { var D = tseDescr(), C = T3C.cruce || (T3C.cruce = (function () { var q = {}, k; for (k in D.cruce) q[k] = D.cruce[k]; q.dosCaras = true; return q; })()); CITY.items.forEach(function (it) { if (it.s === BB.signCruce) it.s = C; }); }   // (por las dos caras: se llega por cualquier calle)
+  return r;
 };
 /*#pieza juegos/tirolina/692_tirolina_multi.js*/
 /* ================================================================
