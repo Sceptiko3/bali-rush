@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V209</title>
+<title>Bali Rush Completo V210</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V209', FECHA = '20-10-2026';
+var VERSION = 'Completo V210', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -106291,46 +106291,75 @@ window.__TXM = { estado: function () {
 /*#pieza juegos/tirolina/692_tirolina_multi.js*/
 /* ================================================================
    V209 · LA TIROLINA, MULTIJUGADOR (POR LA WIFI)
+   V210 · Y SIEMPRE SEIS EN CARRERA (TAMBIÉN JUGANDO SOLO)
    Jose Javier (20-10-2026): «coge la última versión, 208 creo, y haz
-   multijugador con la tirolina».
-   - En la sala (598), quien crea elige «🚡 Tirolina». Las cuatro
-     tirolinas seguidas (arrozales, barranco del Ayung, selva y
-     cascada), como siempre; solo personas (hasta 6).
-   - CADA UNO EN SU CABLE, todos en paralelo: lo que hay por el aire
-     (cometas, garzas, monos, ramas…) y las flores salen de una semilla
-     que manda quien crea: el mismo recorrido para todos. A los demás
-     se les ve colgados en los cables de al lado (el guiri con su
-     camisa, Pitik en la cesta y su nombre encima): cómo se balancean,
-     encogen, gritan y celebran. Cuentan atrás a la vez (3, 2, 1, ¡YA!)
-     y nadie sale antes.
-   - GANA QUIEN LLEGUE ANTES ABAJO (a la plataforma de la cascada),
-     con el reloj de todos desde el ¡YA!. Arriba, en la barra de las
-     cuatro tirolinas, un punto de color por cada uno; a la izquierda,
-     cómo vais. Al acabar, la tarjeta con el orden de todos (con sus
-     frangipanis), que se completa según llegan; quien creó la partida
-     vuelve a la sala con «Otra tirolina».
-   - Decidido sin él (como en las carreras): no se acaban los cascos
-     (un golpe te frena, pero no te quedas colgado); el cachitas no
-     corre (la carrera es con las personas; los turistas de los otros
-     cables siguen, más allá); sin la cámara lenta de los avisos (si no,
-     el que la ve pierde tiempo); los frangipanis van al bolsillo; tu
-     récord de la tirolina no cambia.
+   multijugador con la tirolina»; y con la V209: «la cosa es que
+   estamos enfocando a 6 jugadores, ahora que esto tenga solo 4…
+   raro». Preguntado (con opciones), eligió seis «en los dos» (solo y
+   multijugador).
+   - SEIS EN CARRERA, CADA UNO EN SU CABLE, por las cuatro tirolinas
+     seguidas: tú y cinco más en los cables de al lado (uno a cada
+     lado, los más cerca primero). Jugando solo, los cinco son de la
+     máquina: el cachitas y cuatro turistas (la abuela, Made el
+     balinés, el niño y el mochilero), cada uno con su manera de colgar
+     y lo que dice al adelantarle. En el multijugador, las personas y,
+     en los huecos, ellos (los lleva el móvil de quien creó la partida
+     y los demás los ven por la red).
+   - Los de la máquina bajan las cuatro tirolinas como tú (en cada
+     plataforma esperan lo mismo que tú: llegar, el cambio y la salida).
+     Cada uno a su ritmo (el cachitas, el más rápido; el mochilero, el
+     que menos). Jugando solo, si se van muy lejos de ti aflojan o
+     aprietan un poco (TZS.goma), para que la carrera no se rompa; en el
+     multijugador, no.
+   - EN CADA PLATAFORMA, tu puesto en esa tirolina («Llegas 3º»); el
+     primero en llegar se lleva +5 ✿ (lo que daba ganarle al cachitas).
+     Arriba, un punto por cada uno en la barra de las cuatro tirolinas
+     y tu puesto («🏁 2º de 6»); a la izquierda, cómo vais; encima de
+     cada uno, su nombre.
+   - ABAJO, el puesto final de los seis (por quién llega antes a la
+     plataforma de la cascada): jugando solo, en la tarjeta de siempre
+     (puntos, récord, flores… igual); en el multijugador, en la suya.
+   - EL MULTIJUGADOR (V209): quien crea elige «🚡 Tirolina» en la sala;
+     el mismo recorrido para todos (la semilla de quien crea); a las
+     personas se las ve con su camisa del taller, Pitik en la cesta y
+     su nombre; cuenta atrás común y nadie sale antes; el reloj de
+     arriba es el de todos; gana quien llega antes abajo; la tarjeta,
+     con el orden, los tiempos y las flores, se completa según llegan;
+     «Otra tirolina». Decidido sin él (como en las carreras): no se
+     acaban los cascos, sin la cámara lenta de los avisos, el récord de
+     la tirolina no cambia, las flores al bolsillo.
    TZM.vivo = false: la tirolina no sale en el multijugador.
+   TZS.vivo = false: como la V209 (solo, contra el cachitas; en el
+   multijugador, solo personas y los turistas en los cables de más allá).
    ================================================================ */
 var TZM = { vivo: true, ya: false, bMin: null, nb: 0, sep: 95 };
+var TZS = { vivo: true, orden: ['cachitas', 'abuela', 'balines', 'nino', 'mochilero'],   // los cinco de la máquina, por este orden (en el multijugador, el primer hueco es el cachitas…)
+  ritmo: { cachitas: 1.045, balines: 1.025, nino: 1.005, abuela: 0.99, mochilero: 0.975 },   // cuánto de la velocidad del cachitas de antes (TJ.rv + TJ.rvLi por tirolina) lleva cada uno (medido con pruebas/tirolina_seis.js: el piloto bueno, 1.º o 2.º; el que nunca tira de la polea, 6.º)
+  nom: { cachitas: 'Cachitas', abuela: 'Abuela', balines: 'Made', nino: 'Niño', mochilero: 'Mochilero' },
+  col: { cachitas: '#ff8a2a', abuela: '#9b59b6', balines: '#3fa9f5', nino: '#f1d23f', mochilero: '#6b8e23' },
+  goma: [500, 18, 700, 14],                                                              // jugando solo: si se queda más de [0] detrás de ti, +[1]; si te saca más de [2], −[3] (para que no se vayan lejos; la del cachitas hasta la V209 era [140, 28, 220, 22]: con seis, todos llegaban pegados a ti)
+  espera: 2.15,                                                                           // en cada plataforma: llegar (0,9 s), el cambio (0,95) y la salida (0,3), como tú
+  premio: 5, t: 0, clk: 0, yoFin: null };
 function tzmVa() { return MUL.on && MUL.juego === 'tz'; }
 function tzmOn() { return tzmVa() && G.mode === 'tiro' && !!TIRO; }
+function tzsOn() { return TZS.vivo && G.mode === 'tiro' && !!TIRO && !!TIRO.MU; }
 function tzmMu(r) { return !!r && typeof r.tipo === 'string' && r.tipo.indexOf('mu') === 0; }
-function tzmCol(s) { if (s === RED.soy) return COL_MOTO[lookGet().moto || 0] || '#e2452f'; var j = MUL.jug[s]; return COL_MOTO[j && j.look ? j.look.moto : 0] || '#e2452f'; }
+function tzmCol(s) { if (!tzmVa() || s === RED.soy) return COL_MOTO[lookGet().moto || 0] || '#e2452f'; var j = MUL.jug[s]; return COL_MOTO[j && j.look ? j.look.moto : 0] || '#e2452f'; }
 function tzmT() { return Math.round(Math.max(0, (performance.now() - MUL.salida) / 1000) * 100) / 100; }   // el reloj de todos, desde el ¡YA!
+function tzsReloj() { return tzmVa() ? Math.max(0, (performance.now() - MUL.salida) / 1000) : TZS.t; }
+function tzsTipoHueco(s) {                                                    // en el multijugador: qué turista lleva el hueco s (los huecos, en orden, por TZS.orden)
+  var i = 0, q; for (q = 1; q < s; q++) if (!(MUL.jug[q] && !MUL.jug[q].ia)) i++;
+  return TZS.orden[i % TZS.orden.length];
+}
 if (TZM.vivo) MUL_J.tz = {
-  ico: '🚡', nom: 'Tirolina', ia: false, modo: 'tiro',
+  ico: '🚡', nom: 'Tirolina', ia: TZS.vivo, modo: 'tiro',
   limpiaOp: function () { return {}; },
-  opciones: function () { return '<p class="mu-nota">' + TT('Las cuatro tirolinas seguidas, cada uno en su cable. Gana quien llegue antes abajo.') + '</p>'; },
+  opciones: function () { return '<p class="mu-nota">' + TT(TZS.vivo ? 'Las cuatro tirolinas seguidas, seis en carrera, cada uno en su cable (los huecos, el cachitas y los suyos). Gana quien llegue antes abajo.' : 'Las cuatro tirolinas seguidas, cada uno en su cable. Gana quien llegue antes abajo.') + '</p>'; },
   texto: function () { return TT('Tirolina') + ' · ' + TT('las cuatro seguidas'); },
   salida: function () {
     var J = {}, s; for (s = 1; s <= RED.max; s++) if (MUL.jug[s] && !MUL.jug[s].ia && (s === 1 || (RED.conex[s] && RED.conex[s].vivo))) J[s] = MUL.jug[s];
     MUL.jug = J;
+    if (TZS.vivo) for (s = 1; s <= RED.max; s++) if (!J[s]) { var tp = tzsTipoHueco(s); J[s] = { nom: TZS.nom[tp], ia: true, look: { moto: 0, camisa: 0, tubo: 0, cabeza: 0, cinta: 0 } }; MUL.jug = J; }
     var m = { t: 'go', juego: 'tz', op: {}, sem: 1 + Math.floor(Math.random() * 0xfffff), en: 4200, j: J };
     redManda(m); this.arranca(m);
   },
@@ -106346,13 +106375,17 @@ if (TZM.vivo) MUL_J.tz = {
     for (k in TZG.fichas) if (k.indexOf('mu') === 0) delete TZG.fichas[k];   // (los de la partida anterior: quizá con otra camisa)
     G.enMenu = false; showPad(TOUCH); G.marSolo = null; G.started = true;
     startTiro();
-    var T = TIRO; T.seed = mulEnt(m.sem, 1, 0xfffff); T.rnd = mulberry(T.seed); tiroLinea(0);   // el mismo recorrido para todos
+    var T = TIRO; T.seed = mulEnt(m.sem, 1, 0xfffff); T.rnd = mulberry(T.seed); T.MU = null; T.AI = null; tiroLinea(0);   // el mismo recorrido para todos (y los seis, de nuevo)
     G.state = 'play'; hideScr(); auInit(); if (AU.ok && SAVE.mus) musStart();
   },
   yoD: function () {                                                           // tirolina, dónde vas, cómo cuelgas, cuánto encoges, lo que haces (y la velocidad), tus flores, cuándo has llegado
     var T = TIRO; if (!T) return [0, 0, 0, 0, 0, 0, MUL.miFin];
-    var D = TIRO_L[T.li], f = (T.grito > 0 ? 1 : 0) + (T.inv > 0.4 ? 2 : 0) + (T.empuja ? 4 : 0) + (MUL.miFin >= 0 || T.fase === 'fin' ? 8 : 0);
+    var f = (T.grito > 0 ? 1 : 0) + (T.inv > 0.4 ? 2 : 0) + (T.empuja ? 4 : 0) + (MUL.miFin >= 0 || T.fase === 'fin' ? 8 : 0);
     return [T.li, Math.round(T.s * 10) / 10, Math.round(((T.rho || 0) - (T.phi || 0)) * 1000) / 1000, Math.round((T.tk || 0) * 100) / 100, f + 16 * Math.round(Math.max(0, Math.min(999, T.v || 0))), G.fl, MUL.miFin];
+  },
+  extraE: function (E) {                                                       // los de la máquina, que van en este móvil (el de quien creó la partida)
+    var T = TIRO; if (!T || !T.AI) return;
+    T.AI.forEach(function (A) { E[A.slot] = [A.li, Math.round(A.s * 10) / 10, Math.round(A.phi * 1000) / 1000, 0, 16 * Math.round(Math.max(0, Math.min(999, A.v))), 0, A.fin != null ? A.fin : -1]; });
   }
 };
 /* el reloj, igualado con el del móvil 1 (como en Pitik Nightmare, 722) */
@@ -106362,39 +106395,128 @@ redOye(function (pl, m) {
   TZM.nb++; if (TZM.bMin == null || b < TZM.bMin) TZM.bMin = b;
   if (TZM.nb >= 4 && Math.abs(TZM.bMin - MUL.base) < 1500) { var d = TZM.bMin - MUL.base; MUL.base += d; MUL.salida += d; }
 });
+/* en la sala, los huecos con su nombre de tirolina (el cachitas, la abuela…) */
+var mulFila692 = mulFila;
+mulFila = function (s) {
+  var h = mulFila692(s), j = MUL.jug[s];
+  if (MUL.juego !== 'tz' || !TZS.vivo || (j && !j.ia) || s === RED.soy) return h;
+  return h.replace('🤖 ' + mulEsc(RIV.nom[(s - 2) % RIV.nom.length]), '🤖 ' + mulEsc(TT(TZS.nom[tzsTipoHueco(s)])));
+};
 
-/* ---------- los cables: los demás, en los de al lado (los más cerca, a un lado y al otro); los turistas, más allá ---------- */
+/* ---------- los seis: quién va en cada cable ---------- */
+function tzsMonta(T) {                                                       // una vez por partida: los otros cinco (las personas, por la red; los de la máquina, aquí o por la red)
+  var multi = tzmVa(), MU = [], AI = [], s, i = 0, tp;
+  TZS.t = 0; TZS.clk = 0; TZS.yoFin = null;
+  function ia(slot, tipo) { var A = { slot: slot, tipo: tipo, li: 0, prox: 0, s: 0, v: 0, esp: 0.3, ph: (slot * 2.399) % TAU, k: TZS.ritmo[tipo] || 0.97, fin: null, lleg: [], phi: 0 }; AI.push(A); return A; }
+  function fila(tipo, slot, A, hum) {
+    return { tipo: tipo, slot: slot, A: A, hum: !!hum, racer: true, rival: tipo === 'cachitas', nom: hum ? mulNom(slot) : TT(TZS.nom[tipo] || tipo), col: hum ? tzmCol(slot) : TZS.col[tipo] || '#ffffff',
+      x: 0, dz: 0, pc: 0, s: -1e6, sRaw: 0, li: 0, v: 0, ph: slot * 1.37, sc: (OTROS_C[tipo] && OTROS_C[tipo].sc) || 1, phi: 0, tk: 0, gri: 0, dol: 0, fin: 0, emp: 0, tf: -1, fl: 0, rel: 0 };
+  }
+  if (!multi) { if (TZS.vivo) for (i = 0; i < TZS.orden.length; i++) { tp = TZS.orden[i]; MU.push(fila(tp, i + 2, ia(i + 2, tp), false)); } }
+  else for (s = 1; s <= RED.max; s++) {
+    if (s === RED.soy || !MUL.jug[s]) continue;
+    if (!MUL.jug[s].ia) MU.push(fila('mu' + s, s, null, true));
+    else if (TZS.vivo) { tp = tzsTipoHueco(s); MU.push(fila(tp, s, RED.host ? ia(s, tp) : null, false)); }
+  }
+  T.MU = MU; T.AI = AI;
+}
 var tiroOtrosGen692 = tiroOtrosGen;
-tiroOtrosGen = function (T, li) {
+tiroOtrosGen = function (T, li) {                                            // en cada tirolina: los otros, en los cables de al lado (los más cerca, uno a cada lado); con TZS.vivo = false, los turistas de siempre más allá
   tiroOtrosGen692(T, li);
-  if (!tzmVa()) return;
-  var lado = T.PC[0].x > 0 ? 1 : -1, otros = [], PC = [], s, k, sep = TZM.sep, DZ = [6, -8, 14, -4, 18, -10, 10, 2];
-  function sitio(n) { return { x: (n % 2 ? 1 : -1) * lado * (sep * Math.ceil(n / 2) + (n > 2 ? 8 : 0)), dz: DZ[(n - 1) % DZ.length] }; }
-  for (s = 1; s <= RED.max; s++) if (s !== RED.soy && MUL.jug[s] && !MUL.jug[s].ia) otros.push(s);
-  for (k = 1; k <= otros.length; k++) PC.push(sitio(k));
-  var c1 = sitio(otros.length + 1), c2 = sitio(otros.length + 2), dec = T.R.filter(function (o) { return !o.rival; });   // (el cachitas no corre: la carrera es con las personas)
-  PC.push(c1, c2);
-  dec.forEach(function (o) { var c = o.pc === 1 ? c1 : c2; o.x = c.x; o.dz = c.dz; o.pc = PC.indexOf(c); });
-  var M0 = T.MU || [];
-  T.MU = otros.map(function (sl, i) {
-    var r0 = M0.filter(function (q) { return q.slot === sl; })[0];
-    return { tipo: 'mu' + sl, slot: sl, x: PC[i].x, dz: PC[i].dz, pc: i, s: -1e6, v: 0, ph: sl * 1.37, sc: 1, phi: r0 ? r0.phi : 0, tk: 0, gri: 0, dol: 0, fin: 0, emp: 0, li: r0 ? r0.li : 0, nom: mulNom(sl), col: tzmCol(sl) };
-  });
+  if (!tzmVa() && !TZS.vivo) return;
+  if (!T.MU) tzsMonta(T);
+  var lado = T.PC[0].x > 0 ? 1 : -1, PC = [], k, sep = TZM.sep, DZ = [6, -8, 14, -4, 18, -10, 10, 2], n = T.MU.length;
+  function sitio(q) { return { x: (q % 2 ? 1 : -1) * lado * (sep * Math.ceil(q / 2) + (q > 2 ? 8 : 0)), dz: DZ[(q - 1) % DZ.length] }; }
+  for (k = 1; k <= n; k++) PC.push(sitio(k));
+  T.MU.forEach(function (r, i) { r.x = PC[i].x; r.dz = PC[i].dz; r.pc = i; r.rel = 0; });
+  var dec = [];
+  if (!TZS.vivo) {                                                            // (V209: el cachitas no corre; los turistas, más allá)
+    var c1 = sitio(n + 1), c2 = sitio(n + 2);
+    dec = T.R.filter(function (o) { return !o.rival; }); PC.push(c1, c2);
+    dec.forEach(function (o) { var c = o.pc === 1 ? c1 : c2; o.x = c.x; o.dz = c.dz; o.pc = PC.indexOf(c); });
+  }
   T.PC = PC; T.TD = dec; T.R = dec.concat(T.MU);
-  T.rp = true;                                                                  // (sin el «¡Te echo una carrera, bro!»)
+  T.rp = true; T.tzsReto = false;                                             // (el «¡Te echo una carrera!» del cachitas lo dice tzsCharla)
 };
 var tiroOtrosUpd692 = tiroOtrosUpd;
-tiroOtrosUpd = function (T, D, dt) {                                           // los turistas, como siempre; los demás, aparte (tzmPasoRed)
-  if (!tzmOn() || !T.MU) { tiroOtrosUpd692(T, D, dt); return; }
-  var R = T.R; T.R = T.TD || [];
+tiroOtrosUpd = function (T, D, dt) {                                         // los turistas de siempre (si quedan) y las rachas de viento, como siempre; los seis, aparte
+  if (!T.MU) { tiroOtrosUpd692(T, D, dt); return; }
+  var R = T.R; T.R = T.TD || []; T.rp = true;
   try { tiroOtrosUpd692(T, D, dt); } finally { T.R = R; }
 };
-function tzmPasoRed(T, dt) {                                                    // los demás: donde dicen (y un poco más: lo que tarda en llegar), sin tirones
+var tjSeguir692 = tjSeguir;
+tjSeguir = function (li, fl) {                                               // seguir desde una tirolina: los otros cinco también salen de ahí contigo
+  tjSeguir692(li, fl);
+  var T = TIRO; if (!T || !T.AI) return;
+  TZS.t = 0; TZS.yoFin = null;
+  T.AI.forEach(function (A) { A.li = A.prox = li; A.s = 0; A.v = 0; A.esp = 0.3; A.fin = null; A.lleg = []; });
+};
+
+/* ---------- los de la máquina: bajan las cuatro tirolinas como tú ---------- */
+function tzsPaso(A, dt) {
+  if (A.fin != null) return;
+  if (A.esp > 0) { A.esp -= dt; if (A.esp <= 0) { A.li = A.prox; A.s = 0; A.v = 0; } return; }
+  var T = TIRO, D = TIRO_L[A.li], fin = D.len - 6, band = 0;
+  if (!tzmVa() && T) {                                                       // jugando solo, a tu ritmo (como el cachitas hasta la V209)
+    var dif = A.li === T.li ? A.s - T.s : (A.li > T.li ? 1e4 : -1e4);
+    band = (dif < -TZS.goma[0] ? TZS.goma[1] : 0) - (dif > TZS.goma[2] ? TZS.goma[3] : 0);
+  }
+  var vt = (TJ.rv + TJ.rvLi * A.li) * A.k + 16 * Math.sin(TZS.clk * 0.55 + A.ph) - tzcD(D, A.s) * 240 + band;
+  if (A.s < 60) A.v = Math.min(vt, A.v + 190 * dt); else A.v += (vt - A.v) * Math.min(1, dt * 1.4);
+  if (A.s > fin - 200) A.v = Math.min(A.v, Math.sqrt(2 * 230 * Math.max(0, fin - A.s)) + 4);
+  A.s = Math.min(fin, A.s + Math.max(0, A.v) * dt);
+  A.phi = 0.22 * Math.sin(TZS.clk * (A.tipo === 'abuela' ? 3.2 : 1.4) + A.ph) - (A.v - 150) * 0.0006;
+  if (A.s >= fin - 0.5) {                                                    // en la plataforma: a la siguiente (o, en la última, su tiempo)
+    A.lleg[A.li] = tzsReloj();
+    if (A.li >= TIRO_L.length - 1) A.fin = Math.round(tzsReloj() * 100) / 100;
+    else { A.prox = A.li + 1; A.esp = TZS.espera; }
+  }
+}
+function tzsVista(T) {                                                       // lo que se pinta de cada uno de la máquina que va aquí
+  (T.MU || []).forEach(function (r) {
+    var A = r.A; if (!A) return;
+    r.li = A.li; r.sRaw = A.s; r.v = A.v; r.phi = A.phi; r.tf = A.fin != null ? A.fin : -1; r.fin = A.fin != null ? 1 : 0;
+    r.s = A.li === T.li ? A.s : -1e6;
+  });
+}
+function tzsCharla(T) {                                                      // el cachitas te reta al salir; al adelantar a alguien (o al dejarse adelantar), dice lo suyo
+  if (!T.MU || T.fase === 'llega' || T.fase === 'cambio' || T.fase === 'fin' || T.fase === 'ko') return;
+  var C = T.MU.filter(function (r) { return r.tipo === 'cachitas' && r.s > -1e5; })[0];
+  if (!T.tzsReto && C && T.s > 30) {
+    T.tzsReto = true; tiroOtroDice(T, C, T.li ? '💪 ¡Revancha, bro!' : '💪 ¡Te echo una carrera, bro!');
+    if (!T.li && !(SAVE.h || {}).tiro_rival) { SAVE.h = SAVE.h || {}; SAVE.h.tiro_rival = 1; writeSave(); avisar(TOUCH ? '¡Carrera! Gasta tu fuerza en los tramos libres (RÁPIDO)' : '¡Carrera! Usa ↑ en los tramos libres: la fuerza se gasta', '🏁'); }
+  }
+  T.MU.forEach(function (o) {
+    if (o.s < -1e5) { o.rel = 0; return; }
+    var rel = o.s > T.s ? 1 : -1;
+    if (o.rel && rel !== o.rel && Math.abs(o.s - T.s) < 60 && !o.hum) {
+      if (o.rival) tiroOtroDice(T, o, rel > 0 ? pickM(['💪 ¡Nos vemos abajo, bro!', '💪 ¡Sin manos!']) : pickM(['😤 ¡Eh! ¡Espera, bro!', '😤 ¡Eso es trampa!']));
+      else if (OTROS_DICE[o.tipo]) { tiroOtroDice(T, o, pickM(OTROS_DICE[o.tipo])); if (o.tipo === 'abuela') TSFX.grito(); }
+    }
+    o.rel = rel;
+  });
+}
+function tzsLlego(r, li) {                                                   // ¿ha llegado ya a la plataforma de la tirolina li?
+  return r.tf >= 0 || r.li > li || (r.li === li && r.sRaw >= TIRO_L[li].len - 6.5);
+}
+var tiroRivalLlega692 = tiroRivalLlega;
+tiroRivalLlega = function (T) {                                              // en cada plataforma: tu puesto en esa tirolina; el primero, +5 ✿
+  if (!T.MU) { if (!tzmOn()) tiroRivalLlega692(T); return; }
+  if (T.rivalDicho === T.li) return; T.rivalDicho = T.li;
+  if (!T.MU.length) return;
+  var n = 1; T.MU.forEach(function (r) { if ((!tzmVa() || MUL.jug[r.slot]) && tzsLlego(r, T.li)) n++; });
+  if (n === 1) { T.gana = (T.gana || 0) + 1; G.fl += TZS.premio; T.flTot += TZS.premio; SFX.tlin(); tiroPop('🏁 ¡Llegas el primero! +' + TZS.premio + ' ✿', 'r', 0, 0, 0, '#ffd23f', 1.05); }
+  else tiroPop('🏁 ' + TT('Llegas') + ' ' + rivOrd(n), 'r', 0, 0, 0, '#ffe0b0', 1);
+};
+
+/* ---------- los demás por la red: donde dicen (y un poco más: lo que tarda en llegar), sin tirones ---------- */
+function tzmPasoRed(T, dt) {
   var now = performance.now(), D = TIRO_L[T.li];
   (T.MU || []).forEach(function (r) {
+    if (r.A) return;
     var e = MUL.est[r.slot]; if (!e) { r.s = -1e6; return; }
     var d = e.d, v = Math.floor(d[4] / 16), f = d[4] - v * 16, edad = clamp((now - e.t) / 1000, 0, 0.5) + 1 / 20, k = expo(14, dt);
-    r.li = d[0]; r.v = v; r.fl = d[5]; r.tf = d[6]; r.emp = f & 4 ? 1 : 0; r.fin = f & 8 ? 1 : 0;
+    r.li = d[0]; r.sRaw = d[1]; r.v = v; r.fl = d[5]; r.tf = d[6]; r.emp = f & 4 ? 1 : 0; r.fin = f & 8 || d[6] >= 0 ? 1 : 0;
     r.tk += (d[3] - r.tk) * k; r.gri = f & 1 ? Math.min(1, r.gri + dt * 8) : Math.max(0, r.gri - dt * 3); r.dol = f & 2 ? Math.min(1, r.dol + dt * 8) : Math.max(0, r.dol - dt * 2.5);
     if (d[0] !== T.li) { r.s = -1e6; return; }                                  // va por otra tirolina: aquí no se le ve
     var ts = Math.min(D.len - 6, d[1] + (r.fin ? 0 : v * edad));
@@ -106403,29 +106525,32 @@ function tzmPasoRed(T, dt) {                                                    
   });
 }
 
-/* ---------- la salida a la vez; la llegada; el resto del paso ---------- */
+/* ---------- cada paso: la salida a la vez, los seis, la llegada ---------- */
 var tiroUpdate692 = tiroUpdate;
 tiroUpdate = function (dt) {
   var on = tzmOn(), espera = on && performance.now() < MUL.salida;
   tiroUpdate692(dt);
-  if (!on || !TIRO) return;
-  var T = TIRO, last = TIRO_L.length - 1;
-  if (G.state === 'play') {
+  var T = TIRO; if (!T) return;
+  var last = TIRO_L.length - 1, llega = T.li === last && T.s >= TIRO_L[last].len - 6.5;
+  if (on && G.state === 'play') {
     if (espera) { T.s = 0; T.v = 0; T.ft = 0; T.fase = 'sale'; T.dist = 0; G.time = 0; }   // en la plataforma de salida, hasta el ¡YA!
     else if (!TZM.ya) { TZM.ya = true; tiroPop('¡YA!', 'r', 0, 0, 0, '#ffe27a', 1.4); SFX.pick(7); }
     if (!espera && MUL.miFin < 0) G.time = Math.max(0, (performance.now() - MUL.salida) / 1000);   // el reloj de arriba, el de todos (con los cambios de tirolina): el mismo que sale al final
   }
-  if (MUL.miFin === -1 && T.li === last && T.s >= TIRO_L[last].len - 6.5) MUL.miFin = tzmT();   // abajo: tu tiempo (el de todos, desde el ¡YA!)
-  tzmPasoRed(T, dt);
+  if (on && MUL.miFin === -1 && llega) MUL.miFin = tzmT();                    // abajo: tu tiempo (el de todos, desde el ¡YA!)
+  if (!T.MU || G.state !== 'play' || G.mode !== 'tiro') return;
+  if (!tzmVa()) { TZS.t += dt; if (TZS.yoFin == null && llega) TZS.yoFin = Math.round(TZS.t * 100) / 100; }
+  if (T.AI && T.AI.length && !espera) { TZS.clk += dt; for (var i = 0; i < T.AI.length; i++) tzsPaso(T.AI[i], dt); }
+  tzsVista(T);
+  if (on) tzmPasoRed(T, dt);
+  tzsCharla(T);
 };
 var tiroPistas692 = tiroPistas;
 tiroPistas = function (T) { var ts = G.ts, sl = G.slow; tiroPistas692(T); if (tzmOn()) { G.ts = ts; G.slow = sl; } };   // los avisos, sí; la cámara lenta, no (perderías tiempo)
 var tiroGolpe692 = tiroGolpe;
-tiroGolpe = function (T, o) { if (tzmOn() && !o.roba && T.hp <= 1) T.hp = 2; tiroGolpe692(T, o); };   // no se acaban los cascos: te frena, pero no te quedas colgado
-var tiroRivalLlega692 = tiroRivalLlega;
-tiroRivalLlega = function (T) { if (tzmOn()) return; tiroRivalLlega692(T); };
+tiroGolpe = function (T, o) { if (tzmOn() && !o.roba && T.hp <= 1) T.hp = 2; tiroGolpe692(T, o); };   // en el multijugador no se acaban los cascos: te frena, pero no te quedas colgado
 
-/* ---------- cómo se pinta a los demás: el guiri, con su camisa y lo de la cabeza, y Pitik en la cesta ---------- */
+/* ---------- cómo se pinta a las personas: el guiri, con su camisa y lo de la cabeza, y Pitik en la cesta ---------- */
 var tzgFicha692 = tzgFicha;
 tzgFicha = function (tipo) {
   if (typeof tipo !== 'string' || tipo.indexOf('mu') !== 0) return tzgFicha692(tipo);
@@ -106460,9 +106585,9 @@ tzgOtro = function (g, T, r, x, s, z, ang, th, pend, lod, cruza) {
     pitik: { t: T.anim + (r.ph || 0), giro: 0, est: r.dol > 0.3 ? 'susto' : r.fin ? 'feliz' : 'normal', salto: gr || (r.fin ? 0.6 : 0), pico: gr, sube: -2.3 * smooth(clamp(r.tk || 0, 0, 1)) * (1 - gr) + 1.1 * gr } });
 };
 var tzaOtro692 = TZA.pinta.otro;
-TZA.pinta.otro = function (g, T, D, o) {                                        // y su nombre encima
+TZA.pinta.otro = function (g, T, D, o) {                                        // y el nombre de cada uno de los seis, encima
   var r0 = tzaOtro692(g, T, D, o), r = o.r;
-  if (r0 === false || !tzmMu(r) || !tzmOn()) return r0;
+  if (r0 === false || !r || !r.racer) return r0;
   var z = tzc(D, r.s) + r.dz, d = tp(r.x, r.s, z + 14);
   if (d < 8 || d > 1100 || tFuera(20)) return r0;
   scr(g); g.save(); g.globalAlpha = clamp((1100 - d) / 200, 0, 1) * tNiebla(d);
@@ -106475,12 +106600,12 @@ TZA.pinta.otro = function (g, T, D, o) {                                        
 
 /* ---------- arriba: los demás en la barra de las tirolinas; a la izquierda, cómo vais; la cuenta atrás ---------- */
 function tzmOrden() {                                                          // los que han llegado, por su tiempo; los que van volando, por por dónde van
-  var T = TIRO, A = [{ s: RED.soy, yo: true, nom: TT('Tú'), col: tzmCol(RED.soy), tf: MUL.miFin >= 0 ? MUL.miFin : null, ret: MUL.miFin === -2, p: T ? T.li * 1e5 + T.s : 0, fl: G.fl }], s, d;
-  for (s = 1; s <= RED.max; s++) {
-    if (s === RED.soy || !MUL.jug[s] || MUL.jug[s].ia) continue;
-    d = MUL.est[s] ? MUL.est[s].d : null;
-    A.push({ s: s, nom: mulNom(s), col: tzmCol(s), tf: d && d[6] >= 0 ? d[6] : null, ret: !!d && d[6] === -2, p: d ? d[0] * 1e5 + d[1] : 0, fl: d ? d[5] : 0 });
-  }
+  var T = TIRO, multi = tzmVa(), yoTf = multi ? (MUL.miFin >= 0 ? MUL.miFin : null) : TZS.yoFin;
+  var A = [{ s: multi ? RED.soy : 1, yo: true, nom: TT('Tú'), col: tzmCol(multi ? RED.soy : 1), tf: yoTf, ret: multi && MUL.miFin === -2, p: T ? T.li * 1e5 + T.s : 0, fl: G.fl, hum: true }];
+  ((T && T.MU) || []).forEach(function (r) {
+    if (multi && !MUL.jug[r.slot]) return;
+    A.push({ s: r.slot, nom: r.nom, col: r.col, tf: r.tf >= 0 ? r.tf : null, ret: r.tf === -2, p: (r.li || 0) * 1e5 + (r.sRaw || 0), fl: r.hum ? r.fl || 0 : null, hum: !!r.hum });
+  });
   A.sort(function (a, b) {
     if (a.tf != null && b.tf != null) return a.tf - b.tf || a.s - b.s;           // (a la centésima: el de número de moto más bajo, en todos igual)
     if (a.tf != null) return -1; if (b.tf != null) return 1;
@@ -106491,19 +106616,19 @@ function tzmOrden() {                                                          /
 }
 var tiroHUD25_692 = tiroHUD25;
 tiroHUD25 = function (g, T) {
-  if (!tzmOn()) { tiroHUD25_692(g, T); return; }
-  var R = T.R; T.R = null;                                                     // (sin el cachitas: ni su distancia ni su punto en la barra)
+  if (!T.MU) { tiroHUD25_692(g, T); return; }
+  var R = T.R; T.R = null;                                                     // (sin la distancia al cachitas ni su punto: van los seis)
   try { tiroHUD25_692(g, T); } finally { T.R = R; }
   tzmHUD(g, T);
 };
 function tzmHUD(g, T) {
   scr(g); g.save(); g.lineJoin = 'round'; g.strokeStyle = INK;
-  var n = TIRO_L.length, bw = Math.min(200, V.w - 220), bx = (V.w - bw) / 2 - 8, sw = bw / n, A = tzmOrden(), i, a, y, t, s, e, d;
-  if (bw > 60 && T.fase !== 'cambio') for (s in MUL.est) {                     // los demás, en la barra de las cuatro tirolinas
-    e = MUL.est[s]; d = e && e.d; if (!d || +s === RED.soy || !MUL.jug[s]) continue;
-    var li = clamp(d[0], 0, n - 1), f = d[6] >= 0 ? 1 : clamp(d[1] / TIRO_L[li].len, 0, 1), mx = bx + li * sw + 4 + (sw - 8) * f;
-    circ(g, mx, 19, 3.8, tzmCol(+s), INK, 1.3);
-  }
+  var n = TIRO_L.length, bw = Math.min(200, V.w - 220), bx = (V.w - bw) / 2 - 8, sw = bw / n, A = tzmOrden(), multi = tzmVa(), i, a, y, t;
+  if (bw > 60 && T.fase !== 'cambio') T.MU.forEach(function (r) {              // los demás, en la barra de las cuatro tirolinas
+    if (multi && !MUL.jug[r.slot]) return;
+    var li = clamp(r.li || 0, 0, n - 1), f = r.tf >= 0 ? 1 : clamp((r.sRaw || 0) / TIRO_L[li].len, 0, 1);
+    circ(g, bx + li * sw + 4 + (sw - 8) * f, 19, 3.8, r.col, INK, 1.3);
+  });
   if (T.fase !== 'cambio') {                                                    // tu puesto, donde iba la distancia al cachitas
     var mi = 0; A.forEach(function (q, k) { if (q.yo) mi = k + 1; });
     t = '🏁 ' + rivOrd(mi) + ' ' + TT('de') + ' ' + A.length;
@@ -106519,8 +106644,8 @@ function tzmHUD(g, T) {
     g.strokeText(t, 26, y); g.fillStyle = a.yo ? '#ffe27a' : '#ffffff'; g.fillText(t, 26, y);
   }
   g.textAlign = 'center';
-  if (MUL.cortado) { t = '📶 ' + TT('Se ha cortado la conexión con la moto 1.'); g.strokeText(t, V.w / 2, V.h * 0.27); g.fillStyle = '#ffb3a3'; g.fillText(t, V.w / 2, V.h * 0.27); }
-  var r = (MUL.salida - performance.now()) / 1000;
+  if (multi && MUL.cortado) { t = '📶 ' + TT('Se ha cortado la conexión con la moto 1.'); g.strokeText(t, V.w / 2, V.h * 0.27); g.fillStyle = '#ffb3a3'; g.fillText(t, V.w / 2, V.h * 0.27); }
+  var r = multi ? (MUL.salida - performance.now()) / 1000 : 0;
   if (r > 0 && G.state === 'play') {                                             // la cuenta atrás
     var nn = Math.ceil(r), k = 1 + 0.4 * (r - Math.floor(r)); t = r > 3 ? TT('¡Preparados!') : '' + nn;
     if (r <= 3 && MUL.ult !== nn) { MUL.ult = nn; SFX.pick(2); }
@@ -106530,10 +106655,22 @@ function tzmHUD(g, T) {
   g.restore(); scr(g);
 }
 
-/* ---------- abajo: la tarjeta con todos (se completa según llegan) ---------- */
+/* ---------- abajo: el puesto de los seis (se completa según llegan) ---------- */
 var showTiroEnd692 = showTiroEnd;
 showTiroEnd = function (why) {
-  if (!tzmOn()) { showTiroEnd692(why); return; }
+  if (!tzmOn()) {                                                              // jugando solo: la tarjeta de siempre, con el puesto de los seis
+    var c0 = G.card; showTiroEnd692(why);
+    var T = TIRO, cd = document.querySelector('#scr .card.tiroF');
+    if (c0 || !T || !T.MU || !T.MU.length || !cd) return;
+    cd.querySelectorAll('.res p span').forEach(function (sp) { if (sp.textContent.indexOf(TT('Carreras al cachitas')) >= 0) sp.textContent = '🏁 ' + TT('Primero en la plataforma'); });
+    if (why !== 'ok') return;
+    if (TZS.yoFin == null) TZS.yoFin = Math.round(TZS.t * 100) / 100;
+    var wb = cd.querySelector('.w-b'); if (!wb) return;
+    wb.insertAdjacentHTML('afterbegin', '<div class="mu-res tz-cl">' + tzmClasi(true) + '</div>');
+    clearInterval(TZS.tm);
+    TZS.tm = setInterval(function () { var q = document.querySelector('#scr .tz-cl'); if (!q || !TIRO) { clearInterval(TZS.tm); return; } q.innerHTML = tzmClasi(true); }, 600);
+    return;
+  }
   if (G.card) return; G.card = true; pokiStop();
   if (MUL.miFin === -1) MUL.miFin = tzmT();
   guardaFlores(G.fl);
@@ -106545,24 +106682,38 @@ showTiroEnd = function (why) {
   clearInterval(MUL.tm);
   MUL.tm = setInterval(function () { var r = document.querySelector('#scr .mu-res'); if (!r || !tzmOn()) { clearInterval(MUL.tm); return; } r.innerHTML = tzmClasi(); }, 600);
 };
-function tzmClasi() {
+function tzmClasi(solo) {                                                      // solo: sin tiempos ni flores (los de la tarjeta de siempre son otros: el tuyo no cuenta los cambios de tirolina)
   var A = tzmOrden(), mi = 0, h;
   A.forEach(function (a, i) { if (a.yo) mi = i + 1; });
   h = '<div class="clasi p' + mi + ' mu-cl"><div class="cl-p"><i>' + (['', '🥇', '🥈', '🥉'][mi] || '🚡') + '</i><b>' + TT(RIV_TIT[mi] || '') + '</b><small>' + rivOrd(mi) + ' ' + TT('de') + ' ' + A.length + '</small></div><ol>';
   A.forEach(function (a) {
-    h += '<li' + (a.yo ? ' class="yo"' : '') + '><i style="background:' + a.col + '"></i>' + mulEsc(a.nom) +
-      ' <em>' + (a.tf != null ? fmtT(a.tf) + '.' + Math.floor((a.tf % 1) * 10) : a.ret ? TT('retirado') : TT('en el aire…')) + ' · ✿ ' + (a.fl || 0) + '</em></li>';
+    h += '<li' + (a.yo ? ' class="yo"' : '') + '><i style="background:' + a.col + '"></i>' + (a.hum ? '' : '🤖 ') + mulEsc(a.nom) +
+      ' <em>' + (a.tf != null ? (solo ? '🏁' : fmtT(a.tf) + '.' + Math.floor((a.tf % 1) * 10)) : a.ret ? TT('retirado') : TT('en el aire…')) + (!solo && a.fl != null ? ' · ✿ ' + a.fl : '') + '</em></li>';
   });
   return h + '</ol></div>';
 }
+/* la tarjeta de antes de salir, jugando solo: ya no es el cachitas solo */
+var showReadyTiro692 = showReadyTiro;
+showReadyTiro = function () {
+  showReadyTiro692();
+  if (!TZS.vivo) return;
+  var cd = document.querySelector('#scr .card.ready.tiro'); if (!cd) return;
+  var ld = cd.querySelector('.lead'); if (ld) ld.innerHTML = TT('Cuatro tirolinas largas: arrozales, barranco del Ayung, selva y cascada. ¡Y una carrera de seis: el cachitas y cuatro más, cada uno en su cable!');
+  cd.querySelectorAll('.how li').forEach(function (li) { if (li.textContent.indexOf('💪') >= 0) { var sp = li.querySelector('span'); if (sp) sp.innerHTML = TT('<b>RÁPIDO</b>: tirar de la polea gasta fuerza. Úsalo en los tramos libres y llega el primero a cada plataforma (+5 ✿)'); } });
+};
 /* para las pruebas */
-window.__TZM = { orden: function () { return tzmOrden(); }, mu: function () { return TIRO && TIRO.MU ? TIRO.MU.map(function (r) { return { slot: r.slot, x: r.x, s: r.s, li: r.li, phi: r.phi, tk: r.tk }; }) : null; },
+window.__TZM = { orden: function () { return tzmOrden(); }, mu: function () { return TIRO && TIRO.MU ? TIRO.MU.map(function (r) { return { slot: r.slot, tipo: r.tipo, x: r.x, s: r.s, li: r.li, sRaw: r.sRaw, phi: r.phi, tk: r.tk, tf: r.tf, ia: !r.hum, local: !!r.A }; }) : null; },
   recorrido: function () { var T = TIRO; return T ? T.O.map(function (o) { return o.t + Math.round(o.s) + (o.x != null ? ':' + Math.round(o.x) : '') + (o.xe != null ? ':' + Math.round(o.xe * 10) : ''); }).join(',') : ''; } };
 (function () {
   var N = {
     'Tirolina': ['Zipline', 'Flying fox'], 'las cuatro seguidas': ['all four in a row', 'keempatnya berturut-turut'],
     'Las cuatro tirolinas seguidas, cada uno en su cable. Gana quien llegue antes abajo.': ['All four ziplines in a row, each on their own cable. First to the bottom wins.', 'Keempat flying fox berturut-turut, masing-masing di kabelnya. Yang pertama sampai bawah menang.'],
-    'Otra tirolina': ['Another zipline', 'Flying fox lagi'], 'en el aire…': ['in the air…', 'masih di udara…']
+    'Las cuatro tirolinas seguidas, seis en carrera, cada uno en su cable (los huecos, el cachitas y los suyos). Gana quien llegue antes abajo.': ['All four ziplines in a row, six racing, each on their own cable (empty places go to the muscle guy and his crew). First to the bottom wins.', 'Keempat flying fox berturut-turut, enam orang balapan, masing-masing di kabelnya (kursi kosong untuk si cowok berotot dan kawan-kawan). Yang pertama sampai bawah menang.'],
+    'Otra tirolina': ['Another zipline', 'Flying fox lagi'], 'en el aire…': ['in the air…', 'masih di udara…'],
+    'Cachitas': ['Muscles', 'Si Otot'], 'Abuela': ['Granny', 'Nenek'], 'Made': ['Made', 'Made'], 'Niño': ['Kid', 'Bocah'], 'Mochilero': ['Backpacker', 'Backpacker'],
+    'Llegas': ['You finish', 'Kamu sampai'], '🏁 ¡Llegas el primero! +# ✿': ['🏁 First to the platform! +# ✿', '🏁 Pertama sampai! +# ✿'], 'Primero en la plataforma': ['First to the platform', 'Pertama sampai di platform'],
+    'Cuatro tirolinas largas: arrozales, barranco del Ayung, selva y cascada. ¡Y una carrera de seis: el cachitas y cuatro más, cada uno en su cable!': ['Four long ziplines: rice terraces, the Ayung gorge, jungle and waterfall. And a six-way race: the muscle guy and four more, each on their own cable!', 'Empat flying fox panjang: sawah, jurang Ayung, hutan dan air terjun. Dan balapan berenam: si cowok berotot dan empat lainnya, masing-masing di kabelnya!'],
+    '<b>RÁPIDO</b>: tirar de la polea gasta fuerza. Úsalo en los tramos libres y llega el primero a cada plataforma (+5 ✿)': ['<b>FASTER</b>: pulling the pulley uses strength. Use it on clear stretches and be first to each platform (+5 ✿)', '<b>NGEBUT</b>: menarik katrol menghabiskan tenaga. Pakai di jalur lengang dan jadilah yang pertama di tiap platform (+5 ✿)']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
