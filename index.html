@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V214</title>
+<title>Bali Rush Completo V215</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V214', FECHA = '20-10-2026';
+var VERSION = 'Completo V215', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -3311,7 +3311,7 @@ function flowerPass() {
 /* ---------- señales antes de las curvas cerradas ---------- */
 function signPass() {
   var last = -1e9;
-  if (L.SUBE) L.secs.forEach(function (S) { if ((S.s.sube || 0) >= 0.05 && S.y0 > 300) { var ys = S.y0 + 40; L.deco.ground.push({ s: BB.tanjakan, y: ys, x: cxAt(ys) - (hwAt(ys) + GUT + 7), a: 0, sc: 1.2 }); } });   // V13: «tanjakan», cuesta arriba
+  if (L.SUBE) L.secs.forEach(function (S) { if ((S.s.sube || 0) >= 0.05 && S.y0 > 300) { var ys = S.y0 + 40; L.deco.ground.push({ s: BB.tanjakan, y: ys, x: cxAt(ys) - (hwAt(ys) + GUT + 12), a: 0, sc: 1.2 }); } });   // V13: «tanjakan», cuesta arriba (V215: a 12 y no a 7: a 7 la quitaba limpiaCalzada por rozar la cuneta y no salía nunca)
   for (var y = 350; y < L.len - 250; y += 30) {
     var dk = slopeAt(y + 160) - slopeAt(y);
     if (Math.abs(dk) < 0.2 || y - last < 450) continue;
@@ -106306,6 +106306,8 @@ window.__TXM = { estado: function () {
      enfrente, en el mismo sentido (PRA.B por delante, sin llegar al
      siguiente cruce de calles). Allí se paran y, cuando ya no los ves,
      se van (como antes, «fuera»).
+   - V215: LO QUE HAY EN LA ACERA (los penjor, algún puesto) LO RODEAN,
+     no lo atraviesan (o.pra.ob).
    - CADA UNO SE PINTA POR SU CUENTA en la lista de la calle (k 'procM',
      un poco más cerca de ti que donde está, como la gente junto a una
      tapia): delante de la tapia que tiene al lado, no detrás.
@@ -106316,7 +106318,7 @@ window.__TXM = { estado: function () {
      los cartones de lejos), lo mismo.
    PRA.vivo = false: como antes (cruzan de tapia a tapia).
    ================================================================ */
-var PRA = { vivo: true, ace: 5.5, A: 96, B: 240, v: 17, wob: 1.7, lejos: 520 };   // ace: por dónde van, del bordillo (la tapia está a 14); A: lo que esperan en fila antes de cruzar; B: hasta dónde siguen por la acera de enfrente
+var PRA = { vivo: true, ace: 4.5, A: 96, B: 240, v: 17, wob: 1.7, lejos: 520 };   // ace: por dónde van, del bordillo (la tapia está a 14); A: lo que esperan en fila antes de cruzar; B: hasta dónde siguen por la acera de enfrente
 function praOn(o) { return PRA.vivo && o && o.t === 'procesion' && o.si != null && !!CITY.streets[o.si]; }
 function praPrepara(o) {                                                     // el camino: por la acera hasta la esquina, cruzar, y por la acera de enfrente
   var st = CITY.streets[o.si], E = o.w + PRA.ace, dir = o.dir || 1, s0 = o.s0, A = PRA.A, B = PRA.B, k, n;
@@ -106325,14 +106327,24 @@ function praPrepara(o) {                                                     // 
   for (k = 0; k < (st.sp || []).length; k++) { n = (st.sp[k].s - s0) * dir; if (n > 10) lim = Math.min(lim, n - (st.w + 30)); }   // sin llegar al siguiente cruce de calles
   o.pra = { E: E, dir: dir, A: A, C: 2 * E, B: Math.max(PROC_N * PROC_GAP + 10, Math.min(B, lim)) };
   o.pra.tot = A + o.pra.C + o.pra.B;
+  var Ob = o.pra.ob = [];                                                    // V215: lo que hay en la acera por donde van (los penjor, los puestos…): lo rodean
+  (CITY.items || []).forEach(function (it) {
+    if (Math.abs(it.x - o.cx) > R0 || Math.abs(it.y - o.cy) > R0 || it.k === 'wall' || it.k === 'procM') return;
+    if (!it.pj && !(it.k === 'deco' && it.s)) return;
+    var q = nearestStreet(it.x, it.y); if (!q || q.si !== o.si || q.ex < -2 || q.ex > 13) return;
+    var H = !it.pj && typeof c5Huella === 'function' ? c5Huella(it) : null;
+    Ob.push([it.x, it.y, it.pj ? 1.6 : H ? Math.min(9, Math.max(H[0], H[1])) : 3]);
+  });
 }
-var PRA_P = [0, 0];
+var R0 = 420;
+var PRA_P = [0, 0], PRA_Q = [0, 0, 1, 0];
 function praPunto(o, p) {                                                    // dónde está, a lo largo del camino (p), en el mundo (deja PRA_P)
   var R = o.pra, st = CITY.streets[o.si], s, u;
   if (p < R.A) { s = o.s0 - R.dir * (R.A - p); u = o.side * R.E; }
   else if (p < R.A + R.C) { s = o.s0; u = o.side * R.E - o.side * (p - R.A); }
   else { s = o.s0 + R.dir * (p - R.A - R.C); u = -o.side * R.E; }
   var q = pointAt(st, s); PRA_P[0] = q.x + Math.cos(q.ang) * u; PRA_P[1] = q.y - Math.sin(q.ang) * u;
+  PRA_Q[0] = q.x; PRA_Q[1] = q.y; PRA_Q[2] = Math.cos(q.ang); PRA_Q[3] = -Math.sin(q.ang);   // (y el punto de la calle y su normal)
   return u;
 }
 function praMiembros(o) {                                                    // los ocho: dónde está cada uno, hacia dónde mira y si anda
@@ -106345,6 +106357,13 @@ function praMiembros(o) {                                                    // 
     var wob = (j % 2 ? 1 : -1) * PRA.wob * (0.7 + 0.6 * hash(j * 7.3 + hp)), lo = (hash(j * 3.7 + hp) - 0.5) * 3;   // en zigzag y algo desordenados
     praPunto(o, p);
     m.x = PRA_P[0] - dy / l * wob + dx / l * lo; m.y = PRA_P[1] + dx / l * wob + dy / l * lo;
+    for (var q = 0; q < R.ob.length; q++) {                                  // el que pasa junto a un penjor (o un puesto) lo rodea por el lado de la calle (no lo atraviesa, ni se va contra la tapia)
+      var b = R.ob[q], ex = m.x - b[0], ey = m.y - b[1], mn = b[2] + 3.4; if (ex * ex + ey * ey >= mn * mn) continue;
+      var nx = PRA_Q[2], ny = PRA_Q[3], ub = (b[0] - PRA_Q[0]) * nx + (b[1] - PRA_Q[1]) * ny, um = (m.x - PRA_Q[0]) * nx + (m.y - PRA_Q[1]) * ny;
+      if (Math.abs(u) < R.E - 2) { var dd = Math.sqrt(ex * ex + ey * ey) || 1; m.x = b[0] + ex / dd * mn; m.y = b[1] + ey / dd * mn; continue; }   // (bajando a cruzar: se aparta sin más)
+      var al = ex * (-ny) + ey * nx, lat = Math.sqrt(Math.max(0, mn * mn - al * al)), un = ub - (u > 0 ? 1 : -1) * lat;
+      if (Math.abs(un) < Math.abs(um)) { m.x += nx * (un - um); m.y += ny * (un - um); }
+    }
     m.ang = Math.atan2(dx, dy); m.u = u; m.p = p;
     m.anda = (o.st === 'cruza' || o.st === 'va') && p > 0 && p < R.tot && !o.parada;
   }
@@ -106593,8 +106612,43 @@ function tseConvierte() {
     else if (E && s === SP.statue) { var v = Math.floor(hash(d.x * 0.137 + d.y * 0.071) * 8); d.s = v < 4 ? E.guardianM : v < 6 ? E.ganeshaM : E.altar; d.h3 = vd3Mira(d); d.sc = 1; n++; }
   }
   L.deco.ground.forEach(cambia); L.deco.top.forEach(cambia);
-  TSE.n = n;
+  TSE.n = n; TSE.ajust = tseCabe();
 }
+/* que ninguna chapa se meta en una tapia: en los pueblos, entre la acera y la tapia hay una franja de 10 (BALI.franja); una chapa de cara a quien
+   llega se abre a los lados (un rombo, unos 11 a cada lado del poste): si se metería en la tapia, el poste se acerca al bordillo (y la chapa vuela
+   sobre la cuneta, como las de verdad); si ni así cabe, se hace algo más pequeña */
+function tseChoques(d) {                                                      // las tapias de su lado que tiene a la altura de la chapa: [dónde empieza la tapia (desde el centro de la carretera)]
+  var s = d.s, cx = cxAt(d.y), lado = d.x >= cx ? 1 : -1, sc = d.sc || 1, al = s.a * sc * Math.sin(TSE.gira) + 4, R = [];
+  for (var i = 0; i < L.deco.ground.length; i++) {
+    var q = L.deco.ground[i], m = q.mu; if (!m || m.lado !== lado || d.y < m.y0 - al || d.y > m.y1 + al) continue;
+    R.push(hwAt(d.y) + m.o + 2.5 - 2.4);
+  }
+  return R;
+}
+function tseCabe() {
+  var n = 0, G = L.deco.ground.concat(L.deco.top);
+  G.forEach(function (d) {
+    var s = d.s; if (!s || s.esc !== 'senal3d') return;
+    var W = tseChoques(d); if (!W.length) return;
+    var lim = Math.min.apply(null, W), cx = cxAt(d.y), lado = d.x >= cx ? 1 : -1, u = Math.abs(d.x - cx), sc = d.sc || 1, ext = s.a * sc * Math.cos(TSE.gira) + 0.6, borde = hwAt(d.y) + 1;
+    if (u + ext <= lim) return;
+    var u2 = Math.max(borde, lim - ext);
+    if (u2 + ext > lim) { var k = Math.max(0.55, (lim - borde - 0.6) / (s.a * Math.cos(TSE.gira))) / sc; d.sc = sc * Math.min(1, k); ext = s.a * d.sc * Math.cos(TSE.gira) + 0.6; u2 = Math.max(borde, lim - ext); }
+    d.x = cx + lado * u2; n++;
+  });
+  return n;
+}
+function tseRevisa() {                                                        // (para las pruebas) cuántas chapas se meten aún en una tapia
+  var malas = [];
+  L.deco.ground.concat(L.deco.top).forEach(function (d) {
+    var s = d.s; if (!s || s.esc !== 'senal3d') return;
+    var W = tseChoques(d); if (!W.length) return;
+    var u = Math.abs(d.x - cxAt(d.y)), ext = s.a * (d.sc || 1) * Math.cos(TSE.gira) + 0.6, lim = Math.min.apply(null, W);
+    if (u + ext > lim + 0.01) malas.push(Math.round(d.y) + ':' + Math.round(u + ext - lim));
+  });
+  return malas;
+}
+window.__TSE = { revisa: function () { return tseRevisa(); }, ajust: function () { return TSE.ajust; } };
 var buildLevel618 = buildLevel;
 buildLevel = function (li) {
   var r = buildLevel618.apply(this, arguments);
@@ -106619,9 +106673,12 @@ ST.piedra.draw = function (g, s) {
    - LOS CARTELES DE LOS SITIOS (signSprite: el warung, la panadería
      7AM, el 7PM, la escuela, tus terrenos, los de la liga…, y el
      «HATI-HATI · PROYEK» de las obras de las carreras): dos postes de
-     madera y la tabla azul de verdad, con su letrero por las dos caras,
+     madera y la tabla azul de verdad, en lo alto de los postes (por
+     encima de las tapias de 19, que si no la tapaban), con su letrero por las dos caras,
      atravesada a su calle para que se lea viniendo de un lado y del
-     otro (ESN.fn.senal3d, de 618).
+     otro (ESN.fn.senal3d, de 618). V215: sin meterse en nada (t3cColoca:
+     si atravesada se mete en una tapia, una casa o el asfalto, de cara a
+     la calle; y si hace falta, algo corrida por la acera).
      Y el rombo del cruce de los atascos (BB.signCruce), como en las
      carreras.
    - LOS PUESTOS DEL PASEO LIBRE (7AM y 7PM): eran una caja con lo que
@@ -106649,17 +106706,54 @@ signSprite = function (txt) {
       g.fillText(txt, 0, -6.4);
     });
   } finally { SR = sr; }
-  s.esc = 'senal3d'; s.a = 21.5; s.b = 6; s.H = 19.5; s.postes = [-14, 14]; s.pr = 0.95; s.palo = '#6b4a2a'; s.espalda = '#8a6a44'; s.grueso = 0.9; s.dosCaras = true;   // (el letrero, por las dos caras)
+  s.esc = 'senal3d'; s.a = 21.5; s.b = 6; s.H = 26; s.postes = [-14, 14]; s.pr = 0.95; s.palo = '#6b4a2a'; s.espalda = '#8a6a44'; s.grueso = 0.9; s.dosCaras = true;   // (el letrero, por las dos caras)
   return s;
 };
 var tseSenal620 = ESN.fn.senal3d;
 ESN.fn.senal3d = function (g, d, zg, fa) {
   if (!T3C.vivo && d.s.dosCaras) { bill(g, d.s, d.x, d.y, 0, d.sc || 1, 0, false, fa); return; }   // (T3C.vivo = false: como antes)
-  if (d.h3 == null && !L && typeof nearestStreet === 'function' && CITY) {     // en la ciudad: atravesado a su calle (se lee desde los dos lados, como los de verdad); el del cruce, de cara a quien llega
-    var q = nearestStreet(d.x, d.y), p = pointAt(CITY.streets[q.si], q.s); d.h3 = p.ang;
-  }
+  if (d.h3 == null && !L && typeof nearestStreet === 'function' && CITY) t3cColoca(d);   // en la ciudad: dónde y cómo, sin meterse en nada
   tseSenal620(g, d, zg, fa);
 };
+/* en la ciudad, cada cartel: atravesado a su calle (se lee viniendo de los dos lados, como los de verdad) si cabe; si no, de cara a la calle;
+   y, si hace falta, algo corrido a lo largo de la acera: que la tabla no se meta en una tapia, ni en una casa, ni sobre el asfalto */
+function t3cConflictos(d, th, x, y) {                                         // los postes, ni en el asfalto ni en una tapia; la tabla (en lo alto, por encima de las tapias), sin meterse en una casa
+  var s = d.s, k = d.sc || 1, ha = s.a * k + 1, vx = Math.cos(th), vy = -Math.sin(th), n = 0, i, j, it;
+  var P = []; for (j = -2; j <= 2; j++) P.push([x + vx * ha * j / 2, y + vy * ha * j / 2]);
+  var Q = s.postes.map(function (pv) { return [x + vx * pv * k, y + vy * pv * k]; });
+  for (j = 0; j < Q.length; j++) { var q = nearestStreet(Q[j][0], Q[j][1]); if (q && q.ex < 1.5) n++; }   // un poste sobre el asfalto
+  var L2 = [CITY.items, typeof VILLA_IT !== 'undefined' ? VILLA_IT : []];
+  for (var l = 0; l < L2.length; l++) for (i = 0; i < L2[l].length; i++) {
+    it = L2[l][i]; if (it === d || Math.abs(it.x - x) > 140 || Math.abs(it.y - y) > 140) continue;
+    if (it.k === 'wall') {                                                     // un poste dentro de una tapia
+      var hx = it.ux * it.L / 2, hy = it.uy * it.L / 2;
+      for (j = 0; j < Q.length; j++) if (segDist(Q[j][0], Q[j][1], it.x - hx, it.y - hy, it.x + hx, it.y + hy).d < 3.2) { n++; break; }
+      continue;
+    }
+    var H = typeof c5Huella === 'function' ? c5Huella(it) : null; if (!H || (it.ob && /^(fruta|lapak)/.test(it.ob.id))) continue;   // la tabla, dentro de una casa (o de lo que tenga planta; los puestos de fruta son bajos: la tabla pasa por encima)
+    var a = it.a || 0, ca = Math.cos(a), sa = Math.sin(a);
+    for (j = 0; j < P.length; j++) { var dx = P[j][0] - it.x, dy = -(P[j][1] - it.y), u = dx * ca + dy * sa, v = -dx * sa + dy * ca; if (Math.abs(u) < H[0] + 1 && Math.abs(v) < H[1] + 1) { n++; break; } }
+  }
+  return n;
+}
+function t3cColoca(d) {
+  var q = nearestStreet(d.x, d.y), p = pointAt(CITY.streets[q.si], q.s), tx = Math.sin(p.ang), ty = Math.cos(p.ang), mejor = null, k, o;
+  var nl = Math.hypot(d.x - q.qx, d.y - q.qy) || 1, nx = (d.x - q.qx) / nl, ny = (d.y - q.qy) / nl;   // hacia fuera de su calle
+  if (q.ex < 0) { nx = Math.cos(p.ang); ny = -Math.sin(p.ang); if ((d.x - q.qx) * nx + (d.y - q.qy) * ny < 0) { nx = -nx; ny = -ny; } }
+  var hacia = Math.atan2(-nx, -ny), fuera = Math.max(0, 3 - q.ex), cands = [];
+  [0, fuera, fuera + 9, Math.min(0, 6 - q.ex)].forEach(function (lat, li) {           // (el último: en la acera, delante de la fachada, si la tabla se metía en un edificio)
+    [0, 9, -9, 18, -18, 27, -27].forEach(function (sh) { cands.push([p.ang, sh, lat, li]); });
+    [0, 9, -9, 18, -18, 27, -27, 36, -36, 45, -45].forEach(function (sh) { cands.push([hacia, sh, lat, li]); });
+  });
+  for (k = 0; k < cands.length; k++) {
+    o = cands[k]; if ((o[3] === 1 && fuera === 0) || (o[3] === 3 && o[2] === 0)) continue;
+    var x = d.x + tx * o[1] + nx * o[2], y = d.y + ty * o[1] + ny * o[2], n = t3cConflictos(d, o[0], x, y);
+    if (!mejor || n < mejor[0]) mejor = [n, o[0], x, y];
+    if (!n) break;
+  }
+  if (mejor[0] && !d.t3cPeq) { d.t3cPeq = true; var sc0 = d.sc || 1; d.sc = sc0 * 0.8; t3cColoca(d); if (d.t3cMal) d.sc = sc0; else return; }   // ni así: algo más pequeño
+  d.h3 = mejor[1]; d.x = mejor[2]; d.y = mejor[3]; d.t3cMal = mejor[0];
+}
 
 /* ---------- los puestos del paseo libre ---------- */
 function t3cPuesto3D(g, x, y, z, ang, id, o) {
@@ -106723,6 +106817,19 @@ genCity = function () {                                                         
   if (T3C.vivo && typeof tseDescr === 'function' && TSE.vivo && CITY && CITY.items) { var D = tseDescr(), C = T3C.cruce || (T3C.cruce = (function () { var q = {}, k; for (k in D.cruce) q[k] = D.cruce[k]; q.dosCaras = true; return q; })()); CITY.items.forEach(function (it) { if (it.s === BB.signCruce) it.s = C; }); }   // (por las dos caras: se llega por cualquier calle)
   return r;
 };
+
+/* para las pruebas: coloca todos los carteles de la ciudad y dice cuántos se meten en algo */
+window.__T3C = { revisa: function () {
+  var R = { carteles: 0, mal: [], corridos: 0 };
+  [CITY.items, typeof LIB !== 'undefined' && LIB.it ? LIB.it : [], typeof VILLA_IT !== 'undefined' ? VILLA_IT : []].forEach(function (A) { A.forEach(function (d) {
+    if (!d.s || d.s.esc !== 'senal3d') return; R.carteles++;
+    var x0 = d.x, y0 = d.y;
+    if (d.h3 == null) { var q = nearestStreet(d.x, d.y), p = pointAt(CITY.streets[q.si], q.s); if (t3cConflictos(d, p.ang, x0, y0)) R.antes = (R.antes || 0) + 1; t3cColoca(d); }
+    if (Math.abs(d.x - x0) + Math.abs(d.y - y0) > 0.5) R.corridos++;
+    if (d.t3cMal) R.mal.push(Math.round(d.x) + ',' + Math.round(d.y) + ':' + d.t3cMal);
+  }); });
+  return R;
+} };
 /*#pieza juegos/tirolina/692_tirolina_multi.js*/
 /* ================================================================
    V209 · LA TIROLINA, MULTIJUGADOR (POR LA WIFI)
