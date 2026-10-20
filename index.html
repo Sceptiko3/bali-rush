@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V215</title>
+<title>Bali Rush Completo V216</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V215', FECHA = '20-10-2026';
+var VERSION = 'Completo V216', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -106830,6 +106830,329 @@ window.__T3C = { revisa: function () {
   }); });
   return R;
 } };
+/*#pieza juegos/ciudad/622_procesion_puertas.js*/
+/* ================================================================
+   V216 · LA PROCESIÓN SALE DE UNA CASA Y ENTRA EN OTRA (O EN UN TEMPLETE)
+   Jose Javier (20-10-2026): «cuando cruza no lo hace de una casa
+   abierta a otra o a un mini templo. atraviesan paredes y queda raro».
+   La procesión del mototaxi, el reparto y el paseo (616) esperaba en
+   fila por la acera, cruzaba y seguía por la acera de enfrente: salía
+   de la nada junto a una tapia y se iba por ella.
+   Ahora, en cada procesión (las de los pueblos y barrios):
+   - EL SITIO: un trozo de calle con tapia a los dos lados, sin
+     esquina, puertas, penjor, puestos, alcantarillas ni perros cerca
+     (a menos de 420 de donde estaba; si no lo hay, como en la V215).
+   - LA CASA DE DONDE SALEN: su puerta (angkul-angkul) con las dos
+     hojas ABIERTAS hacia dentro y el umbral a ras de suelo, más grande
+     que las otras (que quepa la gebogan); la tapia, abierta por ella.
+   - ADONDE VAN, ENFRENTE: otra casa con la puerta abierta o un
+     TEMPLETE: la puerta partida (candi bentar) y, dentro, al fondo,
+     el trono de piedra (padmasana) entre dos altares (se quita lo que
+     había en su patio).
+   - LO QUE HACEN: esperando, la primera está en el escalón de su
+     puerta y la siguiente asoma; cuando
+     llegas suena el gong, van saliendo uno detrás de otro por la
+     puerta, cruzan derechos (sin zigzag junto a las puertas) y entran
+     por la de enfrente. En la casa se pierden de vista al pasar la
+     puerta; en el templete se quedan dentro, de pie delante del trono.
+     Al salir y al entrar se ven a través del hueco de la puerta (se
+     pintan detrás de la puerta y de la tapia) y aparecen o se
+     desvanecen dentro, ya tapados.
+   - Lo de siempre, igual: el gong y «¡Procesión! Espera», el −2 si
+     los tocas, el −1 por pitar mientras cruzan, los de la liga los
+     esquivan (praCuerpos), quiénes van y cómo son.
+   PRP.vivo = false (antes de entrar en la ciudad): como en la V215.
+   ================================================================ */
+var PRP = { vivo: true, atras: 12, sc: 0.95, scT: 0.6, hueco: 8, puerta: 15, dentro: 12, ve: 2.5, funde: 4, busca: 220, buscaMas: 420, asoma: 7, sitios: [], hecho: null };   // atras: lo que se ordenan más allá el trono y los altares (la gente de su patio, delante); asoma: dónde espera la primera (del borde de la calle)
+/* --- la puerta de la casa, abierta: como blAngkul (528), con las hojas abiertas hacia dentro y el umbral a ras de suelo --- */
+function prpAngkul(va) {
+  return blPlan('angkulA' + va, function () {
+    var B = BALI, P = [], s;
+    P.push(blC(9, 2.6, 0, 0.9, B.pie, B.pie, 0, 8.6));                                                     // un escalón bajo
+    P.push(blC(7, 6, 0, 1.2, B.pie2, B.suelo));                                                            // el umbral
+    for (s = -1; s <= 1; s += 2) {
+      P.push(blC(0.45, 3.2, 1.2, 46, '#4a2616', null, s * 6.55, -4, { m: 1, fx: blHojaFx }));              // las hojas, abiertas
+      P.push(blC(7.8, 6, 0, 6, B.pie2, null, s * 14, 0, { m: 1 }));
+      P.push(blC(7, 5.2, 6, 50, B.lad, null, s * 14, 0, { m: 1, l: 0 }));
+      P.push(blC(7.9, 6.1, 50, 53, B.pie, B.pie, s * 14, 0));
+      P.push(blC(6, 4.4, 53, 60, B.lad, null, s * 14, 0));
+      P.push(blC(6.9, 5.2, 60, 62.6, B.pie, B.pie, s * 14, 0));
+    }
+    P.push(blC(7.2, 4.6, 46, 53, B.pie, null, 0, 0, { fx: blDoradoFx }));                                   // el dintel tallado
+    P.push(blC(7.4, 4.2, 53, 62.6, B.lad, null));
+    P.push(blT(va % 3 === 0 ? blTeja(va, 25, 10, 10, 13, 1.5) : va % 3 === 1 ? blPaja(va, 25, 10.5, 10.5, 14, 2.4) : blIjuk(25, 10, 10, 13, 1.8), 62.6, 0, 0, va % 3 === 0 ? 1 : 0));
+    return { p: P };
+  });
+}
+var PRP_HA = 21.8, PRP_HC = 37.2;                                            // media puerta de la casa (en el plano): de machón a machón; lo que mide cada mitad de la puerta partida (blCandi), desde el hueco
+/* --- dónde: un trozo de calle con tapia a los dos lados y nada en medio --- */
+function prpEnTapia(x, y, ux, uy) {                                          // ¿hay tapia de la calle justo ahí? (la tapia es un segmento: x, y, ux, uy, L)
+  var W = CITY.items, i, w;
+  for (i = 0; i < W.length; i++) {
+    w = W[i]; if (w.k !== 'wall' || !w.side) continue;
+    var dx = x - w.x, dy = y - w.y; if (Math.abs(dx) > 60 || Math.abs(dy) > 60) continue;
+    if (Math.abs(dx * w.uy - dy * w.ux) < 3 && Math.abs(dx * w.ux + dy * w.uy) <= w.L / 2 + 0.5 && Math.abs(w.ux * ux + w.uy * uy) > 0.9) return true;
+  }
+  return false;
+}
+function prpLibre(o, st, s, tipo) {                                          // ¿cabe aquí? (las dos puertas, una a cada lado)
+  var q = pointAt(st, s), tx = Math.sin(q.ang), ty = Math.cos(q.ang), nx = Math.cos(q.ang), ny = -Math.sin(q.ang), w = st.w, k, sd, i;
+  if (s < w + 60 || s > st.len - w - 60 || nearNode(q.x, q.y, w + 80) || (typeof nearPlace === 'function' && nearPlace(q.x, q.y, 70)) || (typeof jamAt === 'function' && jamAt(o.si, s, 140))) return false;
+  if (CITY.solares && CITY.solares.some(function (S) { return d2(S.x, S.y, q.x, q.y) < S.hw + S.hd + 60; })) return false;
+  for (k = 0; k < PRP.sitios.length; k++) if (d2(PRP.sitios[k].x, PRP.sitios[k].y, q.x, q.y) < 180) return false;
+  for (sd = -1; sd <= 1; sd += 2) {
+    var H = (sd === o.side || tipo === 'casa' ? PRP_HA * PRP.sc : PRP.hueco + PRP_HC * PRP.scT) + 3, ex = w + 14;
+    for (k = -1; k <= 1; k += 0.5) if (!prpEnTapia(q.x + nx * sd * ex + tx * k * H, q.y + ny * sd * ex + ty * k * H, tx, ty)) return false;
+  }
+  var L = CITY.items, O = CITY.obs;
+  for (i = 0; i < L.length; i++) {                                           // lo de la acera y lo de junto a la tapia (puertas, penjor, puestos, árboles, carteles…)
+    var it = L[i]; if (it.k === 'wall' || prpViejaPuerta(it)) continue;      // (la puerta cerrada de una casa, sí: se cambia por la abierta)
+    var dx = it.x - q.x, dy = it.y - q.y; if (Math.abs(dx) > 90 || Math.abs(dy) > 90) continue;
+    var a = dx * tx + dy * ty, e = Math.abs(dx * nx + dy * ny) - w;
+    if (Math.abs(a) < (it.pj ? 12 : 34) && e > -4 && e < 30) return false;   // (un penjor en la acera, a un lado de por donde cruzan, no estorba)
+  }
+  for (i = 0; i < O.length; i++) {                                           // alcantarillas, perros dormidos, cocos… y los otros extras
+    var ob = O[i]; if (ob === o || ob.k === 'procM') continue;
+    var bx = (ob.cx != null ? ob.cx : ob.x) - q.x, by = (ob.cy != null ? ob.cy : ob.y) - q.y; if (Math.abs(bx) > 120 || Math.abs(by) > 120) continue;
+    var b = bx * tx + by * ty, f = Math.abs(bx * nx + by * ny);
+    if (ob.si == null && Math.abs(b) < 22 && f < w + 26) return false;
+  }
+  var sep = (typeof EXV !== 'undefined' && EXV.vivo ? EXV.sep : 110) * 0.84, x0 = o.prpX != null ? o.prpX : o.cx, y0 = o.prpY != null ? o.prpY : o.cy;   // y lejos de los otros extras, casi como se repartieron (554: a 480)
+  for (i = 0; i < O.length; i++) {
+    var x = O[i]; if (x === o || x.si == null || x.k === 'procM' || x.cx == null) continue;
+    if (Math.abs(x.cx - q.x) < sep && Math.abs(x.cy - q.y) < sep && d2(x.cx, x.cy, q.x, q.y) < Math.min(sep, d2(x.cx, x.cy, x0, y0) - 1)) return false;
+  }
+  return true;
+}
+/* --- las obras: la puerta abierta, el templete, y la tapia abierta por ellas --- */
+function prpObra(x, y, a, ob, sc, q) { var it = { k: 'deco', s: ESN.s.obra, ob: ob, x: x, y: y, a: a, sc: sc, prp: q || 1 }; CITY.items.push(it); return it; }
+function prpCorta(x, y, ux, uy, half) {                                      // abre la tapia de la calle de x - half a x + half (los trozos que quedan, como tapias nuevas)
+  var W = CITY.items, i, nuevos = [];
+  for (i = W.length - 1; i >= 0; i--) {
+    var w = W[i]; if (w.k !== 'wall' || !w.side) continue;
+    var dx = x - w.x, dy = y - w.y; if (Math.abs(dx) > 80 || Math.abs(dy) > 80 || Math.abs(dx * w.uy - dy * w.ux) > 4 || Math.abs(w.ux * ux + w.uy * uy) < 0.9) continue;
+    var c = dx * w.ux + dy * w.uy, a0 = -w.L / 2, a1 = w.L / 2; if (c + half <= a0 || c - half >= a1) continue;
+    W.splice(i, 1);
+    [[a0, c - half], [c + half, a1]].forEach(function (r) {
+      if (r[1] - r[0] < 2) return;
+      var m = (r[0] + r[1]) / 2; nuevos.push({ k: 'wall', x: w.x + w.ux * m, y: w.y + w.uy * m, ux: w.ux, uy: w.uy, L: r[1] - r[0], side: w.side, prp: 1 });
+    });
+  }
+  for (i = 0; i < nuevos.length; i++) W.push(nuevos[i]);
+}
+function prpViejaPuerta(it) { return it.k === 'deco' && !it.prp && it.ob && /^angkul\d/.test(it.ob.id); }
+function prpLevanta(o, st, s, tipo) {
+  var q = pointAt(st, s), tx = Math.sin(q.ang), ty = Math.cos(q.ang), nx = Math.cos(q.ang), ny = -Math.sin(q.ang), w = st.w, E = w + PRP.puerta, h = Math.floor(hash(q.x * 0.071 + q.y * 0.113) * 1000);
+  var S = { si: o.si, s: s, x: q.x, y: q.y, side: o.side, tipo: tipo, it: [] }, L0 = CITY.items, i0;
+  for (i0 = L0.length - 1; i0 >= 0; i0--) {                                  // la puerta cerrada que hubiera ahí: ahora es esta, abierta
+    var v = L0[i0]; if (!prpViejaPuerta(v)) continue;
+    var vx = v.x - q.x, vy = v.y - q.y; if (Math.abs(vx * tx + vy * ty) < 40 && Math.abs(Math.abs(vx * nx + vy * ny) - w - 15) < 6) L0.splice(i0, 1);
+  }
+  [o.side, -o.side].forEach(function (sd, n) {
+    var gx = q.x + nx * sd * E, gy = q.y + ny * sd * E, a = Math.atan2(sd * nx, sd * ny), ux = Math.cos(a), uy = -Math.sin(a);   // de cara a la calle (+v hacia ella); su largo (u), a lo largo de la calle
+    if (n === 0 || tipo === 'casa') {
+      prpCorta(gx, gy, tx, ty, PRP_HA * PRP.sc - 1.2);
+      S.it.push(prpObra(gx, gy, a, prpAngkul((h + n * 7) % 3), PRP.sc));
+      return;
+    }
+    var hg = PRP.hueco, i, L = CITY.items;                                   // el templete: se despeja su patio (lo que pisa de él, por su planta)
+    for (i = L.length - 1; i >= 0; i--) {
+      var it = L[i]; if (it.k === 'wall' || it.prp) continue;
+      var dx = it.x - q.x, dy = it.y - q.y, al = dx * tx + dy * ty, e = (dx * nx + dy * ny) * sd - w, H = typeof c5Huella === 'function' ? c5Huella(it) : null, rr = H ? Math.max(H[0], H[1]) : it.pj ? 2 : 8;
+      if (Math.abs(al) < 40 + rr && e > 16 - rr && e < 86 + rr && e > 12) L.splice(i, 1);
+    }
+    prpCorta(gx, gy, tx, ty, hg + PRP_HC * PRP.scT - 1.5);
+    S.it.push(prpObra(gx + ux * hg, gy + uy * hg, a, blCandi(true), PRP.scT, 2));         // la puerta partida: cada mitad crece hacia fuera desde el hueco
+    S.it.push(prpObra(gx - ux * hg, gy - uy * hg, a + Math.PI, blCandi(true), PRP.scT, 2));
+    var px = q.x + nx * sd * (w + 54), py = q.y + ny * sd * (w + 54), ax = q.x + nx * sd * (w + 49), ay = q.y + ny * sd * (w + 49);
+    S.it.push(prpObra(px, py, a, blPadma(), 0.85, 2));                                   // el trono de piedra, al fondo
+    S.it.push(prpObra(ax + ux * 17, ay + uy * 17, a, blAltar(1), 1.6, 2));               // y sus dos altares
+    S.it.push(prpObra(ax - ux * 17, ay - uy * 17, a, blAltar(2), 1.6, 2));
+    S.sx = px; S.sy = py;
+  });
+  PRP.sitios.push(S);
+  return S;
+}
+function prpMonta(o) {                                                       // a esta procesión, su sitio (o null: la de la V215)
+  if (!PRP.vivo || !o || o.t !== 'procesion' || o.si == null || o.prp !== undefined) return o && o.prp;
+  o.prp = null; if (o.prpX == null) { o.prpX = o.cx; o.prpY = o.cy; }       // (de dónde era)
+  if (!BALI.vivo || !ESN.vivo || !ESN.s.obra || !CIO.vivo || !CITY.streets[o.si]) return null;
+  var st = CITY.streets[o.si], z = zoneAt(o.cx, o.cy), k, s, tipo = hash(o.cx * 0.031 + o.cy * 0.017) < 0.5 ? 'templo' : 'casa', S = null;
+  if (z !== 'barrio' && z !== 'pueblo') return null;
+  for (k = 0; k < PRP.sitios.length && !S; k++) if (PRP.sitios[k].si === o.si && Math.abs(PRP.sitios[k].s - o.s0) < PRP.busca) S = PRP.sitios[k];   // (otra vez la misma: la de antes)
+  for (k = 0; k <= PRP.buscaMas && !S; k += 11) for (var sg = 1; sg >= -1 && !S; sg -= 2) {
+    if (k === 0 && sg < 0) continue;
+    s = o.s0 + sg * k;
+    if (prpLibre(o, st, s, tipo)) S = prpLevanta(o, st, s, tipo);
+    else if (tipo === 'templo' && prpLibre(o, st, s, 'casa')) S = prpLevanta(o, st, s, 'casa');
+  }
+  if (!S) return null;
+  var p = pointAt(st, S.s);
+  o.s0 = o.s = S.s; o.cx = p.x; o.cy = p.y; o.nx = Math.cos(p.ang); o.ny = -Math.sin(p.ang); o.side = S.side; o.w = st.w;
+  o.prp = S;
+  return S;
+}
+function prpOn(o) { return PRP.vivo && o && o.t === 'procesion' && !!o.prp && praOn(o); }
+/* --- el camino de cada uno: de dentro de la casa, por su puerta, derecho a la puerta de enfrente y dentro (en el templete, a su sitio) --- */
+var PRP_SITIO = [[36, -5], [36, 5], [31, -7], [31, 0], [31, 7], [26, -4.5], [26, 4.5], [22, 0]];   // en el templete, dónde se queda cada uno: del borde de la calle (el trono está a 49) y a un lado del hueco
+function prpLargo(o, j) {
+  var S = o.prp, w = o.w, a = 2 * w + PRP.puerta * 2 + PRP.dentro + (S.tipo === 'casa' ? PRP.dentro : 4);
+  if (S.tipo === 'templo') { var sp = PRP_SITIO[j % PRP_SITIO.length], e1 = w + PRP.puerta + 4, e2 = w + sp[0]; a += Math.hypot(e2 - e1, sp[1]); }
+  return a;
+}
+function prpPunto(o, j, p, out) {                                            // dónde va (en el camino, p): u (de lado, como en 616), a (a lo largo) y la e (del borde de la calle, en su lado)
+  var S = o.prp, w = o.w, e0 = w + PRP.puerta + PRP.dentro, c = 2 * e0 - (S.tipo === 'casa' ? 0 : PRP.dentro - 4), u, a = 0;
+  if (p <= c) u = o.side * (e0 - p);
+  else {                                                                     // dentro del templete, hacia su sitio
+    var sp = PRP_SITIO[j % PRP_SITIO.length], e1 = w + PRP.puerta + 4, e2 = w + sp[0], l = Math.hypot(e2 - e1, sp[1]) || 1, t = Math.min(1, (p - c) / l);
+    u = -o.side * (e1 + (e2 - e1) * t); a = sp[1] * t;
+  }
+  out.u = u; out.a = a; out.e = Math.abs(u) - w;
+  return out;
+}
+var PRP_A = {}, PRP_B = {};
+function prpMiembros(o) {
+  var S = o.prp, st = CITY.streets[o.si], L = o.praL || (o.praL = []), j, hp = hash(o.cx * 0.13 + o.cy * 0.07), q = pointAt(st, o.s0);
+  var tx = Math.sin(q.ang), ty = Math.cos(q.ang), nx = Math.cos(q.ang), ny = -Math.sin(q.ang), ve = PRP.puerta + PRP.ve;
+  for (j = 0; j < PROC_N; j++) {
+    var tot = prpLargo(o, j), p = clamp(o.D - j * PROC_GAP, 0, tot), m = L[j] || (L[j] = { j: j });
+    prpPunto(o, j, Math.max(0, p - 2.5), PRP_A); prpPunto(o, j, Math.min(tot, p + 2.5), PRP_B);
+    var A = prpPunto(o, j, p, {}), dxu = PRP_B.u - PRP_A.u, dxa = PRP_B.a - PRP_A.a, lw = Math.max(0, Math.min(1, (9 - A.e) / 5));   // junto a las puertas, derechos (sin zigzag)
+    var wob = (j % 2 ? 1 : -1) * PRA.wob * (0.7 + 0.6 * hash(j * 7.3 + hp)) * lw, lo = (hash(j * 3.7 + hp) - 0.5) * 3 * lw;
+    var ll = Math.hypot(dxu, dxa) || 1, du = dxu / ll, da = dxa / ll;        // la dirección en que anda (en u y a)
+    var uu = A.u + du * lo - da * wob, aa = A.a + da * lo + du * wob;
+    m.x = q.x + nx * uu + tx * aa; m.y = q.y + ny * uu + ty * aa;
+    var vx = nx * dxu + tx * dxa, vy = ny * dxu + ty * dxa;
+    m.u = uu; m.p = p; m.e = A.e; m.fin = p >= tot - 0.01;
+    m.dentro = A.e > 10;                                                     // ya (o aún) en el hueco de la puerta o dentro: se pinta detrás de la puerta y de la tapia
+    m.al = A.e < ve ? 1 : Math.max(0, 1 - (A.e - ve) / PRP.funde);           // se ve por el hueco de la puerta y se desvanece dentro
+    if (S.tipo === 'templo' && A.u * o.side < 0) m.al = 1;                  // en el templete (sin puerta que cerrar), se quedan a la vista
+    m.anda = (o.st === 'cruza' || o.st === 'va') && p > 0 && !m.fin;
+    if (m.fin && S.tipo === 'templo') m.ang = Math.atan2(S.sx - m.x, S.sy - m.y);   // de pie, mirando al trono
+    else m.ang = Math.atan2(vx, vy);
+  }
+  return L;
+}
+function w0(o) { return o.w + PRP.puerta + PRP.dentro; }
+var praMiembros622 = praMiembros;
+praMiembros = function (o) { return prpOn(o) ? prpMiembros(o) : praMiembros622(o); };
+/* --- lo que hace --- */
+var extraReset622 = extraReset;
+extraReset = function (o) {
+  extraReset622(o);
+  if (!PRP.vivo || !o || o.t !== 'procesion' || o.si == null) return;
+  if (o.prp === undefined && PRP.hecho && PRP.hecho === CITY.items) prpMonta(o);   // (las que salen luego, en los encargos)
+  if (!prpOn(o)) return;
+  o.st = 'espera'; o.D = PRP.puerta + PRP.dentro - PRP.asoma; o.parada = false; o.praL = null;   // la primera, en el escalón de su puerta (y la siguiente, asomando)
+  var m0 = prpMiembros(o)[0]; o.x = m0.x; o.y = m0.y;
+};
+var extraPos622 = extraPos;
+extraPos = function (o) { if (prpOn(o)) { var L = prpMiembros(o), m = o.st === 'espera' ? L[0] : L[PROC_N >> 1]; o.x = m.x; o.y = m.y; return; } extraPos622(o); };
+var extraUpd622 = extraUpd;
+extraUpd = function (o, dt, d, ahead, lat, ride, fx, fy) {
+  if (!prpOn(o)) { extraUpd622(o, dt, d, ahead, lat, ride, fx, fy); return; }
+  o.t0 += dt;
+  if (!o.pra) praPrepara(o);
+  var L, j, m, puede = ride && P.z < 6 && P.inv <= 0, w = o.w;
+  if (o.st === 'espera' && ahead > 60 && ahead < 430 && lat < 170) { o.st = 'cruza'; SFX.gong(); avisar('🎶 ¡Procesión! Espera'); }
+  else if (o.st === 'cruza' || o.st === 'va') {
+    L = prpMiembros(o);
+    if (!o.parada) { o.D += PRA.v * dt; if (L[PROC_N - 1].fin) o.parada = true; }
+    if (o.st === 'cruza' && o.D - (PROC_N - 1) * PROC_GAP > w0(o) + w + 2) o.st = 'va';            // ya no queda nadie en la calle: puedes seguir
+    if (o.st === 'va' && o.parada && o.prp.tipo === 'casa') o.st = 'fuera';                     // todos dentro de la casa
+    if (o.st === 'va' && (fwd(o.x, o.y) < -60 || fwd(o.x, o.y) > PRA.lejos || d > PRA.lejos + 80)) o.st = 'fuera';
+  }
+  if (o.st !== 'fuera') {
+    L = prpMiembros(o); m = o.st === 'espera' ? L[0] : L[PROC_N >> 1]; o.x = m.x; o.y = m.y;
+    if (puede) for (j = 0; j < L.length; j++) {
+      m = L[j];
+      if (Math.abs(m.u) < w + 9 && d2(P.x, P.y, m.x, m.y) < 11) {
+        if (!o.cool) { o.cool = true; G.fl = Math.max(0, G.fl - 2); golpeBlando({ x: m.x, y: m.y }, '¡Ay, la ofrenda! −2', 0.15); }
+        break;
+      }
+    }
+  }
+  if (o.cool && d > 60) o.cool = false;
+  praAlta(o); praSitua(o);
+};
+/* --- cómo se pinta: en la lista de la calle, los de fuera un poco hacia ti (delante de la tapia) y los de dentro un poco hacia allá (detrás de la tapia y de la puerta) --- */
+var praSitua622 = praSitua;
+praSitua = function (o) {
+  if (!prpOn(o)) { praSitua622(o); return; }
+  if (!o.praM) return;
+  var L = prpMiembros(o), cx = CAM.sy, cy = CAM.cy, tem = o.prp.tipo === 'templo';
+  for (var j = 0; j < L.length; j++) {
+    var m = L[j], b = m.dentro ? -4 : 22;
+    if (tem && m.dentro && m.u * o.side < 0) { prpOrden(o.praM[j], m.x, m.y, 0); continue; }   // en el patio del templete: como su puerta y su trono (prpOrden)
+    o.praM[j].x = m.x - cx * b; o.praM[j].y = m.y - cy * b;
+  }
+};
+function prpOrden(c, x, y, mas) {                                           // en el patio del templete, cada cosa (la puerta partida, el trono, los altares y la gente) se ordena por lo lejos que está de la cámara, no por lo de delante:
+  var k = Math.hypot(x - CAM.x, y - CAM.y) + (mas || 0);                     // están unas detrás de otras de lado, y así la de más cerca se pinta la última
+  c.x = CAM.x + CAM.sy * k; c.y = CAM.y + CAM.cy * k;
+}
+function prpPinta(g, o, m) {                                                 // como praPintaUno (616), con lo que se desvanece al entrar
+  if (m.al <= 0.02) return;
+  if (m.al >= 0.99) { praPintaUno(g, o, m); return; }
+  var a0 = K3.alfa, ga = g.globalAlpha, fo = fogK;
+  try { fogK = function (dd) { return 1 - (1 - fo(dd)) * m.al; }; g.globalAlpha = ga * m.al; praPintaUno(g, o, m); }
+  finally { fogK = fo; g.globalAlpha = ga; K3.alfa = a0; }
+}
+var ciuItem622 = ciuItem;
+ciuItem = function (g, it, k, i) {
+  if (k === 'procM' && it.pr && prpOn(it.pr)) {
+    var o = it.pr; if (o.st === 'fuera') return true;
+    var m = prpMiembros(o)[it.j]; if (m) prpPinta(g, o, m);
+    return true;
+  }
+  if (k === 'deco' && it.prp === 2) return true;                              // la puerta partida, el trono y los altares del templete: con su cartón de orden (prpS)
+  if (k === 'prpS') { it.d._f = it._f; drawDeco3D(g, it.d); return true; }
+  return ciuItem622(g, it, k, i);
+};
+var extraDraw622 = extraDraw;
+extraDraw = function (g, o) {
+  if (!prpOn(o)) { extraDraw622(g, o); return; }
+  if (o.st === 'fuera' || (o.praM && CITY.obs.indexOf(o.praM[0]) >= 0)) return;
+  var L = prpMiembros(o).slice();
+  L.sort(function (a, b) { return fwd(b.x, b.y) - fwd(a.x, a.y); });
+  L.forEach(function (m) { prpPinta(g, o, m); });
+};
+/* la puerta partida, el trono y los altares del templete, en la lista de la calle con su cartón de orden (prpS, prpOrden); el trono y los altares, un poco más allá (la gente de su patio, delante) */
+function prpCartones() {
+  for (var i = 0; i < CITY.obs.length; i++) { var o = CITY.obs[i]; if (o.t === 'procesion' && o.praM && o.st !== 'fuera' && prpOn(o)) praSitua(o); }   // (con la cámara de este fotograma)
+  PRP.sitios.forEach(function (S) {
+    S.it.forEach(function (d) {
+      if (d.prp !== 2) return;
+      if (!d._c) d._c = { k: 'prpS', d: d, x: d.x, y: d.y };
+      if (CITY.obs.indexOf(d._c) < 0) CITY.obs.push(d._c);
+      prpOrden(d._c, d.x, d.y, /^candi/.test(d.ob.id) ? 0 : PRP.atras);
+    });
+  });
+}
+var genCity622 = genCity;
+genCity = function () {
+  var r = genCity622.apply(this, arguments);
+  PRP.sitios = []; PRP.hecho = null;
+  if (PRP.vivo && CITY && CITY.items && CITY.obs) {
+    CITY.obs.forEach(function (o) { if (o.t === 'procesion') { o.prp = undefined; o.pra = null; prpMonta(o); if (o.prp) { praPrepara(o); extraReset(o); } } });
+    PRP.hecho = CITY.items;
+  }
+  return r;
+};
+var spawnTraffic622 = spawnTraffic;
+spawnTraffic = function () {                                                 // las procesiones que se quitan (las del encargo de 7AM 7PM se rehacen cada vez): fuera también su gente de la lista
+  spawnTraffic622.apply(this, arguments);
+  if (CITY && CITY.obs) CITY.obs = CITY.obs.filter(function (q) { return q.k !== 'procM' || CITY.obs.indexOf(q.pr) >= 0; });
+};
+var cityRender622 = typeof cityRender === 'function' ? cityRender : null;
+if (cityRender622) cityRender = function () { if (PRP.vivo && PRP.sitios.length) prpCartones(); return cityRender622.apply(this, arguments); };
+
+/* para las pruebas */
+window.__PRP = {
+  sitios: function () { return PRP.sitios.map(function (S) { return { si: S.si, s: Math.round(S.s), tipo: S.tipo, side: S.side, piezas: S.it.length }; }); },
+  procs: function () { return CITY.obs.filter(function (o) { return o.t === 'procesion'; }).map(function (o) { return { si: o.si, s0: Math.round(o.s0), zona: zoneAt(o.cx, o.cy), patro: !!o.patro, sitio: o.prp ? o.prp.tipo : null }; }); },
+  miembros: function (o) { return prpMiembros(o).map(function (m) { return { x: Math.round(m.x), y: Math.round(m.y), u: Math.round(m.u), e: Math.round(m.e * 10) / 10, al: Math.round(m.al * 100) / 100, anda: m.anda, fin: m.fin, dentro: m.dentro }; }); }
+};
 /*#pieza juegos/tirolina/692_tirolina_multi.js*/
 /* ================================================================
    V209 · LA TIROLINA, MULTIJUGADOR (POR LA WIFI)
