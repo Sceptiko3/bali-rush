@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V219</title>
+<title>Bali Rush Completo V220</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V219', FECHA = '20-10-2026';
+var VERSION = 'Completo V220', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -108102,6 +108102,228 @@ mulPintaQR = function (c, txt) {
     'Ese no es su código de respuesta.': ['That\'s not their reply code.', 'Itu bukan kode balasannya.'], 'Ese código es de otra moto: que vuelva a abrir tu enlace.': ['That code is from another bike: ask them to open your link again.', 'Kode itu dari motor lain: minta dia buka tautanmu lagi.'],
     'Ese no es un código de partida.': ['That\'s not a game code.', 'Itu bukan kode permainan.'], 'Copiado: pégaselo por WhatsApp o donde quieras.': ['Copied: paste it to them on WhatsApp or wherever.', 'Tersalin: tempel lewat WhatsApp atau apa saja.'],
     'Únete a mi partida de Bali Rush:': ['Join my Bali Rush game:', 'Gabung permainan Bali Rush-ku:']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza nucleo/616_online.js*/
+/* ================================================================
+   V220 · EL MODO ONLINE: JUGAR DESDE CUALQUIER SITIO
+   Jose Javier (20-10-2026): «¿y no hay manera de que se juegue online?»
+   → preguntado con opciones, eligió Cloudflare.
+   Lo de la wifi (QR, móvil a móvil) se queda igual. Esto añade otro
+   camino: un servidor pequeño en Cloudflare (servidor/, en su GitHub)
+   que solo reenvía mensajes. Quien crea la sala recibe un código de 4
+   letras (p. ej. KUTA); los demás lo escriben o abren el enlace
+   …/bali-rush/#sala=KUTA. Sin cuentas para los amigos.
+   Por dentro, el juego no cambia: cada moto de la sala es una
+   «conexión» de RED como las de la wifi (RED.conex[n], con sus canales
+   c y g), solo que lo que se manda va por el servidor. Así la carrera,
+   Pitik, el mototaxi y la tirolina funcionan igual online.
+   La dirección del servidor: RON.url, o la que diga online.json junto
+   al juego en su web (*.github.io), para poder activarlo sin publicar
+   otra versión.
+   RON.vivo = false: nada de esto.
+   ================================================================ */
+var RON = { vivo: true, url: '', ws: null, sala: '', on: false, fue: false, letras: 'ABCDEFGHJKLMNPRSTUVWXYZ', intentos: 0, cola: [], nota: '' };
+function ronListo() { return RON.vivo && !!RON.url && typeof WebSocket === 'function' && redPuede(); }
+function ronCodigo() { var s = ''; for (var i = 0; i < 4; i++) s += RON.letras.charAt(Math.floor(Math.random() * RON.letras.length)); return s; }
+function ronEnlace() { return redDireccion() + '#sala=' + RON.sala; }
+/* ---------- la dirección del servidor (online.json, junto al juego) ---------- */
+(function () {
+  if (!RON.vivo || RON.url || !/\.github\.io$/.test(location.hostname) || !redPuede()) return;   // solo en su web (las pruebas ponen RON.url)
+  try {
+    fetch('online.json?v=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (j && typeof j.url === 'string' && /^https?:\/\//.test(j.url)) { RON.url = j.url.replace(/\/+$/, ''); if (document.querySelector('#scr .card.mu') && !MUL.on) mulPinta(); }
+    }).catch(function () {});
+  } catch (e) {}
+})();
+/* ---------- la conexión con el servidor ---------- */
+function ronCierra() { var w = RON.ws; RON.ws = null; RON.on = false; RON.cola = []; if (w) { w.onclose = null; w.onmessage = null; try { w.close(1000); } catch (e) {} } }
+function ronCanal(n) {                                                 // un «canal» de RED que manda por el servidor
+  return { readyState: 'open', send: function (t) { var w = RON.ws; if (!w || w.readyState !== 1) throw new Error('ws'); w.send(RED.host ? n + '|' + t : t); } };
+}
+function ronEngancha(n) {
+  var k = RED.conex[n] = { pc: { connectionState: 'connected', close: function () { if (!RED.host && n === 1) ronCierra(); } }, c: null, g: null, vivo: false, rtt: [], pings: {}, online: true };
+  k.c = ronCanal(n); k.g = ronCanal(n);
+  redCanal(n, k, k.c); redCanal(n, k, k.g);                           // → vivo, y «red:hola» como en la wifi
+  if (RED.host) redCanalManda(k, 'c', { t: 'ron:dime' });             // que la otra moto diga quién es (si habló antes de tiempo, se perdió)
+  redAvisa();
+}
+function ronAbre(rol, sala) {
+  ronCierra(); redSale();
+  RON.sala = sala; RON.on = true; RON.fue = true; RON.nota = '';
+  var w;
+  try { w = new WebSocket(RON.url.replace(/^http/, 'ws') + '/s/' + sala + '?rol=' + rol); }
+  catch (e) { RON.on = false; MUL.vista = 'ini'; MUL.nota = TT('No se puede conectar con el servidor online.'); mulPinta(); return; }
+  RON.ws = w;
+  w.onmessage = function (e) { if (RON.ws === w) ronRecibe(rol, String(e.data)); };
+  w.onclose = function () { if (RON.ws === w) ronSeCorta(); };
+  w.onerror = function () {};
+  MUL.vista = 'ronesp'; MUL.nota = ''; mulPinta();
+}
+function ronRecibe(rol, t) {
+  if (t.charAt(0) === '!') {
+    var p = t.slice(1).split(' '), q = p[0], n = +p[1];
+    if (q === 'soy') {
+      RED.soy = n; RED.host = n === 1; RED.perdido = false; MUL.cortado = false; MUL.nota = ''; MUL.qr = '';
+      if (RED.host) { MUL.jug = { 1: mulYo() }; MUL.est = {}; MUL.elige = mulEligeDefecto(); }
+      else { MUL.jug = {}; MUL.est = {}; ronEngancha(1); }
+      MUL.vista = 'sala'; SFX.pick(3); mulPinta(); redAvisa(); return;
+    }
+    if (q === 'entra' && RED.host) { if (MUL.on) RON.cola.push(n); else ronEngancha(n); return; }
+    if (q === 'sale' && RED.host) { RON.cola = RON.cola.filter(function (x) { return x !== n; }); redQuita(n); redAvisa(); return; }
+    if (q === 'fin' && !RED.host) { ronCierra(); redQuita(1); redAvisa(); return; }
+    if (q === 'err') {
+      if (p[1] === 'ocupada' && rol === 'crea' && RON.intentos++ < 6) { ronAbre('crea', ronCodigo()); return; }
+      var txt = { nosala: 'No hay ninguna sala con ese código. Revisa las letras.', llena: 'Esa sala ya está llena (6 motos).' }[p[1]] || 'No se ha podido entrar en la sala.';
+      ronCierra(); RED.soy = 0; RED.host = false; MUL.vista = 'ini'; MUL.nota = TT(txt); mulPinta(); return;
+    }
+    return;
+  }
+  if (RED.host) { var k = t.indexOf('|'); if (k < 1) return; var de = +t.slice(0, k); if (RED.conex[de]) redRecibe(de, t.slice(k + 1)); return; }
+  if (RED.conex[1]) redRecibe(1, t);
+}
+function ronSeCorta() {                                                // el servidor ya no contesta (sin internet, o se ha caído)
+  var eraHost = RED.host, n;
+  RON.ws = null; RON.on = false;
+  if (eraHost) { for (n in RED.conex) redQuita(+n); mulSal(); MUL.nota = TT('Se ha cortado la conexión con el servidor online: crea otra sala.'); mulAbre('ini'); }
+  else if (RED.conex[1]) { redQuita(1); redAvisa(); }
+  else if (MUL.vista === 'ronesp') { RED.soy = 0; MUL.vista = 'ini'; MUL.nota = TT('No se puede conectar con el servidor online.'); mulPinta(); }
+}
+setInterval(function () {                                              // quien entró en plena carrera, a la sala cuando acabe
+  if (!RON.on || !RED.host || MUL.on || !RON.cola.length) return;
+  var c = RON.cola; RON.cola = []; c.forEach(function (n) { if (!RED.conex[n]) ronEngancha(n); });
+}, 500);
+redOye(function (pl, m) {                                              // la moto 1 pide que digas quién eres
+  if (m.t === 'ron:dime' && !RED.host && pl === 1) redMandaA(1, { t: 'hola', j: mulYo() });
+});
+/* a todos, de una vez (el servidor lo reparte): menos mensajes */
+var redManda219 = redManda;
+redManda = function (m, rapido) {
+  if (!(RON.on && RED.host && RON.ws)) return redManda219(m, rapido);
+  var hay = false, n; for (n in RED.conex) if (RED.conex[n].vivo) hay = true;
+  if (!hay || RON.ws.readyState !== 1) return;
+  try { RON.ws.send('*|' + JSON.stringify(m)); } catch (e) {}
+};
+var redSale219 = redSale;
+redSale = function () { ronCierra(); redSale219(); };
+/* ---------- la tarjeta del multijugador ---------- */
+function ronEntra() {
+  var i = document.querySelector('#scr .ron-cod'), c = i ? i.value.toUpperCase().replace(/[^A-Z]/g, '') : '';
+  if (!/^[A-Z]{4}$/.test(c)) { var a = document.querySelector('#scr .ron-aviso'); if (a) { a.textContent = TT('Escribe las 4 letras del código.'); a.style.display = ''; } if (i) i.focus(); return; }
+  RON.intentos = 0; ronAbre('une', c);
+}
+function ronComparte() {
+  var url = ronEnlace(), msg = TT('Únete a mi partida de Bali Rush. Código:') + ' ' + RON.sala;
+  function aviso(t) { var n = document.querySelector('#scr .ron-aviso'); if (n) { n.textContent = t; n.style.display = ''; } }
+  function copia() {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(msg + ' ' + url).then(function () { aviso(TT('Copiado: pégaselo por WhatsApp o donde quieras.')); }, function () { aviso(url); });
+    else aviso(url);
+  }
+  if (navigator.share) navigator.share({ title: 'Bali Rush', text: msg, url: url }).catch(function (e) { if (!e || e.name !== 'AbortError') copia(); });
+  else copia();
+}
+var mulUnete219 = mulUnete;                                            // por la wifi: lo de «volver a unirme» vuelve a ser la cámara
+mulUnete = function (t) { RON.fue = false; return mulUnete219(t); };
+var menuAct219 = menuAct;
+menuAct = function (a) {
+  if (!RON.vivo || typeof a !== 'string') return menuAct219(a);
+  if (a === 'mu:crea') RON.fue = false;
+  if (a === 'mu:oncrea') { if (ronListo()) { RON.intentos = 0; ronAbre('crea', ronCodigo()); } return true; }
+  if (a === 'mu:onentra') { if (ronListo()) ronEntra(); return true; }
+  if (a === 'mu:oncomparte') { ronComparte(); return true; }
+  if (a === 'mu:oncancela') { ronCierra(); redSale(); MUL.vista = 'ini'; mulPinta(); return true; }
+  if (a === 'mu:une' && RON.fue && !RED.host && (RED.perdido || MUL.cortado) && !RON.on) { redSale(); MUL.vista = 'ini'; MUL.nota = ''; mulPinta(); setTimeout(function () { var i = document.querySelector('#scr .ron-cod'); if (i) i.focus(); }, 60); return true; }
+  return menuAct219(a);
+};
+var mulPinta219 = mulPinta;
+mulPinta = function () {
+  if (RON.vivo && !MUL.on && MUL.vista === 'ronesp') {                  // esperando al servidor
+    card(fasCab('👥 ' + TT('Multijugador'), 'menu') + '<p class="mu-esp">🌍 ' + TT('Conectando con el servidor…') + '</p><button class="b3" data-act="mu:oncancela">' + TT('Cancelar') + '</button>', 'menu po-multi mu');
+    return;
+  }
+  mulPinta219();
+  if (!RON.vivo || MUL.on) return;
+  var card0 = document.querySelector('#scr .card.mu'); if (!card0 || !redPuede()) return;
+  var v = MUL.vista, b, d = document.createElement('div');
+  if (v === 'ini') {
+    var listo = ronListo();
+    d.innerHTML = '<div class="ron-caja"><p class="ron-t">🌍 ' + TT('Online, desde cualquier sitio') + '</p>' +
+      (listo ? '<button class="b1" data-act="mu:oncrea">' + TT('Crear sala online') + '</button>' +
+        '<div class="ron-fila"><input class="ron-cod" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="' + TT('CÓDIGO') + '"><button class="b2" data-act="mu:onentra">' + TT('Entrar') + '</button></div>' +
+        '<p class="ron-nota">' + TT('Quien crea la sala ve un código de 4 letras; los demás lo escriben aquí o abren el enlace que les manda.') + '</p>'
+        : '<p class="ron-nota">' + TT('El modo online todavía no está activado.') + '</p>') +
+      '<p class="ron-aviso mu-aviso" style="display:none"></p></div>';
+    card0.appendChild(d.firstChild);
+    var inp = card0.querySelector('.ron-cod');
+    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') ronEntra(); });
+  } else if (v === 'sala' && RON.on) {
+    if (RED.host) {
+      b = card0.querySelector('.mfa-otra') || card0.querySelector('[data-act="mu:otra"]');
+      d.innerHTML = '<div class="ron-sala"><small>' + TT('Código de la sala') + '</small><b>' + RON.sala + '</b>' +
+        '<button class="b2" data-act="mu:oncomparte">📤 ' + TT('Compartir el enlace') + '</button>' +
+        '<p class="ron-nota">' + TT('Que lo escriban en «Entrar» (online) o abran tu enlace, desde donde estén.') + '</p><p class="ron-aviso mu-aviso" style="display:none"></p></div>';
+      if (b) { var fila = b.parentNode; b.parentNode.replaceChild(d.firstChild, b); if (fila && fila.className === 'row' && !fila.children.length) fila.remove(); }
+      else { var l = card0.querySelector('.mu-lista'); card0.insertBefore(d.firstChild, l ? l.nextSibling : null); }
+    } else {
+      var e2 = card0.querySelector('.mu-esp'); if (e2 && !RED.perdido) e2.insertAdjacentHTML('beforeend', '<br><small>🌍 ' + TT('Sala') + ' ' + RON.sala + '</small>');
+    }
+  }
+  if (v === 'sala' && RON.fue && !RON.on && !RED.host && (RED.perdido || MUL.cortado)) {   // la sala online se ha cerrado: entrar en otra
+    b = card0.querySelector('[data-act="mu:une"]'); if (b) b.textContent = '🌍 ' + TT('Entrar en otra sala');
+    var nn = b && b.nextElementSibling; if (nn && nn.className === 'mu-nota') nn.textContent = TT('La sala se ha cerrado. Pídele el código de la nueva.');
+  }
+};
+/* el enlace …#sala=KUTA: al abrir el juego, o con el juego ya abierto */
+function ronDelEnlace() {
+  var m = /^#sala=([A-Za-z]{4})$/.exec(location.hash || ''); if (!m) return '';
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  return m[1].toUpperCase();
+}
+function ronVaAlEnlace(c) {
+  var ve = function () {
+    menuFondo();
+    if (ronListo()) { RON.intentos = 0; ronAbre('une', c); return; }
+    var t0 = Date.now(), mira = setInterval(function () {                  // online.json aún no ha llegado: un momento
+      if (ronListo()) { clearInterval(mira); RON.intentos = 0; ronAbre('une', c); }
+      else if (Date.now() - t0 > 6000) { clearInterval(mira); mulAbre('ini'); }
+    }, 200);
+  };
+  if (typeof CINE !== 'undefined' && CINE.on) { CINE.sigue = ve; cineSalir(); } else ve();
+}
+var boot2_219 = boot2;
+boot2 = function () {
+  var c = RON.vivo ? ronDelEnlace() : '';
+  boot2_219.apply(this, arguments);
+  if (c && redPuede()) ronVaAlEnlace(c);
+};
+window.addEventListener('hashchange', function () {
+  if (!RON.vivo) return; var c = ronDelEnlace(); if (!c || !redPuede()) return;
+  if (MUL.on) mulSal();
+  ronVaAlEnlace(c);
+});
+/* la baldosa de la portada: «wifi u online» */
+var porModo219 = porModo;
+porModo = function (id) { var h = porModo219(id); return id === 'multi' && RON.vivo ? h.replace(TT('Por la wifi'), TT('Wifi u online')) : h; };
+window.__RON = RON;
+(function () {
+  var css = '.ron-caja{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin-top:4px;padding:12px;border:3px solid #2a1a0c;border-radius:14px;background:#e8f4ff;color:#2a1a0c;text-align:center}' +
+    '.ron-t{margin:0;font:900 15px/1.3 system-ui,sans-serif}.ron-nota{margin:0;font:700 12.5px/1.35 system-ui,sans-serif;color:#3a4a5a}' +
+    '.ron-fila{display:flex;gap:8px}.ron-fila .b2{flex:0 0 auto}' +
+    '.ron-cod{flex:1;min-width:0;box-sizing:border-box;padding:10px 12px;border:3px solid #2a1a0c;border-radius:12px;background:#fff;color:#2a1a0c;font:900 22px/1 ui-monospace,monospace;letter-spacing:.3em;text-align:center;text-transform:uppercase}' +
+    '.ron-sala{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px;border:3px solid #2a1a0c;border-radius:14px;background:#e8f4ff;color:#2a1a0c;text-align:center}' +
+    '.ron-sala small{font:800 12px/1 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#3a4a5a}.ron-sala b{font:900 40px/1 ui-monospace,monospace;letter-spacing:.25em}.ron-sala .b2{width:100%}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  var N = {
+    'Online, desde cualquier sitio': ['Online, from anywhere', 'Online, dari mana saja'], 'Crear sala online': ['Create online room', 'Buat ruang online'], 'Entrar': ['Join', 'Masuk'],
+    'CÓDIGO': ['CODE', 'KODE'], 'Quien crea la sala ve un código de 4 letras; los demás lo escriben aquí o abren el enlace que les manda.': ['Whoever creates the room gets a 4-letter code; the others type it here or open the link they send.', 'Pembuat ruang mendapat kode 4 huruf; yang lain mengetiknya di sini atau membuka tautan yang dikirim.'],
+    'El modo online todavía no está activado.': ['Online mode isn\'t switched on yet.', 'Mode online belum aktif.'], 'Escribe las 4 letras del código.': ['Type the 4 letters of the code.', 'Ketik 4 huruf kodenya.'],
+    'Código de la sala': ['Room code', 'Kode ruang'], 'Que lo escriban en «Entrar» (online) o abran tu enlace, desde donde estén.': ['They type it under «Join» (online) or open your link, wherever they are.', 'Mereka mengetiknya di «Masuk» (online) atau membuka tautanmu, dari mana saja.'],
+    'Sala': ['Room', 'Ruang'], 'Conectando con el servidor…': ['Connecting to the server…', 'Menghubungkan ke server…'], 'Únete a mi partida de Bali Rush. Código:': ['Join my Bali Rush game. Code:', 'Gabung permainan Bali Rush-ku. Kode:'],
+    'No se puede conectar con el servidor online.': ['Can\'t connect to the online server.', 'Tidak bisa terhubung ke server online.'], 'No hay ninguna sala con ese código. Revisa las letras.': ['There\'s no room with that code. Check the letters.', 'Tidak ada ruang dengan kode itu. Periksa hurufnya.'],
+    'Esa sala ya está llena (6 motos).': ['That room is already full (6 bikes).', 'Ruang itu sudah penuh (6 motor).'], 'No se ha podido entrar en la sala.': ['Couldn\'t join the room.', 'Gagal masuk ruang.'],
+    'Se ha cortado la conexión con el servidor online: crea otra sala.': ['The connection to the online server was lost: create another room.', 'Sambungan ke server online terputus: buat ruang lain.'],
+    'Entrar en otra sala': ['Join another room', 'Masuk ruang lain'], 'La sala se ha cerrado. Pídele el código de la nueva.': ['The room has closed. Ask for the new code.', 'Ruang sudah ditutup. Minta kode yang baru.'], 'Wifi u online': ['Wifi or online', 'Wifi atau online']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
