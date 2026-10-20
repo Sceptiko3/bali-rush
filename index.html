@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V210</title>
+<title>Bali Rush Completo V211</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V210', FECHA = '20-10-2026';
+var VERSION = 'Completo V211', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -106717,6 +106717,235 @@ window.__TZM = { orden: function () { return tzmOrden(); }, mu: function () { re
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza juegos/tirolina/694_tirolina_obstaculos.js*/
+/* ================================================================
+   V211 · LOS OBSTÁCULOS DE LOS DEMÁS, EN SU CABLE Y A LA VISTA
+   Jose Javier (20-10-2026), con la V210: «pero, el resto de jugadores
+   tiene obstáculo también ¿no?». No los tenían: los de la máquina
+   bajaban sin chocar con nada y, de las personas, solo se veía que se
+   quejaban. Preguntado (con opciones), eligió «en su cable, a la vista».
+   - CADA CABLE, LO SUYO: en el cable de cada uno de los otros cinco van
+     sus copas de palmera, garzas, cometas, murciélagos, zorros
+     voladores, monos, ramas, penjor y drones (TZO.tipos), con todo lo
+     que hacen (los que cruzan se acercan a él, no a ti). El dragón
+     janggan y el que se cruza ya pasaban por encima de todos los
+     cables: no se repiten. Las flores y los cocos, solo en el tuyo.
+     · Las PERSONAS (multijugador) llevan el mismo recorrido que tú (es
+       el de todos): se ve lo que esquivan y, cuando gritan o chocan, los
+       bichos de su cable se apartan o salen volando.
+     · Los de la MÁQUINA tienen su recorrido (sale de la semilla de la
+       partida y de su sitio: el mismo en todos los móviles). Esquivan
+       casi todo (se balancean al lado bueno o encogen las piernas, y a
+       veces gritan ¡UUUH! a los bichos), y a veces chocan (TZO.falla:
+       cada uno con su torpeza): un golpe les frena como a ti (TJ.golpeV),
+       ponen cara de dolor y, si te quedan cerca, se quejan. El mono, en
+       vez de frenar tanto, les roba. Para que la carrera quede como
+       estaba (lo que pierden en los golpes), van un poco más deprisa
+       (TZO.mas).
+   - EL DIBUJO: cada obstáculo de otro cable se pinta con lo mismo que
+     los tuyos, con la cámara corrida a su cable (tzoDibuja); lejos de
+     ti (TZO.lejos) no se pintan, y sin el equipo que vuela cada
+     cometa (eso ya está en las tuyas).
+   - EN EL MULTIJUGADOR, el móvil de quien crea dice también cuándo grita
+     o choca cada uno de la máquina y cuánto encoge (extraE), y los
+     demás lo ven igual.
+   TZO.vivo = false: como la V210 (cables limpios; nadie más choca).
+   ================================================================ */
+var TZO = { vivo: true,
+  tipos: { copa: 1, garzas: 1, cometa: 1, murcis: 1, kalong: 1, mono: 1, rama: 1, penjor: 1, dron: 1 },   // los que van en el cable de cada uno
+  encoge: { copa: 1, garzas: 1, janggan: 1 },                                 // los que se pasan encogiendo las piernas (los demás, balanceándose al lado bueno)
+  falla: { cachitas: 0.07, balines: 0.06, nino: 0.12, abuela: 0.15, mochilero: 0.1 },   // de cada obstáculo, cuántas veces choca cada uno de la máquina
+  grita: 0.5,                                                                 // de los bichos que se asustan, a cuántos les grita (si no choca)
+  mas: 1.015,                                                                 // lo que va cada uno más deprisa que en la V210 (lo que pierden en los golpes: así la carrera queda como estaba; medido con pruebas/tirolina_seis.js)
+  lejos: 950,                                                                 // hasta dónde se pintan los de los otros cables (los tuyos, 1150)
+  dx: 0, dz: 0, dib: false };
+function tzoVa() { return TZO.vivo && !!TIRO && !!TIRO.MU; }
+
+/* ---------- el recorrido de cada cable ---------- */
+function tzoGenera(seed, li) {                                                // un recorrido entero, como el tuyo, con otra semilla (la tirolina, el festival…)
+  var F = { seed: seed, rnd: mulberry(seed * 31 + li * 977), O: [], RA: [], D: [], pops: [] };
+  tiroGenera(F, li);
+  return F.O;
+}
+function tzoCopia(o, r) {                                                     // un obstáculo, para el cable de r (sin nada de lo que le haya pasado)
+  var c = {}, k;
+  for (k in o) if (Object.prototype.hasOwnProperty.call(o, k)) c[k] = o[k];
+  c.huye = 0; c.golpe = false; c.visto = false; c.tg = 0; c.robo = 0; c.xp = null; c.plan = null; c.res = false;
+  c.dicho = true; c.rr = r;
+  return c;
+}
+function tzoCursoIA(T, li, r) {                                               // el de uno de la máquina: su semilla (la de la partida y su sitio) y, para encoger, los dragones de todos
+  if (T.tzoSeed !== T.seed) { T.tzoC = {}; T.tzoSeed = T.seed; }
+  var k = r.slot + ':' + li; if (T.tzoC[k]) return T.tzoC[k];
+  var C = [];
+  tzoGenera((T.seed * 7 + r.slot * 7919) % 1048573 + 3, li).forEach(function (o) { if (TZO.tipos[o.t]) C.push(tzoCopia(o, r)); });
+  var com = T.tzoC['com:' + li] || (T.tzoC['com:' + li] = tzoGenera(T.seed, li));
+  com.forEach(function (o) { if (o.t === 'janggan') { var c = tzoCopia(o, r); c.nodib = true; C.push(c); } });
+  C.sort(function (a, b) { return a.s - b.s; });
+  return (T.tzoC[k] = C);
+}
+function tzoMonta(T) {                                                        // al empezar cada tirolina: el recorrido de cada uno de los otros cinco en esta
+  if (!tzoVa()) return;
+  var mio = T.O.filter(function (o) { return TZO.tipos[o.t]; });
+  T.MU.forEach(function (r) {
+    r.O = r.hum ? mio.map(function (o) { return tzoCopia(o, r); }) : tzoCursoIA(T, T.li, r);
+    r.fG1 = r.fG2 = 0;
+  });
+}
+var tiroOtrosGen694 = tiroOtrosGen;
+tiroOtrosGen = function (T, li) { tiroOtrosGen694(T, li); tzoMonta(T); };
+var tzsMonta694 = tzsMonta;
+tzsMonta = function (T) { tzsMonta694(T); (T.MU || []).forEach(function (r) { if (r.A) { r.A.row = r; if (TZO.vivo) r.A.k *= TZO.mas; } }); };
+function tzoS(T, r) {                                                         // dónde va r en tu tirolina (para lo que se le acerca); si va por otra, al principio o al final
+  if (r.li === T.li && r.tf < 0) return r.sRaw || 0;
+  return r.li > T.li || r.tf >= 0 ? TIRO_L[T.li].len : 0;
+}
+
+/* ---------- los de la máquina: esquivan, gritan y a veces chocan ---------- */
+function tzoIA(A, dt) {
+  var T = TIRO, r = A.row, C = tzoCursoIA(T, A.li, r || A), i, o, d, tkO = 0, phO = 0, cerca;
+  A.gT = (A.gT || 0) - dt; A.dT = (A.dT || 0) - dt;
+  A.gri = A.gT > 0 ? Math.min(1, (A.gri || 0) + dt * 8) : Math.max(0, (A.gri || 0) - dt * 3);
+  A.dol = A.dT > 0 ? Math.min(1, (A.dol || 0) + dt * 8) : Math.max(0, (A.dol || 0) - dt * 2.5);
+  if (A.fin != null || A.esp > 0) { A.tk = Math.max(0, (A.tk || 0) - dt * 6); A.phiD = (A.phiD || 0) * Math.max(0, 1 - dt * 4); return; }
+  if (A.oiLi !== A.li || A.s < (A.sP || 0) - 1) { A.oiLi = A.li; A.oi = 0; while (A.oi < C.length && C[A.oi].s <= A.s) A.oi++; }
+  A.sP = A.s;
+  if (!A.rn) A.rn = mulberry(T.seed * 3 + A.slot * 101);
+  cerca = r && A.li === T.li && Math.abs(A.s - T.s) < 320 && T.fase !== 'cambio';
+  for (i = A.oi; i < C.length; i++) {                                         // lo que le viene: qué va a hacer con cada cosa
+    o = C[i]; d = o.s - A.s; if (d > 260) break;
+    if (!o.plan) o.plan = A.rn() < (TZO.falla[A.tipo] || 0.1) ? 'choca' : o.grito && A.rn() < TZO.grita ? 'grita' : 'esquiva';
+    if (o.plan === 'grita' && !o.huye && d < 200 && d > 30) {                   // ¡UUUH!: los bichos se apartan
+      o.huye = T.clock; A.gT = 0.55;
+      if (cerca) tiroOtroDice(T, r, '¡UUUH!');
+    }
+    if (o.plan === 'choca' && d < 90 && d > -15 && !o.huye && !tkO && !phO) {   // el que va a chocar no se aparta: se le va el cuerpo hacia ello
+      var sY0 = T.s; T.s = A.s; try { phO = -Math.asin(clamp((o.t === 'janggan' ? 0 : tiroObX(T, o)) / 28, -0.6, 0.6)) || 0.0001; } finally { T.s = sY0; }
+    }
+    if (o.plan === 'esquiva' && d < 120 && d > -15 && !o.huye && !tkO && !phO) {
+      if (TZO.encoge[o.t]) tkO = 1; else phO = -Math.asin(clamp((o.seguro || 17) * 1.3 / 28, -0.72, 0.72));   // el cuerpo, al lado bueno y con margen (el cuerpo queda a −28·sen φ del cable; como tú, hasta 0,8)
+    }
+  }
+  A.tk = (A.tk || 0) + (tkO - (A.tk || 0)) * Math.min(1, dt * 9);
+  A.phiD = (A.phiD || 0) + (phO - (A.phiD || 0)) * Math.min(1, dt * 4.5);
+  A.phi = A.phi * (1 - 0.8 * clamp(Math.abs(A.phiD) / 0.6, 0, 1)) + A.phiD;      // (mientras se aparta, casi sin el vaivén)
+  while (A.oi < C.length && C[A.oi].s <= A.s) {                                // lo que pasa
+    o = C[A.oi++];
+    if (TZO.stat && o.plan) {                                                 // (para las pruebas: ¿se le ve tocarlo?)
+      var sY = T.s; T.s = A.s;
+      try { var Fk = { rho: A.phi, phi: 0, tk: A.tk || 0 }, ox = o.t === 'janggan' ? 0 : tiroObX(T, o), toca = o.huye ? false : tiroChoca(Fk, o, ox), q = TZO.stat[o.plan + (toca ? ' tocando' : ' sin tocar')]; TZO.stat[o.plan + (toca ? ' tocando' : ' sin tocar')] = (q || 0) + 1; if (o.plan === 'esquiva' && toca) { TZO.stat.mal = TZO.stat.mal || {}; TZO.stat.mal[o.t] = (TZO.stat.mal[o.t] || 0) + 1; } } finally { T.s = sY; }
+    }
+    if (o.plan !== 'choca' || o.huye || o.golpe) continue;
+    if (o.roba) { A.v *= 0.88; o.huye = T.clock; o.robo = 1; A.dT = 0.9; if (cerca) tiroOtroDice(T, r, '🐒 ¡Eh, el mono!'); }
+    else { A.v *= TJ.golpeV; o.golpe = true; o.tg = T.clock; A.dT = 1.3; A.phiD = (A.phiD || 0) + (A.rn() < 0.5 ? -1 : 1) * 0.35; A.golpes = (A.golpes || 0) + 1; if (cerca) tiroOtroDice(T, r, pickM(['¡Ay!', '¡Uf!', '¡Auch!'])); }
+  }
+}
+var tzsPaso694 = tzsPaso;
+tzsPaso = function (A, dt) { tzsPaso694(A, dt); if (tzoVa()) tzoIA(A, dt); };
+var tzsVista694 = tzsVista;
+tzsVista = function (T) {
+  tzsVista694(T);
+  (T.MU || []).forEach(function (r) { var A = r.A; if (!A) return; r.tk = A.tk || 0; r.gri = A.gri || 0; r.dol = A.dol || 0; });
+};
+/* las personas (y, en los móviles de los demás, los de la máquina): cuando gritan o chocan, lo de su cable se entera */
+function tzoReacciona(T, r, f) {
+  var g1 = f & 1, g2 = f & 2, s = r.sRaw || 0;
+  if (r.O && r.li === T.li) {
+    if (g1 && !r.fG1) r.O.forEach(function (o) { var d = o.s - s; if (o.grito && !o.huye && !o.golpe && d > -10 && d < 330) o.huye = T.clock; });
+    if (g2 && !r.fG2) {
+      var b = null; r.O.forEach(function (o) { if (!o.huye && !o.golpe && Math.abs(o.s - s) < 60 && (!b || Math.abs(o.s - s) < Math.abs(b.s - s))) b = o; });
+      if (b) { if (b.roba) { b.huye = T.clock; b.robo = 1; } else { b.golpe = true; b.tg = T.clock; } }
+    }
+  }
+  r.fG1 = g1; r.fG2 = g2;
+}
+var tzmPasoRed694 = tzmPasoRed;
+tzmPasoRed = function (T, dt) {
+  tzmPasoRed694(T, dt);
+  if (!tzoVa()) return;
+  T.MU.forEach(function (r) {
+    if (r.A) return;
+    var e = MUL.est[r.slot]; if (!e) return;
+    var v = Math.floor(e.d[4] / 16); tzoReacciona(T, r, e.d[4] - v * 16);
+  });
+};
+if (MUL_J.tz) MUL_J.tz.extraE = function (E) {                                // los de la máquina: también cuánto encogen y si gritan o chocan
+  var T = TIRO; if (!T || !T.AI) return;
+  T.AI.forEach(function (A) {
+    var f = TZO.vivo ? ((A.gT || 0) > 0 ? 1 : 0) + ((A.dT || 0) > 0.4 ? 2 : 0) : 0;
+    E[A.slot] = [A.li, Math.round(A.s * 10) / 10, Math.round(A.phi * 1000) / 1000, TZO.vivo ? Math.round((A.tk || 0) * 100) / 100 : 0, f + 16 * Math.round(Math.max(0, Math.min(999, A.v))), 0, A.fin != null ? A.fin : -1];
+  });
+};
+/* cómo cuelgan los de la máquina: encima de lo suyo, las piernas encogidas, el grito y el golpe */
+var tzgOtroPostura694 = tzgOtroPostura;
+tzgOtroPostura = function (T, r, P, E, cruza) {
+  P = tzgOtroPostura694(T, r, P, E, cruza);
+  if (!TZO.vivo || cruza || !r || !r.racer || r.hum || tzmMu(r)) return P;
+  var tk = clamp(r.tk || 0, 0, 1), i;
+  if (tk > 0.01) tzgMezPi(P, TZG_P.encoge, smooth(tk));
+  if (r.gri > 0) { tzgMezBr(P, TZG_P.grita, r.gri, 0); if (r.gri > 0.3) E.gesto = 'grito'; }
+  if (r.dol > 0) { for (i = 0; i < 2; i++) { P.p[i][0] += 2.6 * r.dol; P.p[i][1] += 3.4 * r.dol; } P.atras -= 0.2 * r.dol; if (r.dol > 0.3) E.gesto = 'tzgAy'; }
+  return P;
+};
+
+/* ---------- el dibujo: lo de los otros cables, en la lista, y pintado con la cámara corrida a su cable ---------- */
+var tiroCosas694 = tiroCosas;
+tiroCosas = function (T, D) {
+  tiroCosas694(T, D);
+  if (!tzoVa()) return;
+  var s0 = TC.s + 8, s1 = TC.s + TZO.lejos, n = TIT.length, multi = tzmVa();
+  T.MU.forEach(function (r) {
+    if (!r.O || (multi && !MUL.jug[r.slot])) return;
+    for (var i = 0; i < r.O.length; i++) {
+      var o = r.O[i]; if (o.s < s0 || o.nodib) continue; if (o.s > s1) break;
+      if (o.huye && T.clock - o.huye > 4) continue;                              // (ya se fue)
+      TIT.push(o);
+    }
+  });
+  if (TIT.length > n) TIT.sort(function (a, b) { return b.s - a.s; });
+};
+var tiroDibuja694 = tiroDibuja;
+tiroDibuja = function (g, T, D, o) {
+  if (!o.rr) { tiroDibuja694(g, T, D, o); return; }
+  var r = o.rr, sY = T.s, cx = TC.x, cz = TC.z, casa = typeof LX !== 'undefined' && !!LX.S, kx = casa ? CAM.x : 0, kz = casa ? CAM.z : 0;
+  T.s = tzoS(T, r); TZO.dx = r.x; TZO.dz = r.dz; TZO.dib = true;
+  TC.x -= r.x; TC.z -= r.dz; if (casa) { CAM.x -= r.x; CAM.z -= r.dz; }
+  try { tiroDibuja694(g, T, D, o); }
+  finally { T.s = sY; TC.x = cx; TC.z = cz; if (casa) { CAM.x = kx; CAM.z = kz; } TZO.dx = TZO.dz = 0; TZO.dib = false; }
+};
+var tgz694 = tgz;
+tgz = function (D, s) { return tgz694(D, s) - TZO.dz; };                     // (pintando lo de otro cable, la cámara va corrida: el suelo, donde está)
+if (typeof tzvSuelo === 'function') {
+  var tzvSuelo694 = tzvSuelo;
+  tzvSuelo = function (D, x, s) {
+    if (!TZO.dib) return tzvSuelo694(D, x, s);
+    var dz = TZO.dz; TZO.dz = 0;
+    try { return tzvSuelo694(D, x + TZO.dx, s) - dz; } finally { TZO.dz = dz; }
+  };
+}
+if (typeof tzbVoladores === 'function') {
+  var tzbVoladores694 = tzbVoladores;
+  tzbVoladores = function (g, T, x, s, zg, n, lado) { if (!TZO.dib) tzbVoladores694(g, T, x, s, zg, n, lado); };   // (el equipo que vuela cada cometa: solo en las tuyas)
+}
+
+(function () {
+  var N = { '🐒 ¡Eh, el mono!': ['🐒 Hey, that monkey!', '🐒 Eh, monyetnya!'] };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/* para las pruebas */
+window.__TZO = {
+  curso: function (slot) { var T = TIRO; if (!T || !T.MU) return null; var r = T.MU.filter(function (q) { return q.slot === slot; })[0]; return r && r.O ? r.O.filter(function (o) { return !o.nodib; }).map(function (o) { return o.t + Math.round(o.s) + ':' + Math.round(o.x || o.xe || o.x0 || 0); }).join(',') : null; },
+  mio: function () { var T = TIRO; return T ? T.O.filter(function (o) { return TZO.tipos[o.t]; }).map(function (o) { return o.t + Math.round(o.s) + ':' + Math.round(o.x || o.xe || o.x0 || 0); }).join(',') : ''; },
+  golpes: function () { var T = TIRO, R = {}; if (T && T.AI) T.AI.forEach(function (A) { R[A.tipo] = A.golpes || 0; }); return R; },
+  reacciones: function (slot) { var T = TIRO; if (!T || !T.MU) return null; var r = T.MU.filter(function (q) { return q.slot === slot; })[0]; if (!r || !r.O) return null; var h = 0, gp = 0; r.O.forEach(function (o) { if (o.huye) h++; if (o.golpe) gp++; }); return { huye: h, golpe: gp, dol: r.dol || 0, tk: r.tk || 0 }; },
+  estado: function (slot, margen) {                                            // lo que ha pasado con lo de ese cable (g: golpe, h: se fue, ·: nada), hasta «margen» por detrás de él; slot 0: el tuyo
+    var T = TIRO; if (!T) return null; var L, sR;
+    if (!slot) { L = T.O.filter(function (o) { return TZO.tipos[o.t]; }); sR = T.s; }
+    else { var r = (T.MU || []).filter(function (q) { return q.slot === slot; })[0]; if (!r || !r.O || r.li !== T.li) return null; L = r.O.filter(function (o) { return !o.nodib; }); sR = r.sRaw || 0; }
+    return L.filter(function (o) { return o.s < sR - margen; }).map(function (o) { return o.golpe ? 'g' : o.huye ? 'h' : '·'; }).join('');
+  },
+  pinta: function () { var n = 0; TIT.forEach(function (o) { if (o.rr) n++; }); return n; }
+};
 /*#pieza nucleo/613_todo_abierto.js*/
 /* ================================================================
    V205 · POR AHORA, TODO ABIERTO
