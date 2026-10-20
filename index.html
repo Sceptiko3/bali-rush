@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V212</title>
+<title>Bali Rush Completo V213</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V212', FECHA = '20-10-2026';
+var VERSION = 'Completo V213', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -106442,6 +106442,171 @@ ciuItem = function (g, it, k, i) {
 
 /* para las pruebas */
 window.__PRA = { miembros: function (o) { return praMiembros(o).map(function (m) { return { x: Math.round(m.x), y: Math.round(m.y), u: Math.round(m.u), p: Math.round(m.p), anda: m.anda }; }); } };
+/*#pieza juegos/carreras/618_senales_estatuas_3d.js*/
+/* ================================================================
+   V213 · LAS SEÑALES Y LAS ESTATUAS DE LAS CARRERAS, EN 3D
+   Jose Javier (20-10-2026): «algunos detalles todavía no tienen 3D».
+   Preguntado (con una lista de lo que seguía plano), marcó «Señales y
+   estatuas» (y «Cosas de la ciudad», que va aparte).
+   Seguían planos, de pie siempre de frente a la cámara (o vistos desde
+   el cielo y puestos en una caja):
+   - LAS SEÑALES: el rombo de curva peligrosa (BB.curva), los chevrones
+     de las curvas (BB.chev), el rombo del cruce (BB.signCruce), el de
+     cuesta arriba (BB.tanjakan) y el aviso de puente y de estrechamiento
+     (SP.sign). Ahora: su poste de metal y la chapa de verdad, con su
+     dibujo de siempre por delante y gris por detrás, de cara a quien
+     llega y algo girada hacia la carretera: al pasar se ve de lado y
+     luego por detrás (ESN.fn.senal3d).
+   - EL CARTEL DEL TALLER DE PIEDRA (BB.patung, «PATUNG BATU»): dos
+     postes de madera y la tabla, igual.
+   - LAS ESTATUAS: las del bosque de Sangeh (SP.statue: una caja con la
+     estatua vista desde arriba encima) son las de la ciudad (550): el
+     guardián con musgo, Ganesha y el altar, de cara a la carretera; la
+     Ganesha y los bloques del taller de piedra (BB.ganesha, BB.bloque,
+     y las piedras que invaden el carril: ST.piedra), de piedra, con
+     volumen. (El guardián del taller ya era 3D.)
+   - LAS SOMBRILLAS DE PLAYA (SP.umbB: un disco plano en lo alto de un
+     palo): el mástil, algo inclinado, y la tela en ocho gajos de sus
+     dos colores.
+   De cerca, el modelo; de lejos, su cartón (como todo: ESN.fn.modelo).
+   TSE.vivo = false (antes de empezar la carrera): como la V212.
+   ================================================================ */
+var TSE = { vivo: true, tex: null, sil: {}, d: null, gira: 0.18 };
+
+/* ---------- las chapas: el dibujo de siempre, sin el poste (y su silueta, para el canto y la espalda) ---------- */
+function tseTex() {
+  if (TSE.tex) return TSE.tex;
+  var sr = SR; SR = 6;
+  try {
+    TSE.tex = {
+      curva: [-1, 1].map(function (d) { return mk(19, 19, function (g) { g.translate(0, 8); signCurve(g, d); }); }),
+      chev: [-1, 1].map(function (d) { return mk(17, 12, function (g) { g.translate(0, 3.5); signChevron(g, d); }); }),
+      cruce: mk(19, 19, function (g) { g.translate(0, 8); signCross(g); }),
+      tanjakan: mk(19, 19, function (g) { g.translate(0, 8); signTanjakan(g); }),
+      aviso: mk(13, 13, function (g) { drawSign(g); }),
+      patung: mk(25, 11, function (g) { g.translate(0, 7); drawPatung(g); })
+    };
+  } finally { SR = sr; }
+  return TSE.tex;
+}
+function tseSil(t, col) {                                                     // la misma forma, de un color (la espalda de la chapa)
+  var S = t._sil || (t._sil = {}); if (S[col]) return S[col];
+  var c = document.createElement('canvas'); c.width = t.c.width; c.height = t.c.height;
+  var g = c.getContext('2d'); g.drawImage(t.c, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
+  return (S[col] = { c: c });
+}
+function tseDescr() {                                                        // lo que va en d.s en lugar del dibujo plano
+  if (TSE.d) return TSE.d;
+  var T = tseTex();
+  function senal(base, tex, o) { var s = { esc: 'senal3d', k: 'bb', c: base.c, w: base.w, h: base.h, tex: tex }, q; for (q in o) s[q] = o[q]; return s; }
+  var rombo = { a: 9.4, b: 9.4, H: 24, postes: [0], pr: 0.8, palo: '#9aa0a8', espalda: '#8b9198' };
+  function R(o) { var q = {}, k; for (k in rombo) q[k] = rombo[k]; for (k in o) q[k] = o[k]; return q; }
+  TSE.d = {
+    curva: [0, 1].map(function (i) { return senal(BB.curva[i], T.curva[i], R({})); }),
+    chev: [0, 1].map(function (i) { return senal(BB.chev[i], T.chev[i], R({ a: 8.5, b: 6, H: 15.5 })); }),
+    cruce: senal(BB.signCruce, T.cruce, R({})),
+    tanjakan: senal(BB.tanjakan, T.tanjakan, R({})),
+    aviso: senal(SP.sign, T.aviso, R({ a: 6.5, b: 6.5, H: 16.5 })),
+    patung: senal(BB.patung, T.patung, R({ a: 12.5, b: 5.5, H: 19.5, postes: [-8, 8], pr: 0.95, palo: '#6b4a2a', espalda: '#7a5a3a', grueso: 0.9 }))
+  };
+  return TSE.d;
+}
+
+/* ---------- pintar una señal: el poste (o los dos) y la chapa, en su sitio y girada ---------- */
+function tseRumbo(d) { var cx = typeof cxAt === 'function' && L ? cxAt(d.y) : d.x + 1; return d.x > cx ? Math.PI + TSE.gira : Math.PI - TSE.gira; }   // de cara a quien llega, algo hacia la carretera
+ESN.fn.senal3d = function (g, d, zg, fa) {
+  var s = d.s, dd = proj(d.x, d.y, zg);
+  if (dd < 16 || PX < -200 || PX > V.w + 200) return;
+  var al = fa * (1 - fogK(dd)); if (al <= 0.02) return;
+  shadow(g, d.x, d.y, 3 * (d.sc || 1), 2 * (d.sc || 1), 0); scr(g);
+  var k = d.sc || 1, a = s.a, b = s.b, H = s.H, t = s.grueso || 0.6, i;
+  k3Abre(d.x, d.y, zg, d.h3 != null ? d.h3 : tseRumbo(d), 0, 0, k);
+  for (i = 0; i < s.postes.length; i++) k3Tubo(k3(-t - s.pr * 0.6, s.postes[i], 0), k3(-t - s.pr * 0.6, s.postes[i], H + b * (s.postes.length > 1 ? 0.6 : 0.2)), s.pr, s.pr * 0.85, s.palo, { borde: 0.6, vol: 0.3 });
+  var f0 = k3(0, a, H + b), f1 = k3(0, -a, H + b), f2 = k3(0, a, H - b);       // la cara de delante: arriba a la izquierda, arriba a la derecha y abajo a la izquierda (vista de frente)
+  var e0 = k3(-t, a, H + b), e1 = k3(-t, -a, H + b), e2 = k3(-t, a, H - b);   // y la de detrás
+  var frente = (f1[0] - f0[0]) * (f2[1] - f0[1]) - (f1[1] - f0[1]) * (f2[0] - f0[0]) > 0, tex = s.tex, sil = tseSil(tex, s.espalda), canto = tseSil(tex, '#5d636b');
+  function plano(img, p0, p1, p2) { g.save(); g.globalAlpha = al; g.transform(p1[0] - p0[0], p1[1] - p0[1], p2[0] - p0[0], p2[1] - p0[1], p0[0], p0[1]); g.drawImage(img, 0, 0, 1, 1); g.restore(); }
+  var dF = (f1[3] + f2[3]) / 2, dE = (e1[3] + e2[3]) / 2;
+  k3Fn(Math.max(dF, dE) + 0.01, function () {                                // el canto: las dos caras, una encima de otra, la de detrás algo corrida
+    for (var q = 1; q <= 3; q++) { var m = q / 4; plano(canto.c, k3Med(e0, f0, m), k3Med(e1, f1, m), k3Med(e2, f2, m)); }
+  });
+  k3Fn(frente ? dF : dE, function () {
+    if (frente) { plano(sil.c, e0, e1, e2); plano(tex.c, f0, f1, f2); }
+    else { plano(tex.c, f0, f1, f2); plano(sil.c, e0, e1, e2); }
+  });
+  k3Pinta(g);
+};
+
+/* ---------- los modelos de piedra y la sombrilla (de cerca el modelo; de lejos su cartón: ESN.fn.modelo) ---------- */
+function tseBloque3D(g, x, y, z, ang, k) {
+  k3Abre(x, y, z, ang, 0, 0, k || 1);
+  var r = 6.8;
+  k3Bloque([-r, r, -r, r, 0], [-r * 0.92, r * 0.92, -r * 0.92, r * 0.92, r * 1.3], '#8e897d', { top: '#a39e92', deco: function (cara, c) {
+    vQuad(c, 0, 1, 0.46, 0.5, 'rgba(60,55,50,.35)'); vQuad(c, 0.48, 0.52, 0.5, 1, 'rgba(60,55,50,.3)');   // las marcas del cincel
+    vQuad(c, 0, 1, 0, 0.12, 'rgba(70,60,45,.25)');
+  } });
+  k3Pinta(g);
+}
+var TSE_UMB = [['#e0302a', '#fafafa'], ['#2f7fd8', '#f2c230'], ['#35a852', '#fafafa']];
+function tseSombrilla3D(g, x, y, z, ang, o) {
+  o = o || {};
+  var k = o.k || 1, col = o.col || TSE_UMB[0], i, n = 8, R = 11, inc = o.inc || 0.12;
+  k3Abre(x, y, z, ang, inc, 0, k);
+  k3Tubo(k3(0, 0, 0), k3(0, 0, 14.6), 0.45, 0.4, '#e8e2d2', { borde: 0.6, vol: 0.2 });   // el mástil
+  var A = k3(0, 0, 15.2), rim = [];
+  for (i = 0; i < n; i++) { var an = i / n * TAU + (o.gira || 0); rim.push(k3(Math.cos(an) * R, Math.sin(an) * R, 11.6)); }
+  for (i = 0; i < n; i++) k3Poli([A, rim[i], rim[(i + 1) % n]], col[i % 2], { borde: 0.7, vol: 0 });   // la tela, en gajos
+  k3Bola(k3(0, 0, 15.6), 0.8, '#e8e2d2', { borde: 0.5, vol: 0.2, pr: -3 });
+  k3Pinta(g);
+}
+function tseModelo(w, h, pie, sombra, carton, mod) { var s = k3Carton(w, h, 4, carton, pie); s.pie = 0; s.esc = 'modelo'; s.k = 'bb'; s.sombra = sombra; s.mod = mod; return s; }
+function tseModelos() {
+  if (TSE.m) return TSE.m;
+  var F = Math.PI - 0.35;
+  TSE.m = {
+    bloque: tseModelo(24, 26, 3, 9, function (g) { tseBloque3D(g, 0, 0, 0, 0.35, 1); }, function (g, d, zg) { tseBloque3D(g, d.x, d.y, zg, (hash(d.y * 0.13 + d.x) - 0.5) * 1.2, d.sc || 1); }),
+    umb: TSE_UMB.map(function (col, v) {
+      return tseModelo(34, 34, 2, 10, function (g) { tseSombrilla3D(g, 0, 0, 0, F, { col: col }); }, function (g, d, zg) { tseSombrilla3D(g, d.x, d.y, zg, (d.a || 0), { k: d.sc || 1, col: col, gira: hash(d.y) * 0.8, inc: 0.08 + hash(d.x) * 0.1 }); });
+    })
+  };
+  return TSE.m;
+}
+function tseUmbColor(i) { var rn = mulberry(2 + i * 5); return Math.floor(rn() * 3); }   // (los colores que tenía cada dibujo, drawBeachUmb)
+
+/* ---------- al hacer la carrera: cada cosa plana, por la suya ---------- */
+function tseConvierte() {
+  var D = tseDescr(), M = tseModelos(), E = typeof c5Estatuas === 'function' ? c5Estatuas() : null, n = 0;
+  function cambia(d) {
+    var s = d.s; if (!s || d.pj) return;
+    if (s === BB.curva[0] || s === BB.curva[1]) { d.s = D.curva[s === BB.curva[0] ? 0 : 1]; n++; }
+    else if (s === BB.chev[0] || s === BB.chev[1]) { d.s = D.chev[s === BB.chev[0] ? 0 : 1]; n++; }
+    else if (s === BB.signCruce) { d.s = D.cruce; n++; }
+    else if (s === BB.tanjakan) { d.s = D.tanjakan; n++; }
+    else if (s === SP.sign) { d.s = D.aviso; n++; }
+    else if (s === BB.patung) { d.s = D.patung; n++; }
+    else if (s === BB.bloque) { d.s = M.bloque; n++; }
+    else if (SP.umbB && SP.umbB.indexOf(s) >= 0) { d.s = M.umb[tseUmbColor(SP.umbB.indexOf(s))]; d.sc = (d.sc || 1) * 1.05; n++; }
+    else if (E && s === BB.ganesha) { d.s = E.ganesha; d.h3 = vd3Mira(d); d.sc = 1; n++; }
+    else if (E && s === SP.statue) { var v = Math.floor(hash(d.x * 0.137 + d.y * 0.071) * 8); d.s = v < 4 ? E.guardianM : v < 6 ? E.ganeshaM : E.altar; d.h3 = vd3Mira(d); d.sc = 1; n++; }
+  }
+  L.deco.ground.forEach(cambia); L.deco.top.forEach(cambia);
+  TSE.n = n;
+}
+var buildLevel618 = buildLevel;
+buildLevel = function (li) {
+  var r = buildLevel618.apply(this, arguments);
+  if (TSE.vivo && typeof ER3 !== 'undefined' && ER3.vivo && ESN.vivo && L && L.deco) tseConvierte();
+  return r;
+};
+/* las piedras del taller que invaden el carril (ST.piedra): el bloque, de piedra; el guardián, de cerca su modelo */
+var tsePiedra0 = ST.piedra.draw;
+ST.piedra.draw = function (g, s) {
+  if (!TSE.vivo || typeof ER3 === 'undefined' || !ER3.vivo || !ESN.vivo) { tsePiedra0(g, s); return; }
+  var zg = zAt(s.y), d = s._tse;
+  if (s.v === 'estatua' && !(BB.estatua && BB.estatua.mod)) { tsePiedra0(g, s); return; }
+  if (!d || d.x !== s.x) d = s._tse = s.v === 'estatua' ? { s: BB.estatua, x: s.x, y: s.y, sc: 1.19 } : { s: tseModelos().bloque, x: s.x, y: s.y, sc: s.r / 7.5 };   // (siempre el mismo: la foto de lejos se guarda en él)
+  ESN.fn.modelo(g, d, zg, 1);
+};
 /*#pieza juegos/tirolina/692_tirolina_multi.js*/
 /* ================================================================
    V209 · LA TIROLINA, MULTIJUGADOR (POR LA WIFI)
