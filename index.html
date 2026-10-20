@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V222</title>
+<title>Bali Rush Completo V223</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V222', FECHA = '20-10-2026';
+var VERSION = 'Completo V223', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -49596,6 +49596,7 @@ function motoGuiriFiel(g, x, y, z, ang, o) {
   }
   /* Pitik, en el espacio: una bola amarilla con su cresta, su pico, sus ojos y sus alas. Mira hacia atrás (a quien conduce… el juego), girado a un lado o a otro según o.mira */
   function fmPitikHaz(cu, cv, cw, vuela) {
+    if (PRM.vivo) return pmrHaz(cu, cv, cw, vuela, { B: B, zb: zb, o: o, t: t, LK: LK, MP: MP });   // V223: el Pitik redondo, con sus miradas (biblioteca/586)
     var r = 2.7, fi = Math.PI + (o.mira || 0) * 0.6 + (vuela ? Math.sin(o.salto * TAU) * 0.5 : 0), cf = Math.cos(fi), sf = Math.sin(fi), ba = vuela ? 0 : Math.sin(t * 7) * 0.12;
     function L(a, b, h) { return B(cu + (a * cf - b * sf) * r, cv + (a * sf + b * cf) * r, cw + ba + h * r); }
     function ve(p) { return (pc[3] - p[3]) / (r * KK); }
@@ -49634,6 +49635,7 @@ function motoGuiriFiel(g, x, y, z, ang, o) {
     return P;
   }
   function fmPitikPinta(c, P) {
+    if (P.nuevo) { pmrPinta(c, P); return; }
     var x = P.c[0], y = P.c[1], r = P.r, s = P.s, lw = fmLw(s), i, q, w, a;
     function ala(A) {
       var dx = A.q[0] - A.p[0], dy = A.q[1] - A.p[1], l = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -50318,6 +50320,180 @@ FMOD.push(
     UP: 12.6, MW: 26.4, gu: 9.6, gv: 13, rw: 0.4, pie: [6.6, 7, 20.6, 3.6, 7.4, 10.6, 7.6, 8, 9.2], pieSaca: [5, 12.6, 16.6, 5, 16.6, 6, 9.4, 18.4, 4.2], cesta: [-0.4, 0.2], pas: [-11.6, 21] })
 );
 FMOD[0].txt = 'La de Wayan: redonda y simpática, con su cesta de mimbre.';
+/*#pieza biblioteca/586_pitik_en_la_moto.js*/
+/* ================================================================
+   V223 · PITIK EN LA MOTO: EL REDONDO, CON SUS MIRADAS
+   Jose Javier (20-10-2026), con la V222: «pero ese no es el Pitik que
+   trabajamos al final, el último. Es demasiado cutre, tienes que darle
+   más aire, que haga lo de las miradas, estilo como el juego de él en
+   el mercado, ese personaje».
+   - En la cesta (y de paquete en la deportiva, y cuando salta en los
+     rasantes) va el Pitik redondo de Pitik travieso / Lío en el
+     mercado (juegos/pitik3d/712, pitikRedondo3D): más grande que la
+     bola de antes y asomando más de la cesta.
+   - Sus miradas: mira a un lado y a otro, ladea la cabeza, pía y
+     picotea las flores de la cesta (los gestos de 708, también
+     sentado); los ojos van de un sitio a otro, como quien vigila; de
+     vez en cuando pone la cara de pillo, o la de contento; en las
+     curvas mira hacia dentro; al frenar fuerte, susto; al saltar,
+     susto y luego contento.
+   - La ropa del taller (V222), rehecha para su forma: casco o gorra
+     pequeños en lo alto (se quitan su flor y el mechón), gafas sobre
+     sus ojos grandes, bufanda o pajarita bajo el pico.
+   Se pinta dentro del dibujo de la moto (en su sitio de la cesta, entre
+   las paredes de atrás y las de delante): pmrPinta guarda el kit 3D de
+   la moto, pinta a Pitik con su propia lista y lo deja como estaba.
+   PRM.vivo = false: la bola de antes (574).
+   ================================================================ */
+var PRM = { vivo: true, k: 0.31, dwC: -2.6, dwP: -1.9 };
+var PMR_OJOS = [0, -0.75, 0.2, 0.7, -0.3, 0, 0.85, -0.6];                 // adónde van mirando los ojos, uno tras otro
+
+/* dónde va y qué hace: se calcula al montar la moto (con el kit en el sitio de la moto) */
+function pmrHaz(cu, cv, cw, vuela, X) {
+  var K = K3, kb = K.k, o = X.o, t = X.t;
+  var dw = !vuela && X.MP.paquete ? PRM.dwP : PRM.dwC, w0 = cw + dw;
+  var u = cu * kb, v = cv * kb, w = (w0 + X.zb) * kb, u1 = u * K.cp - w * K.sp, w1 = u * K.sp + w * K.cp, v2 = v * K.cr + w1 * K.sr, w2 = w1 * K.cr - v * K.sr;
+  var C = pmrConducta(o, t, vuela);
+  var P = { nuevo: true, c: X.B(cu, cv, w0), x: K.x + K.fx * u1 + K.rx * v2, y: K.y + K.fy * u1 + K.ry * v2, z: K.z + w2, ang: Math.atan2(K.fx, K.fy) + Math.PI + C.giro };   // mira hacia atrás, a quien conduce… y a la cámara
+  P.op = { t: t, k: PRM.k * kb / PT3.k, sentado: !vuela, gestoSentado: true, cab: -Math.atan2(K.sp, K.cp), incl: -Math.atan2(K.sr, K.cr), est: C.est, mira: C.mira, salto: C.salto };
+  pmrRopa(P.op, X.LK || {});
+  return P;
+}
+/* se pinta: el kit 3D es uno solo, así que se guarda el de la moto (que está a medio pintar) y se devuelve */
+function pmrPinta(c, P) {
+  var sv = {}, k;
+  for (k in K3) sv[k] = K3[k];
+  K3.q = [];
+  try { pitikRedondo3D(c, P.x, P.y, P.z, P.ang, P.op); }
+  finally { for (k in sv) K3[k] = sv[k]; }
+}
+/* las miradas y las caras */
+function pmrConducta(o, t, vuela) {
+  var r = { est: 'normal', mira: 0, giro: 0, salto: 0 };
+  if (vuela) { r.salto = 0.85; r.est = (o.salto || 0) < 0.3 ? 'susto' : 'feliz'; return r; }
+  var L = PMR_OJOS, n = L.length, q = t / 1.55 + 0.37, i = Math.floor(q), f = q - i, a = L[((i - 1) % n + n) % n], b = L[(i % n + n) % n], e = Math.min(1, f * 1.55 / 0.16);
+  e = e * e * (3 - 2 * e); r.mira = a + (b - a) * e;                     // los ojos saltan de un sitio a otro (rápido) y se quedan
+  var inc = clamp(o.incl || 0, -0.6, 0.6);
+  if (Math.abs(inc) > 0.12) { r.mira = clamp(r.mira * 0.3 - inc * 1.6, -1, 1); r.giro = -inc * 0.45; }   // en las curvas, hacia dentro
+  if (o.pitikEst) { r.est = o.pitikEst; return r; }                       // (el taller, al vestirle: contento)
+  var cc = ((t + 2.3) % 11 + 11) % 11;
+  if (o.frena && (o.v || 0) > 0.35) r.est = 'susto';
+  else if (cc > 7.2 && cc < 8.7) { r.est = 'pillo'; r.mira = r.mira * 0.3 + 0.25; }   // tramando algo
+  else if (cc > 9.5 && cc < 10.3) r.est = 'feliz';
+  return r;
+}
+
+/* ---------- la ropa (V222), en su forma ---------- */
+function pmrRopa(op, LK) {
+  var cab = LK.pCab == null ? 2 : LK.pCab | 0, gaf = fmPitikGaf(LK), cue = LK.pCue | 0, col = fmPitikCol(LK);
+  op.sinFlor = cab !== 2; op.sinMechon = cab === 1 || cab === 3;           // (2: su flor, la de siempre; 0: nada)
+  if (cab !== 1 && cab !== 3 && !gaf && !cue) return;
+  op.lleva = function (Hd) {
+    if (cue) pmrCuello(Hd, cue, col, op.t || 0);
+    if (cab === 1 || cab === 3) pmrCasco(Hd, cab === 1, col);
+    if (gaf) pmrGafas(Hd, gaf);
+  };
+}
+function pmrLw(s) { return Math.max(0.45, 0.9 * s * (K3.fino || 0.5)); }
+/* una vuelta alrededor de él (bufanda, cuello, goma de las gafas): se pinta de un trazo lo que da a la cámara, con su borde */
+function pmrVuelta(Hd, cx, cz, r, n, a0, a1, ancho, col, tin, dz, luz) {
+  var L = [], i, a, p, q, c0 = Hd(cx, 0, cz), s = c0[2];
+  for (i = 0; i <= n; i++) {
+    a = a0 + (a1 - a0) * i / n; p = [cx + Math.cos(a) * r, Math.sin(a) * r, cz + (dz ? dz(a) : 0)];
+    q = Hd(p[0], p[1], p[2]); L.push([q, Hd(cx + Math.cos(a) * r * 1.15, Math.sin(a) * r * 1.15, p[2])[3] < q[3]]);
+  }
+  k3Fn(c0[3] - 0.3 * K3.k, function (c) {
+    var m, ab;
+    for (var pas = 0; pas < (luz ? 3 : 2); pas++) {
+      c.beginPath(); ab = false;
+      for (m = 0; m < L.length; m++) { if (!L[m][1]) { ab = false; continue; } if (ab) c.lineTo(L[m][0][0], L[m][0][1] - (pas === 2 ? ancho * s * 0.22 : 0)); else c.moveTo(L[m][0][0], L[m][0][1] - (pas === 2 ? ancho * s * 0.22 : 0)); ab = true; }
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      c.strokeStyle = pas === 0 ? tin : pas === 1 ? col : luz; c.lineWidth = pas === 0 ? ancho * s + pmrLw(s) * 2 : pas === 1 ? ancho * s : ancho * s * 0.22; c.stroke();
+    }
+  });
+}
+/* el casco o la gorra: un casquete de la cabeza cortado por un plano inclinado (alto delante: los ojos se ven enteros) */
+function pmrCasco(Hd, casco, col) {
+  var Cx = 0.9, Cz = 17.2, R = casco ? 10.1 : 9.9, kq = casco ? 0.36 : 0.3, dq = casco ? 5.9 : 6.9, KK = K3.k, i, j, q;
+  var nq = Math.sqrt(1 + kq * kq), nx = -kq / nq, nz = 1 / nq, al = Math.acos(clamp(dq / (R * nq), -1, 1));
+  function U(ph, psi) { var cp = Math.cos(ph), sp = Math.sin(ph) * Math.cos(psi); return [Cx + R * (cp * nx + sp * nz), R * Math.sin(ph) * Math.sin(psi), Cz + R * (cp * nz - sp * nx)]; }
+  function P(p) { return Hd(p[0], p[1], p[2]); }
+  function vis(p) { return Hd(Cx + (p[0] - Cx) * 1.12, p[1] * 1.12, Cz + (p[2] - Cz) * 1.12)[3] < P(p)[3]; }
+  var D = [P(U(0, 0))];
+  for (j = 0; j < 3; j++) for (i = 0; i < 16; i++) D.push(P(U(al * [1, 0.68, 0.36][j], i / 16 * TAU)));
+  var H = k3Casco(D.map(function (p) { return [p[0], p[1]]; })), top = D[0], s = top[2];
+  var borde = []; for (i = 0; i <= 28; i++) { q = U(al, i / 28 * TAU); borde.push([P(q), vis(q)]); }
+  var raya = null;
+  if (casco) { raya = []; for (i = 0; i <= 16; i++) { var f = -al + i / 16 * 2 * al; q = U(Math.abs(f), f < 0 ? Math.PI : 0); raya.push([P(q), vis(q)]); } }
+  var tin = k3Osc(col), osc = shadeCol(col, 0.72);
+  function linea(c, L) { var ab = false; c.beginPath(); for (var m = 0; m < L.length; m++) { if (!L[m][1]) { ab = false; continue; } if (ab) c.lineTo(L[m][0][0], L[m][0][1]); else c.moveTo(L[m][0][0], L[m][0][1]); ab = true; } }
+  k3Fn(Hd(Cx, 0, Cz)[3] - 0.4 * KK, function (c) {
+    c.beginPath(); k3Camino(c, H, false); c.fillStyle = col; c.fill();
+    c.save(); c.beginPath(); k3Camino(c, H, false); c.clip();
+    c.beginPath(); c.ellipse(top[0] - 2.6 * s, top[1] - 0.6 * s, 2.8 * s, 1.4 * s, -0.45, 0, TAU); c.fillStyle = 'rgba(255,255,255,.45)'; c.fill();
+    if (raya) { linea(c, raya); c.strokeStyle = tin; c.lineWidth = 1.5 * s + pmrLw(s) * 2; c.stroke(); c.strokeStyle = '#ffffff'; c.lineWidth = 1.5 * s; c.stroke(); }
+    c.restore();
+    c.beginPath(); k3Camino(c, H, false); c.strokeStyle = tin; c.lineWidth = pmrLw(s); c.stroke();
+    linea(c, borde); c.strokeStyle = tin; c.lineWidth = 1.1 * s + pmrLw(s) * 2; c.stroke(); c.strokeStyle = osc; c.lineWidth = 1.1 * s; c.stroke();   // el borde, por delante
+  });
+  if (!casco) {                                                           // la gorra: botón arriba y la visera del revés, un poco de lado
+    k3Bola(Hd(Cx + nx * R * 1.02, 0, Cz + nz * R * 1.02), 0.9, osc, { borde: 0.6, vol: 0.2, pr: -0.6 * KK });
+    var vc = 2.1, rr = R * Math.sin(al), zc = U(al, vc)[2] + 0.4, cv = Math.cos(vc), sv = Math.sin(vc), V = [], ox, oy, ps;
+    for (i = 0; i <= 6; i++) V.push(P(U(al, vc - 1 + i / 3)));
+    for (i = 6; i >= 0; i--) { ps = (-1 + i / 3) * 0.8; ox = rr * (0.9 + Math.cos(ps) * 0.62); oy = rr * Math.sin(ps); V.push(Hd(Cx + ox * cv - oy * sv, ox * sv + oy * cv, zc)); }
+    var vm = P(U(al * 1.15, vc));
+    k3Fn(vm[3], function (c) { c.beginPath(); c.moveTo(V[0][0], V[0][1]); for (var m = 1; m < V.length; m++) c.lineTo(V[m][0], V[m][1]); c.closePath(); c.fillStyle = osc; c.fill(); c.strokeStyle = tin; c.lineWidth = pmrLw(s); c.stroke(); });
+  }
+}
+/* la bufanda (con su nudo y dos puntas al viento) o la pajarita, bajo el pico */
+function pmrCuello(Hd, cue, col, t) {
+  var Cx = 1.0, Cz = 12.3, R = cue === 1 ? 10.2 : 10.0, KK = K3.k, tin = k3Osc(col);
+  function aro(th) { return [Cx + Math.cos(th) * R, Math.sin(th) * R, Cz + Math.cos(th) * 0.5]; }
+  pmrVuelta(Hd, Cx, Cz, R, 36, 0, TAU, cue === 1 ? 2.7 : 0.95, cue === 1 ? col : shadeCol(col, 0.8), tin, function (a) { return Math.cos(a) * 0.5; }, cue === 1 ? 'rgba(255,255,255,.28)' : null);
+  if (cue === 1) {
+    var th = 0.8, kn = aro(th), ou = [Math.cos(th), Math.sin(th)], fl = Math.sin(t * 9) * 0.9, fl2 = Math.sin(t * 9 + 1.3) * 0.9;
+    var K0 = Hd(kn[0] + ou[0] * 0.9, kn[1] + ou[1] * 0.9, kn[2]);
+    k3Curva(K0, Hd(kn[0] + ou[0] * 2.4 - 1.2, kn[1] + ou[1] * 2.4, kn[2] - 2.6 + fl), Hd(kn[0] + ou[0] * 3.2 - 3.2, kn[1] + ou[1] * 3.6, kn[2] - 6 + fl * 1.6), 1.15, 1.35, col, { vol: 0.3, borde: 0.7, tinta: tin, pr: -0.4 * KK });
+    k3Curva(K0, Hd(kn[0] + ou[0] * 2.8 - 2.4, kn[1] + ou[1] * 2.0, kn[2] - 1.8 + fl2), Hd(kn[0] + ou[0] * 4.4 - 5, kn[1] + ou[1] * 2.6, kn[2] - 4.4 + fl2 * 1.6), 1.1, 1.3, shadeCol(col, 0.86), { vol: 0.3, borde: 0.7, tinta: tin, pr: -0.3 * KK });
+    k3Bola(K0, 1.7, col, { vol: 0.3, borde: 0.7, tinta: tin, pr: -0.6 * KK });
+  } else {
+    var F = Hd(11.3, 0, 12.6), Fn = Hd(13, 0, 12.6);
+    if (Fn[3] < F[3]) {
+      var A = [Hd(11.2, 2.9, 13.9), Hd(11.2, 2.9, 11.3), Hd(11.2, -2.9, 13.9), Hd(11.2, -2.9, 11.3)];
+      k3Fn(F[3] - 0.8 * KK, function (c) {
+        var s = F[2]; c.beginPath();
+        c.moveTo(F[0], F[1]); c.lineTo(A[0][0], A[0][1]); c.lineTo(A[1][0], A[1][1]); c.closePath();
+        c.moveTo(F[0], F[1]); c.lineTo(A[2][0], A[2][1]); c.lineTo(A[3][0], A[3][1]); c.closePath();
+        c.fillStyle = col; c.fill(); c.strokeStyle = tin; c.lineWidth = pmrLw(s); c.lineJoin = 'round'; c.stroke();
+        c.beginPath(); c.arc(F[0], F[1], 0.95 * s, 0, TAU); c.fillStyle = shadeCol(col, 0.8); c.fill(); c.stroke();
+      });
+    }
+  }
+}
+/* las gafas: de piloto (cristal claro: se le siguen viendo los ojos) o de sol; con la goma alrededor de la cabeza */
+function pmrGafas(Hd, gaf) {
+  var KK = K3.k, d, i, sol = gaf === 2, goma = sol ? '#2b2530' : '#6b4428';
+  for (d = -1; d <= 1; d += 2) (function (d) {
+    var nx = 0.88, ny = d * 0.37, nz = 0.24, nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
+    var cc = [0.9 + nx * 9.3, ny * 9.3, 18.4 + nz * 9.3], tl = Math.hypot(ny, nx), t1 = [-ny / tl * d, nx / tl * d, 0];
+    var up = [-nx * nz, -ny * nz, nx * nx + ny * ny], ul = Math.hypot(up[0], up[1], up[2]); up = [up[0] / ul, up[1] / ul, up[2] / ul];
+    var p0 = Hd(cc[0], cc[1], cc[2]), pn = Hd(cc[0] + nx * 2, cc[1] + ny * 2, cc[2] + nz * 2);
+    if (pn[3] >= p0[3]) return;
+    var pa = Hd(cc[0] + t1[0] * 3.3, cc[1] + t1[1] * 3.3, cc[2]), pb = Hd(cc[0] - up[0] * 3.7, cc[1] - up[1] * 3.7, cc[2] - up[2] * 3.7);
+    var ax = pa[0] - p0[0], ay = pa[1] - p0[1], bx = pb[0] - p0[0], by = pb[1] - p0[1], sc = Math.max(0.3, Math.sqrt(Math.abs(ax * by - ay * bx)));
+    k3Fn(p0[3] - 0.75, function (c) {                                    // (después de los ojos, que van a 0,5)
+      c.save(); c.transform(ax, ay, bx, by, p0[0], p0[1]);
+      var lw = 1 / sc;
+      c.beginPath(); c.ellipse(0, 0, 1.26, 1.22, 0, 0, TAU);
+      c.fillStyle = sol ? 'rgba(30,26,36,.94)' : 'rgba(170,218,236,.28)'; c.fill();
+      c.strokeStyle = sol ? '#1b171e' : '#5a3a22'; c.lineWidth = Math.max(0.2, 2.2 * lw); c.stroke();
+      c.beginPath(); c.arc(0, 0, 0.98, Math.PI * 1.08, Math.PI * 1.5); c.strokeStyle = sol ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.75)'; c.lineWidth = Math.max(0.1, 1.3 * lw); c.stroke();
+      if (sol) { c.beginPath(); c.moveTo(-0.5, 0.25); c.lineTo(0.15, -0.45); c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = Math.max(0.08, 1 * lw); c.stroke(); }
+      c.restore();
+    });
+  })(d);
+  for (d = -1; d <= 1; d += 2) pmrVuelta(Hd, 0.9, 21.3, 8.8, 12, d * 0.72, d * Math.PI, 1.0, goma, '#1b161c', null, null);   // la goma, por los lados de la cabeza hasta la nuca
+}
 /*#pieza biblioteca/575_arte_animales.js*/
 /* ================================================================
    EL 3D, FIEL AL DIBUJO · LOS ANIMALES DE LA CARRETERA
@@ -102052,6 +102228,10 @@ pitik3D = function (g, x, y, z, ang, o) { if (PTR.vivo) pitikReal3D(g, x, y, z, 
    pitik3D (y o.est = 'pillo' o 'pena'). Con PTR.vivo y PTR.estilo =
    'redondo' (el de serie), pitik3D lo pinta a él; 'plumon' es el de
    la V159.
+   V223 (para ir en la moto, biblioteca/586): o.cab (cabeceo de lo
+   que le lleva), o.gestoSentado (sentado también mira, ladea, pía y
+   picotea), o.sinFlor y o.sinMechon (con casco o gorra). Sin ellos,
+   igual que antes.
    ================================================================ */
 var PTD = { c: { Y: '#ffd02e', Y2: '#fff1b0', YW: '#f2ae0f', BK: '#ff9a1f', BK2: '#e57a12', PA: '#ff9a1f', PA2: '#e07d14', OJ: '#23160e', tY: 'rgba(150,95,10,.85)', tB: 'rgba(150,70,10,.85)' } };
 PTR.estilo = 'redondo';
@@ -102107,14 +102287,14 @@ function pitikRedondo3D(g, x, y, z, ang, o) {
   if (est === 'susto') pico = Math.max(pico, 0.6);
   if (est === 'ko') sent = true;
   var moving = !sent && salto < 0.05 && (corre > 0 || o.anda);
-  var quieto = !moving && !sent && salto < 0.05 && (est === 'normal' || est === 'pillo');
+  var quieto = !moving && (!sent || o.gestoSentado) && salto < 0.05 && (est === 'normal' || est === 'pillo');
   var Gs = quieto ? ptrGesto(t, o) : { pk: 0, yaw: 0, roll: 0, pico: 0, bote: 0 };
   pico = Math.max(pico, Gs.pico);
   /* aplasta y estira (como en los dibujos): al andar bota, al caer se aplasta, al saltar se estira */
   var bote = moving ? Math.abs(Math.sin(ph * TAU)) : 0, aplas = moving ? (1 - bote) * 0.07 * (1 + corre) : 0;
   var sy = (1 - aplas + salto * 0.08 - ag * 0.1 + Gs.bote * 0.05) * (sent ? 0.92 : 1), sx = 1 / Math.sqrt(sy);
   var alzo = moving ? bote * (1.2 + corre * 1.4) : 0, low = sent ? 2.6 : 0;
-  var cab = -(Gs.pk * 0.4) - corre * 0.16, incl = (o.incl || 0) + Gs.roll * 0.55 + (est === 'ko' ? 0.4 : 0) + (moving ? Math.sin(ph * TAU) * 0.06 : 0);
+  var cab = (o.cab || 0) - (Gs.pk * 0.4) - corre * 0.16, incl = (o.incl || 0) + Gs.roll * 0.55 + (est === 'ko' ? 0.4 : 0) + (moving ? Math.sin(ph * TAU) * 0.06 : 0);
   k3Abre(x, y, z, ang, incl, cab, k);
   var KK = K3.k, cg = Math.cos(gir), sg = Math.sin(gir);
   function B(u, v, w) {                                                   // un punto del modelo, con el aplastado y la voltereta
@@ -102152,10 +102332,10 @@ function pitikRedondo3D(g, x, y, z, ang, o) {
   }
   /* el mechón de arriba: tres plumitas que se mecen */
   var bam = Math.sin(t * 4) * 0.5 + (moving ? Math.sin(ph * TAU * 2) * 0.6 : 0) + (est === 'susto' ? 1.4 : 0);
-  for (j = -1; j <= 1; j++) k3Curva(Hd(0.2, j * 1.2, 25.4), Hd(1.2 + bam * 0.4, j * 1.8, 28 - Math.abs(j) * 0.8), Hd(3.2 + bam, j * 2.6, 28.6 - Math.abs(j) * 1.4 + (est === 'susto' ? 2 : 0)), 1.1, 0.35, j ? C.YW : C.Y, { vol: 0.2, borde: 0.6, tinta: C.tY, pr: -0.5 });
+  if (!o.sinMechon) for (j = -1; j <= 1; j++) k3Curva(Hd(0.2, j * 1.2, 25.4), Hd(1.2 + bam * 0.4, j * 1.8, 28 - Math.abs(j) * 0.8), Hd(3.2 + bam, j * 2.6, 28.6 - Math.abs(j) * 1.4 + (est === 'susto' ? 2 : 0)), 1.1, 0.35, j ? C.YW : C.Y, { vol: 0.2, borde: 0.6, tinta: C.tY, pr: -0.5 });
   /* el frangipani, a un lado de la cabeza (lo suyo) */
   var fc = Hd(1.6, 6.6, 22.4), fcn = Hd(3.0, 9.0, 24.0);
-  k3Fn(fc[3] - 1 * KK, function (c) {
+  if (!o.sinFlor) k3Fn(fc[3] - 1 * KK, function (c) {
     var s = fc[2], R = 1.9 * s, i;
     c.save(); c.translate(fc[0], fc[1]); c.rotate(0.3 + Math.sin(t * 2) * 0.05);
     for (i = 0; i < 5; i++) { c.save(); c.rotate(i * TAU / 5); c.beginPath(); c.ellipse(0, -R * 0.95, R * 0.55, R * 0.95, 0.35, 0, TAU); c.fillStyle = '#fffaf0'; c.fill(); c.strokeStyle = 'rgba(170,140,90,.7)'; c.lineWidth = Math.max(0.5, 0.3 * s); c.stroke(); c.restore(); }
@@ -108790,9 +108970,12 @@ window.__RON = RON;
      arriba se acerca a Pitik (y se aleja al salir).
    - Va en el look (pCab, pGaf, pCue, pCol), y por tanto también a los
      demás móviles del multijugador. El dibujo: biblioteca/574.
+   V223 · Pitik es el redondo de Lío en el mercado (biblioteca/586): la
+   cabeza es «Su flor» (la de siempre, sin elegir: pCab 2), casco,
+   gorra o nada; al vestirle se pone contento (TLN.pkFeliz).
    ================================================================ */
 var TLN = { vivo: true, pes: 'moto', ang: 2.25, auto: true, suelta: 0, giro: 0, cer: 0, lt: 0, zm: 0, pAng: 0, pT: 0 };
-var PIT_CAB = ['Nada', 'Casco', 'Flor', 'Gorra'], PIT_GAF = ['Nada', 'Gafas de piloto', 'Gafas de sol'], PIT_CUE = ['Nada', 'Bufanda', 'Pajarita'];
+var PIT_CAB = ['Nada', 'Casco', 'Su flor', 'Gorra'], PIT_CAB_ORDEN = [2, 1, 3, 0], PIT_GAF = ['Nada', 'Gafas de piloto', 'Gafas de sol'], PIT_CUE = ['Nada', 'Bufanda', 'Pajarita'];
 var MDL_PRECIO = 0;
 var TLN_CER = { camisa: '#f7f3ea', udeng: '#f7f3ea', kamben: '#7a4a2a' };
 function tlnCeremonia() { return SAVE.ceremonia !== false; }
@@ -108803,14 +108986,14 @@ vestirCeremonia = function (li) { if (TLN.vivo && !tlnCeremonia()) { ropaNormal(
 var mulYo220 = mulYo;
 mulYo = function () {
   var r = mulYo220(), lk = lookGet(); r.look.modelo = lk.modelo | 0;
-  r.look.pCab = lk.pCab | 0; r.look.pCue = lk.pCue | 0; if (lk.pGaf != null) r.look.pGaf = lk.pGaf | 0; if (lk.pCol != null) r.look.pCol = lk.pCol | 0;   // V222: la ropa de Pitik
+  if (lk.pCab != null) r.look.pCab = lk.pCab | 0; r.look.pCue = lk.pCue | 0; if (lk.pGaf != null) r.look.pGaf = lk.pGaf | 0; if (lk.pCol != null) r.look.pCol = lk.pCol | 0;   // V222: la ropa de Pitik
   return r;
 };
 var mulLimpia220 = mulLimpia;
 mulLimpia = function (j, s) {
   var r = mulLimpia220(j, s), lk = j && typeof j === 'object' && j.look && typeof j.look === 'object' ? j.look : {};
   r.look.modelo = mulEnt(lk.modelo, 0, FMOD.length - 1);
-  r.look.pCab = mulEnt(lk.pCab, 0, PIT_CAB.length - 1); r.look.pCue = mulEnt(lk.pCue, 0, PIT_CUE.length - 1);
+  if (lk.pCab != null) r.look.pCab = mulEnt(lk.pCab, 0, PIT_CAB.length - 1); r.look.pCue = mulEnt(lk.pCue, 0, PIT_CUE.length - 1);
   if (lk.pGaf != null) r.look.pGaf = mulEnt(lk.pGaf, 0, PIT_GAF.length - 1); if (lk.pCol != null) r.look.pCol = mulEnt(lk.pCol, 0, COL_CINTA.length - 1);
   return r;
 };
@@ -108833,11 +109016,11 @@ function tlnPinta(cv, ang, look, o2, t) {                                 // el 
   try {
     bancoCam(w, h, o.sinGuiri ? 22 : 25, o.sinGuiri ? 12 : 21, dpr, function () {
       var e = zm * zm * (3 - 2 * zm), x = 0, y = 0, z = 0;
-      CAM.W2 = w / 2; CAM.H2 = h * (o.sinGuiri ? 0.78 : 0.86 - 0.3 * e);
+      CAM.W2 = w / 2; CAM.H2 = h * (o.sinGuiri ? 0.78 : 0.86 - 0.38 * e);
       if (e > 0.001) {                                                     // V222: de cerca, a Pitik (e: 0 la moto entera, 1 Pitik)
         var ps0 = Math.min(w * 0.4 / 25, h * 0.3 / 21), ps1 = Math.min(w * 0.075, h * 0.09), dz = CAM.F / (ps0 + (ps1 - ps0) * e), pp = tlnPitikSitio(look), k = MG3.k * e;
         CAM.y = -dz * Math.cos(CAM.pitch); CAM.z = dz * Math.sin(CAM.pitch);
-        x = -Math.sin(ang) * pp[0] * k; y = -Math.cos(ang) * pp[0] * k; z = -pp[1] * k;
+        x = -(Math.sin(ang) * pp[0] + Math.cos(ang) * pp[2]) * k; y = -(Math.cos(ang) * pp[0] - Math.sin(ang) * pp[2]) * k; z = -pp[1] * k;
       }
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       motoGuiri3D(g, x, y, z, ang, o);
@@ -108845,7 +109028,7 @@ function tlnPinta(cv, ang, look, o2, t) {                                 // el 
   } catch (e) { g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#7a2a1c'; g.font = '700 12px sans-serif'; g.textAlign = 'center'; g.fillText('…', w / 2, h / 2); }
   VESTIR = VE0; g.setTransform(1, 0, 0, 1, 0, 0);
 }
-function tlnPitikSitio(lk) { var M = fmPerfil(lk); return M.paquete ? [M.paquete[0], M.paquete[1] + 2.5] : [-18.5 + M.cesta[0], 30.1 + M.cesta[1]]; }   // dónde va Pitik: [u, w] del modelo
+function tlnPitikSitio(lk) { var M = fmPerfil(lk); return M.paquete ? [M.paquete[0], M.paquete[1] + 5.6, 0] : [-18.5 + M.cesta[0], 32.7 + M.cesta[1], -1.8]; }   // dónde va Pitik: [u, w, v] del modelo (V223: el centro de su cara)
 function tlnBucle(ts) {
   var cv = document.querySelector('#scr .card.taller .tln-prev canvas');
   if (!cv || !TLN.vivo) { TLN.raf = 0; return; }
@@ -108859,6 +109042,7 @@ function tlnBucle(ts) {
   var cer = performance.now() < TLN.cer, e = TLN.zm * TLN.zm * (3 - 2 * TLN.zm), d = TLN.pAng - TLN.ang;
   d = d - Math.round(d / TAU) * TAU;
   var o2 = { vestir: cer ? TLN_CER : null, zm: TLN.zm };
+  if (performance.now() < (TLN.pkFeliz || 0)) o2.pitikEst = 'feliz';
   if (e > 0.001) o2.mira = (Math.floor(ts / 2000) % 2 ? 1 : -1) * (1 - e) + Math.sin(ts / 900) * 0.45 * e;
   tlnPinta(cv, TLN.ang + d * e, lookGet(), o2, ts / 1000);
 }
@@ -108922,14 +109106,14 @@ function tlnResto(L, dor, fl) {
     swatches('Color de la cinta y del casco', COL_CINTA, 'cin', L.cinta || 0);
     h += '</div>';
   } else if (p === 'pitik') {                                              // V222: la ropa de Pitik, gratis
-    var fila = function (tit, nombres, clave, sel) {
+    var fila = function (tit, nombres, clave, sel, orden) {
       h += '<div class="tn"><b>' + TT(tit) + '</b></div><div class="tln-pk">';
-      nombres.forEach(function (n, i) { h += '<button class="' + (sel === i ? 'sel' : '') + '" data-act="tln:pk:' + clave + ':' + i + '" aria-pressed="' + (sel === i) + '">' + TT(n) + '</button>'; });
+      (orden || nombres.map(function (n, i) { return i; })).forEach(function (i) { var n = nombres[i]; h += '<button class="' + (sel === i ? 'sel' : '') + '" data-act="tln:pk:' + clave + ':' + i + '" aria-pressed="' + (sel === i) + '">' + TT(n) + '</button>'; });
       h += '</div>';
     };
     var pc = L.pCol != null ? L.pCol | 0 : 2;
     h += '<div class="tl">';
-    fila('Cabeza', PIT_CAB, 'cab', L.pCab | 0); fila('Ojos', PIT_GAF, 'gaf', fmPitikGaf(L)); fila('Cuello', PIT_CUE, 'cue', L.pCue | 0);
+    fila('Cabeza', PIT_CAB, 'cab', L.pCab == null ? 2 : L.pCab | 0, PIT_CAB_ORDEN); fila('Ojos', PIT_GAF, 'gaf', fmPitikGaf(L)); fila('Cuello', PIT_CUE, 'cue', L.pCue | 0);
     h += '<div class="tn"><b>' + TT('Color de su ropa') + '</b></div><div class="sw">';
     COL_CINTA.forEach(function (c, i) { h += '<button class="swb' + (pc === i ? ' sel' : '') + '" style="background:' + c + '" data-act="tln:pk:col:' + i + '" aria-label="' + TT('Color de su ropa') + ' ' + (i + 1) + '"></button>'; });
     h += '</div><p class="tln-nota">' + TT('En el multijugador, los demás ven a tu Pitik así.') + '</p></div>';
@@ -108988,7 +109172,7 @@ tallerAct = function (a) {
     var v = +p[3] | 0, mx = { cab: PIT_CAB.length, gaf: PIT_GAF.length, cue: PIT_CUE.length, col: COL_CINTA.length }[p[2]];
     if (mx == null) return false;
     L[{ cab: 'pCab', gaf: 'pGaf', cue: 'pCue', col: 'pCol' }[p[2]]] = clamp(v, 0, mx - 1);
-    TLN.suelta = 0; writeSave(); rebuildGuiri(); SFX.pick(p[2] === 'col' ? 3 : 5); showTaller(); return true;
+    TLN.suelta = 0; TLN.pkFeliz = performance.now() + 1300; writeSave(); rebuildGuiri(); SFX.pick(p[2] === 'col' ? 3 : 5); showTaller(); return true;   // (V223: y se pone contento)
   }
   if (p[1] === 'cer') { SAVE.ceremonia = p[2] === '1'; if (SAVE.ceremonia) TLN.cer = performance.now() + 2600; else TLN.cer = 0; writeSave(); SFX.pick(4); showTaller(); return true; }
   return false;
@@ -109019,7 +109203,7 @@ tallerAct = function (a) {
     'En las carreras de ofrendas': ['In the offering races', 'Di balapan sesajen'], 'Ropa de ceremonia': ['Ceremony clothes', 'Pakaian adat'], 'Mi ropa': ['My clothes', 'Bajuku'],
     'Camisa blanca, udeng y sarong, como se va a un templo.': ['White shirt, udeng and sarong, as you would wear to a temple.', 'Kemeja putih, udeng dan kamben, seperti ke pura.'],
     'Corres con la camisa y la cabeza que elijas aquí.': ['You race in the shirt and headgear you pick here.', 'Kamu balapan dengan baju dan penutup kepala pilihanmu.'],
-    'Pitik': ['Pitik', 'Pitik'], 'Ojos': ['Eyes', 'Mata'], 'Cuello': ['Neck', 'Leher'], 'Nada': ['None', 'Tidak ada'], 'Casco': ['Helmet', 'Helm'], 'Flor': ['Flower', 'Bunga'], 'Gorra': ['Cap', 'Topi'],
+    'Pitik': ['Pitik', 'Pitik'], 'Ojos': ['Eyes', 'Mata'], 'Cuello': ['Neck', 'Leher'], 'Nada': ['None', 'Tidak ada'], 'Casco': ['Helmet', 'Helm'], 'Flor': ['Flower', 'Bunga'], 'Su flor': ['His flower', 'Bunganya'], 'Gorra': ['Cap', 'Topi'],
     'Gafas de piloto': ['Goggles', 'Kacamata pilot'], 'Gafas de sol': ['Sunglasses', 'Kacamata hitam'], 'Bufanda': ['Scarf', 'Syal'], 'Pajarita': ['Bow tie', 'Dasi kupu-kupu'],
     'Color de su ropa': ['Colour of his clothes', 'Warna bajunya'], 'En el multijugador, los demás ven a tu Pitik así.': ['In multiplayer, everyone sees your Pitik like this.', 'Di multipemain, semua melihat Pitik-mu seperti ini.'],
     'Tu moto': ['Your bike', 'Motormu'], 'Arrástrala para girarla': ['Drag to turn it', 'Geser untuk memutar'],
