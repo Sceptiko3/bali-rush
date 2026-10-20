@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V211</title>
+<title>Bali Rush Completo V212</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V211', FECHA = '20-10-2026';
+var VERSION = 'Completo V212', FECHA = '20-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -2961,7 +2961,7 @@ var LEVELS = [
   { n: 'Penglipuran', t: 'Gallos y ofrendas', dest: 'al templo del pueblo', seed: 303, tod: 'mediodia', inv: 0.15, secs: [
     { len: 800, th: 'pueblo', curv: 0, g: [['carril'], ['gallos', 1]] },
     { len: 1500, th: 'pueblo', curv: 0.2, g: [['gallos', 0.4], ['ofrendas', 0.4], ['badenes', 1]] },
-    { len: 1400, th: 'pueblo', curv: 0.25, g: [['callejones', 2], ['motos', 0.25]] },
+    { len: 1400, th: 'pueblo', curv: 0.25, g: [['cruce'], ['callejones', 2], ['motos', 0.25]] },   // V212: el cruce de Ubud, también aquí
     { len: 1300, th: 'arrozal', curv: 0.35, g: [['badenes', 1], ['motos', 0.3], ['baches', 0.25], ['heal']] },
     { len: 1500, th: 'pueblo', curv: 0.2, g: [['gallos', 0.45], ['ofrendas', 0.5], ['callejones', 1], ['motos', 0.25], ['perroZ', 1]] },
     { len: 600, th: 'templo', curv: 0, g: [['meta']] }] },
@@ -2998,7 +2998,7 @@ var LEVELS = [
   { n: 'Kuta', t: '¡A la playa!', dest: 'a la playa de Kuta', seed: 808, tod: 'atardecer', inv: 0.3, secs: [
     { len: 700, th: 'ciudad', curv: 0, hw: 62, g: [['carril']] },
     { len: 1600, th: 'ciudad', curv: 0.2, hw: 62, g: [['motos', 0.9], ['callejones', 3], ['cargados', 0.6], ['perrosC', 1]] },
-    { len: 1500, th: 'ciudad', curv: 0.3, hw: 62, g: [['camiones', 0.4], ['motos', 0.7], ['ofrendas', 0.6], ['gallos', 0.4], ['badenes', 2]] },
+    { len: 1500, th: 'ciudad', curv: 0.3, hw: 62, g: [['cruce'], ['camiones', 0.4], ['motos', 0.7], ['ofrendas', 0.6], ['gallos', 0.4], ['badenes', 2]] },   // V212: y en la ciudad
     { len: 1500, th: 'costa', curv: 0.3, g: [['palmeras', 0.6], ['monos', 0.5, 0.3], ['arena', 0.5], ['motos', 0.5]] },
     { len: 1700, th: 'ciudad', curv: 0.3, hw: 62, g: [['motos', 1.0], ['callejones', 3], ['cargados', 0.6], ['baches', 0.5], ['perroZ', 1], ['heal']] },
     { len: 700, th: 'playa', curv: 0, g: [['meta']] }] },
@@ -59486,6 +59486,7 @@ function lgObst(R, D) {
     else if (o.t === 'influ') { if (o.st === 'cruza' || o.st === 'fotos' || o.st === 'corre') mete(o.x, o.y, 9, 0, 0, 'influ', o); }
     else if (o.t === 'vaca') { if (o.st === 'cruza' || o.st === 'coco' || o.st === 'come' || o.st === 'harta') mete(o.x, o.y, 17, 0, 0, 'vaca', o); }
     else if (o.t === 'bakso' || o.t === 'surf') mete(o.x, o.y, o.t === 'bakso' ? 13 : 8, 0, 0, o.t, o);
+    else if (o.t === 'procesion' && (o.st === 'cruza' || o.st === 'va') && typeof praCuerpos === 'function' && praCuerpos(o, function (x, y) { mete(x, y, 9, 0, 0, 'procesion', o); }, true)) continue;   // V212: la procesión por la acera (616)
     else if (o.t === 'procesion' && o.st === 'cruza') for (j = 0; j < PROC_N; j++) { var mu = o.u + o.side * j * PROC_GAP; if (Math.abs(mu) < o.w + 8) mete(o.cx + o.nx * mu, o.cy + o.ny * mu, 9, 0, 0, 'procesion', o); }
   }
   return O;
@@ -106288,6 +106289,159 @@ window.__TXM = { estado: function () {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza juegos/ciudad/616_procesion_acera.js*/
+/* ================================================================
+   V212 · LA PROCESIÓN DE LA CIUDAD YA NO ATRAVIESA LAS TAPIAS
+   Jose Javier (20-10-2026): «mejora las procesiones (atraviesan
+   muros)». La procesión del mototaxi, el reparto y el paseo (115,
+   546, 554) cruzaba la calle en fila de lado a lado: esperaba metida
+   en la tapia de un lado (los ocho, en fila hacia dentro) y, al
+   cruzar, se iba metiendo en la tapia del otro.
+   Ahora va por la ACERA (entre el bordillo y la tapia, que en los
+   pueblos y barrios está a 14 del borde):
+   - ESPERA en fila por la acera, el primero en la esquina por donde
+     va a cruzar, cada uno mirando a un lado.
+   - AL CRUZAR, uno detrás de otro: por la acera hasta ese punto, gira,
+     cruza la calle derecho, vuelve a girar y sigue por la acera de
+     enfrente, en el mismo sentido (PRA.B por delante, sin llegar al
+     siguiente cruce de calles). Allí se paran y, cuando ya no los ves,
+     se van (como antes, «fuera»).
+   - CADA UNO SE PINTA POR SU CUENTA en la lista de la calle (k 'procM',
+     un poco más cerca de ti que donde está, como la gente junto a una
+     tapia): delante de la tapia que tiene al lado, no detrás.
+   - Lo de siempre, igual: el gong y «¡Procesión! Espera», que pasen
+     antes de que pases tú, el −2 si te los llevas por delante (también
+     si vas por la acera) y el −1 por pitarles; los de la liga los
+     esquivan (praCuerpos, en 600). Cómo son (los muñecos, la chapa y
+     los cartones de lejos), lo mismo.
+   PRA.vivo = false: como antes (cruzan de tapia a tapia).
+   ================================================================ */
+var PRA = { vivo: true, ace: 5.5, A: 96, B: 240, v: 17, wob: 1.7, lejos: 520 };   // ace: por dónde van, del bordillo (la tapia está a 14); A: lo que esperan en fila antes de cruzar; B: hasta dónde siguen por la acera de enfrente
+function praOn(o) { return PRA.vivo && o && o.t === 'procesion' && o.si != null && !!CITY.streets[o.si]; }
+function praPrepara(o) {                                                     // el camino: por la acera hasta la esquina, cruzar, y por la acera de enfrente
+  var st = CITY.streets[o.si], E = o.w + PRA.ace, dir = o.dir || 1, s0 = o.s0, A = PRA.A, B = PRA.B, k, n;
+  if ((dir > 0 ? s0 : st.len - s0) < A + 12) dir = -dir;                     // (para que quepa la fila por detrás)
+  var lim = dir > 0 ? st.len - 20 - s0 : s0 - 20;
+  for (k = 0; k < (st.sp || []).length; k++) { n = (st.sp[k].s - s0) * dir; if (n > 10) lim = Math.min(lim, n - (st.w + 30)); }   // sin llegar al siguiente cruce de calles
+  o.pra = { E: E, dir: dir, A: A, C: 2 * E, B: Math.max(PROC_N * PROC_GAP + 10, Math.min(B, lim)) };
+  o.pra.tot = A + o.pra.C + o.pra.B;
+}
+var PRA_P = [0, 0];
+function praPunto(o, p) {                                                    // dónde está, a lo largo del camino (p), en el mundo (deja PRA_P)
+  var R = o.pra, st = CITY.streets[o.si], s, u;
+  if (p < R.A) { s = o.s0 - R.dir * (R.A - p); u = o.side * R.E; }
+  else if (p < R.A + R.C) { s = o.s0; u = o.side * R.E - o.side * (p - R.A); }
+  else { s = o.s0 + R.dir * (p - R.A - R.C); u = -o.side * R.E; }
+  var q = pointAt(st, s); PRA_P[0] = q.x + Math.cos(q.ang) * u; PRA_P[1] = q.y - Math.sin(q.ang) * u;
+  return u;
+}
+function praMiembros(o) {                                                    // los ocho: dónde está cada uno, hacia dónde mira y si anda
+  if (!o.pra) praPrepara(o);
+  var R = o.pra, L = o.praL || (o.praL = []), j, hp = hash(o.cx * 0.13 + o.cy * 0.07);
+  for (j = 0; j < PROC_N; j++) {
+    var p = clamp(o.D - j * PROC_GAP, 0, R.tot), m = L[j] || (L[j] = { j: j });
+    praPunto(o, p - 2.5); var ax = PRA_P[0], ay = PRA_P[1];
+    var u = praPunto(o, p + 2.5), bx = PRA_P[0], by = PRA_P[1], dx = bx - ax, dy = by - ay, l = Math.sqrt(dx * dx + dy * dy) || 1;
+    var wob = (j % 2 ? 1 : -1) * PRA.wob * (0.7 + 0.6 * hash(j * 7.3 + hp)), lo = (hash(j * 3.7 + hp) - 0.5) * 3;   // en zigzag y algo desordenados
+    praPunto(o, p);
+    m.x = PRA_P[0] - dy / l * wob + dx / l * lo; m.y = PRA_P[1] + dx / l * wob + dy / l * lo;
+    m.ang = Math.atan2(dx, dy); m.u = u; m.p = p;
+    m.anda = (o.st === 'cruza' || o.st === 'va') && p > 0 && p < R.tot && !o.parada;
+  }
+  return L;
+}
+function praCentro(o) { var L = praMiembros(o), m = L[PROC_N >> 1]; o.x = m.x; o.y = m.y; }
+function praCuerpos(o, fn, calle) {                                          // los que están en la calle (calle) o también en la acera: para chocar y para los de la liga
+  if (!praOn(o)) return false;
+  if (o.st === 'fuera' || !o.pra) return true;
+  praMiembros(o).forEach(function (m) { if (Math.abs(m.u) < o.w + (calle ? 2 : 9)) fn(m.x, m.y, m); });
+  return true;
+}
+/* cada uno de los ocho, en la lista de la calle por su cuenta (k 'procM'): así se pinta delante o detrás de cada tapia según donde esté él, no la procesión entera */
+function praAlta(o) {
+  if (!o.praM) { o.praM = []; for (var j = 0; j < PROC_N; j++) o.praM.push({ k: 'procM', t: 'procM', pr: o, j: j, x: o.x, y: o.y }); }
+  if (CITY.obs.indexOf(o.praM[0]) < 0) for (var q = 0; q < o.praM.length; q++) CITY.obs.push(o.praM[q]);
+}
+function praSitua(o) {                                                       // dónde va cada uno en la lista: un poco más cerca de ti que donde está (como la gente junto a una tapia, 075: se pinta después de ella)
+  if (!o.praM) return;
+  var L = praMiembros(o), f0 = fwd(0, 0), ax = fwd(1, 0) - f0, ay = fwd(0, 1) - f0, l = Math.sqrt(ax * ax + ay * ay) || 1;
+  for (var j = 0; j < L.length; j++) { o.praM[j].x = L[j].x - ax / l * 22; o.praM[j].y = L[j].y - ay / l * 22; }
+}
+/* ---------- lo que hace: espera en la acera, cruza y se va por la de enfrente ---------- */
+var extraReset616 = extraReset;
+extraReset = function (o) {
+  extraReset616(o);
+  if (!praOn(o)) return;
+  praPrepara(o); o.D = o.pra.A; o.parada = false; o.praL = null;
+  praCentro(o); var m0 = o.praL[0]; o.x = m0.x; o.y = m0.y;                   // (para que se pongan a cruzar cuando llegas, mira el primero: está en la esquina)
+};
+var extraPos616 = extraPos;
+extraPos = function (o) { if (praOn(o) && o.pra) { if (o.st === 'espera') { var m0 = praMiembros(o)[0]; o.x = m0.x; o.y = m0.y; } else praCentro(o); return; } extraPos616(o); };
+var extraUpd616 = extraUpd;
+extraUpd = function (o, dt, d, ahead, lat, ride, fx, fy) {
+  if (!praOn(o)) { extraUpd616(o, dt, d, ahead, lat, ride, fx, fy); return; }
+  o.t0 += dt;
+  if (!o.pra) extraReset(o);
+  var R = o.pra, puede = ride && P.z < 6 && P.inv <= 0, L;
+  if (o.st === 'espera' && ahead > 60 && ahead < 430 && lat < 170) { o.st = 'cruza'; SFX.gong(); avisar('🎶 ¡Procesión! Espera'); }
+  else if (o.st === 'cruza' || o.st === 'va') {
+    if (!o.parada) { o.D += PRA.v * dt; if (o.D >= R.tot) { o.D = R.tot; o.parada = true; } }
+    if (o.st === 'cruza' && o.D - (PROC_N - 1) * PROC_GAP > R.A + R.C + 4) o.st = 'va';   // ya han pasado todos: puedes seguir
+    if (o.st === 'va' && (fwd(o.x, o.y) < -60 || fwd(o.x, o.y) > PRA.lejos || d > PRA.lejos + 80)) o.st = 'fuera';   // se van cuando ya no los ves
+  }
+  if (o.st !== 'fuera') {
+    praCentro(o);
+    if (o.st === 'espera') { var m0 = o.praL[0]; o.x = m0.x; o.y = m0.y; }
+    if (puede) {
+      L = o.praL;
+      for (var j = 0; j < L.length; j++) {
+        var m = L[j];
+        if (Math.abs(m.u) < o.w + 9 && d2(P.x, P.y, m.x, m.y) < 11) {
+          if (!o.cool) { o.cool = true; G.fl = Math.max(0, G.fl - 2); golpeBlando({ x: m.x, y: m.y }, '¡Ay, la ofrenda! −2', 0.15); }
+          break;
+        }
+      }
+    }
+  }
+  if (o.cool && d > 60) o.cool = false;
+  praAlta(o); praSitua(o);
+};
+
+/* ---------- cómo se pinta: cada uno donde va y mirando hacia donde anda ---------- */
+function praPintaUno(g, o, m) {
+  var t = PROC_TIPOS[m.j % PROC_TIPOS.length], f = fwd(m.x, m.y), hp = typeof exvH === 'function' ? exvH(o.cx, o.cy, 97) : 0;
+  if (typeof EXV !== 'undefined' && EXV.vivo && CIG.vivo && ER3.vivo && f < CIG.cerca + 30) {   // de cerca, su muñeco (como en 554)
+    var dd = proj(m.x, m.y, 0); if (dd < 16) return;
+    var v = m.j * 3 + hp, lod = dd < 210 ? 0 : 1, a = m.anda ? m.ang + Math.sin(G.t * 0.7 + m.j) * 0.08 : m.ang + (hash(m.j * 5.1 + hp) - 0.5) * 1.5;   // parados, cada uno mira a un lado
+    var po = { pose: m.anda ? 'anda' : 'pie', paso: m.anda ? G.t * 1.45 + m.j * 0.37 : 0, t: G.t + m.j * 1.3, lodF: lod };
+    if (t === 'gebogan') { po.carga = true; po.k = 0.96; cigPersona(g, m.x, m.y, a, EXV.procM[v % EXV.procM.length], po, lod ? 'geboganL' : 'gebogan'); }
+    else if (t === 'nina') { po.brazos = 'ofrece'; cigPersona(g, m.x, m.y, a, EXV.procN[v % EXV.procN.length], po, 'canang'); }
+    else { po.brazos = t === 'dupa' ? 'ofrece' : 'palo'; cigPersona(g, m.x, m.y, a, EXV.procH[v % EXV.procH.length], po, t); }
+    return;
+  }
+  var fl = side2(m.x + Math.sin(m.ang), m.y + Math.cos(m.ang)) < side2(m.x, m.y), fr = m.anda ? Math.floor(G.t * 5 + m.j * 1.3) % 4 : 0;   // de lejos, su cartón (546) o la chapa (405)
+  shadow(g, m.x, m.y, t === 'nina' || t === 'penjor' ? 4 : 5.5, 3, 0);
+  if (typeof CIG !== 'undefined' && CIG.proc && CIG.vivo && ER3.vivo) k3Bill(g, CIG.proc[t][fr], m.x, m.y, 0, 1, 0, fl);
+  else { if (!BB.proc) procBuild(); bill(g, BB.proc[t][fr], m.x, m.y, 0, 1.12, 0, fl); }
+}
+var extraDraw616 = extraDraw;
+extraDraw = function (g, o) {
+  if (!praOn(o) || !o.pra) { extraDraw616(g, o); return; }
+  if (o.st === 'fuera' || (o.praM && CITY.obs.indexOf(o.praM[0]) >= 0)) return;   // (cada uno se pinta por su cuenta)
+  var L = praMiembros(o).slice();
+  L.sort(function (a, b) { return fwd(b.x, b.y) - fwd(a.x, a.y); });
+  L.forEach(function (m) { praPintaUno(g, o, m); });
+};
+var ciuItem616 = ciuItem;
+ciuItem = function (g, it, k, i) {
+  if (k !== 'procM') return ciuItem616(g, it, k, i);
+  var o = it.pr; if (!praOn(o) || o.st === 'fuera' || !o.pra) return true;
+  var m = praMiembros(o)[it.j]; if (m) praPintaUno(g, o, m);
+  return true;
+};
+
+/* para las pruebas */
+window.__PRA = { miembros: function (o) { return praMiembros(o).map(function (m) { return { x: Math.round(m.x), y: Math.round(m.y), u: Math.round(m.u), p: Math.round(m.p), anda: m.anda }; }); } };
 /*#pieza juegos/tirolina/692_tirolina_multi.js*/
 /* ================================================================
    V209 · LA TIROLINA, MULTIJUGADOR (POR LA WIFI)
