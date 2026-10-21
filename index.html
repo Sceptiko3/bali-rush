@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V223</title>
+<title>Bali Rush Completo V224</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V223', FECHA = '20-10-2026';
+var VERSION = 'Completo V224', FECHA = '21-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -76035,7 +76035,7 @@ function tjImpulso(T, dt) {                                              // lo q
     if (T.fz <= 0) { T.cansado = true; T.empuja = false; tiroPop('¡Sin fuerza!', 'r', 0, 0, 0, '#ffb199', 1); SFX.thud && SFX.thud(); }
   } else {
     T.empuja = false;
-    T.fz = Math.min(1, T.fz + dt / (quiere ? TJ.recFz * 2.5 : TJ.recFz));   // con el botón apretado y sin fuerza casi no se recupera: suelta
+    T.fz = Math.min(1, T.fz + dt / (quiere ? TJ.recFz * (TJ.aprieta == null ? 2.5 : TJ.aprieta) : TJ.recFz));   // con el botón apretado y sin fuerza casi no se recupera: suelta
     if (T.cansado && T.fz >= TJ.vuelve) T.cansado = false;
   }
   return dar;
@@ -108148,7 +108148,7 @@ function tzmHUD(g, T) {
   }
   g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = '900 12px ' + FONT; g.lineWidth = 3.2;   // cómo vais, a la izquierda (bajo el reloj)
   for (i = 0; i < A.length; i++) {
-    a = A[i]; y = 84 + i * 17;
+    a = A[i]; y = (TZM.listaY || 84) + i * 17;
     t = (i + 1) + 'º ' + a.nom + (a.tf != null ? ' 🏁' : a.ret ? ' ✖' : '');
     circ(g, 17, y, 4, a.col, INK, 1.2);
     g.strokeText(t, 26, y); g.fillStyle = a.yo ? '#ffe27a' : '#ffffff'; g.fillText(t, 26, y);
@@ -109217,6 +109217,185 @@ tallerAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza juegos/tirolina/696_tirolina_clara.js*/
+/* ================================================================
+   V224 · LA TIROLINA, MÁS CLARA Y CON MÁS FUERZA
+   Jose Javier (21-10-2026): «La tirolina multijugador es muy difusa,
+   demasiadas cosas con colores similares, y hay un problema con la
+   rapidez que se gasta y es muy difícil ir rápido, haz una revisión».
+   Lo que se vio al revisarla (pruebas/multi_tirolina.js HOJA=5 y
+   pruebas/tirolina_seis.js con el piloto «dedo»):
+   - Lo de los otros cinco cables (V211) se pintaba igual que lo tuyo y
+     hasta 950 por delante: en el festival, unas 36 cometas rojas y
+     blancas a la vez; en la selva, copas verdes sobre selva verde. No
+     se sabía qué era tuyo.
+     → LO DE LOS DEMÁS, TENUE (TCL.tenue) y solo lo que cada uno tiene
+       cerca (TCL.cerca: de 60 detrás a 320 delante de él, apareciendo
+       y yéndose poco a poco). Lo tuyo, igual que siempre.
+   - A los demás no se les encontraba: su nombre, letra blanca de 11 px
+     con un puntito de color; y dos podían llevar el mismo color (el de
+     su moto).
+     → SU CHAPA: el nombre en una chapa de su color, con un pico que le
+       señala; y en cada móvil, cada uno con un color distinto
+       (TCL.paleta, si se repite o se parece mucho a otro).
+   - El aviso de arriba a la izquierda tapaba la lista de cómo vais, y
+     los letreros que salen a la vez (¡Bonus!, ¡Racha!…) se pintaban
+     uno encima de otro.
+     → La lista baja mientras está el aviso (TZM.listaY) y los letreros
+       se apilan.
+   - LA FUERZA (RÁPIDO): duraba 4,4 s y tardaba 8 en llenarse; y si se
+     acababa con el dedo en RÁPIDO (lo normal en el móvil), casi no se
+     recuperaba (2,5 veces más lento) y no volvía hasta el 30 %: dejando
+     el dedo puesto, el 70 % del vuelo sin fuerza.
+     → Dura 7 s, se llena en 5, con el dedo puesto se llena a la mitad
+       de ritmo (no a 2,5 veces más lento) y vuelve al 25 %. Medido con
+       tirolina_seis.js (sin goma, como en el multijugador): dejando el
+       dedo puesto, 62 % del vuelo tirando (antes 30 %) y 1.º (antes 3.º);
+       el piloto bueno, 1.º a 1–3 s (antes 1.º o 2.º a medio segundo);
+       el flojo, 2.º o 3.º; el que no tira, 6.º.
+   Todo vale también jugando solo (es la misma tirolina de seis).
+   TCL.vivo = false: como la V223.
+   ================================================================ */
+var TCL = { vivo: true,
+  tenue: 0.42,                      // lo de los otros cables, a este tanto de opaco
+  cerca: [60, 320, 70],             // de los otros cables, lo que tienen de [0] detrás a [1] delante (y [2] para aparecer o irse)
+  chapa: true,                      // el nombre de cada uno en una chapa de su color
+  paleta: ['#e2452f', '#2f7fd8', '#27ae60', '#f1c40f', '#8e44ad', '#ff7eb3', '#ff8a2a', '#16b6b0'],
+  dur: 7, rec: 5, vuelve: 0.25, aprieta: 2,  // la fuerza: segundos de RÁPIDO (antes 4,4), segundos en llenarse (antes 8), sin fuerza hasta aquí (antes 0,3), cuánto más lento se llena con el dedo puesto (antes 2,5)
+  ly: 84 };
+function tclVa() { return TCL.vivo && !!TIRO; }
+
+/* ---------- la fuerza ---------- */
+var tclImp0 = tjImpulso;
+tjImpulso = function (T, dt) {
+  if (!TCL.vivo) return tclImp0(T, dt);
+  var a = TJ.durFz, b = TJ.recFz, c = TJ.vuelve, d = TJ.aprieta;
+  TJ.durFz = TCL.dur; TJ.recFz = TCL.rec; TJ.vuelve = TCL.vuelve; TJ.aprieta = TCL.aprieta;
+  try { return tclImp0(T, dt); } finally { TJ.durFz = a; TJ.recFz = b; TJ.vuelve = c; TJ.aprieta = d; }
+};
+
+/* ---------- lo de los otros cables: tenue y solo lo que tienen cerca ---------- */
+var TCL_GA = (function () {                                                   // el globalAlpha de verdad del lienzo
+  var p = typeof CanvasRenderingContext2D !== 'undefined' ? CanvasRenderingContext2D.prototype : null;
+  return p ? Object.getOwnPropertyDescriptor(p, 'globalAlpha') : null;
+})();
+function tclTenue(g, k, fn) {                                                 // pinta fn con todo a k de opaco (también lo que pone su propio globalAlpha)
+  if (!TCL_GA || k >= 0.999 || !(g instanceof CanvasRenderingContext2D)) { fn(); return; }
+  var a0 = TCL_GA.get.call(g);
+  Object.defineProperty(g, 'globalAlpha', { configurable: true,
+    get: function () { return TCL_GA.get.call(g) / k; },
+    set: function (v) { TCL_GA.set.call(g, v * k); } });
+  TCL_GA.set.call(g, a0 * k);
+  try { fn(); } finally { delete g.globalAlpha; TCL_GA.set.call(g, a0); }
+}
+function tclCerca(T, o) {                                                     // cuánto se ve lo de otro cable (0 = nada), por lo cerca que lo tiene él
+  var r = o.rr, rs = tzoS(T, r), d = o.s - rs, C = TCL.cerca;
+  if (d < -C[0] || d > C[1]) return 0;
+  return Math.min(1, (d + C[0]) / C[2], (C[1] - d) / C[2]);
+}
+var tclCosas0 = tiroCosas;
+tiroCosas = function (T, D) {
+  tclCosas0(T, D);
+  if (!TCL.vivo || !T.MU) return;
+  for (var i = TIT.length - 1; i >= 0; i--) { var o = TIT[i]; if (o && o.rr && tclCerca(T, o) <= 0.01) TIT.splice(i, 1); }   // (no se pinta: ni se mira)
+};
+var tclDibuja0 = tiroDibuja;
+tiroDibuja = function (g, T, D, o) {
+  if (!TCL.vivo || !o.rr) { tclDibuja0(g, T, D, o); return; }
+  var k = tclCerca(T, o); if (k <= 0.01) return;
+  tclTenue(g, TCL.tenue * smooth(k), function () { tclDibuja0(g, T, D, o); });
+};
+
+/* ---------- un color distinto para cada uno (en cada móvil) ---------- */
+function tclRgb(c) { var m = /^#?([0-9a-f]{6})$/i.exec(c || ''); if (!m) return [255, 255, 255]; var n = parseInt(m[1], 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function tclParecido(a, b) { var p = tclRgb(a), q = tclRgb(b), dr = p[0] - q[0], dg = p[1] - q[1], db = p[2] - q[2]; return dr * dr + dg * dg + db * db < 70 * 70; }
+function tclColores(T) {
+  if (!TCL.vivo || !T || !T.MU) return;
+  var usados = [tzmCol(tzmVa() ? RED.soy : 1)];
+  T.MU.slice().sort(function (a, b) { return a.slot - b.slot; }).forEach(function (r) {
+    if (!r.racer) return;
+    if (r.col0 == null) r.col0 = r.col;
+    var c = r.col0, i;
+    if (usados.some(function (u) { return tclParecido(u, c); }))
+      for (i = 0; i < TCL.paleta.length; i++) if (!usados.some(function (u) { return tclParecido(u, TCL.paleta[i]); })) { c = TCL.paleta[i]; break; }
+    r.col = c; usados.push(c);
+  });
+}
+var tclMonta0 = tzsMonta;
+tzsMonta = function (T) { tclMonta0(T); tclColores(T); };
+
+/* ---------- la chapa con el nombre ---------- */
+function tclClaro(c) { var p = tclRgb(c); return (0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]) / 255 > 0.62; }
+var tclOtro0 = TZA.pinta.otro;
+TZA.pinta.otro = function (g, T, D, o) {
+  if (!TCL.vivo || !TCL.chapa) return tclOtro0(g, T, D, o);
+  var r0 = tzaOtro692(g, T, D, o), r = o.r;
+  if (r0 === false || !r || !r.racer) return r0;
+  var z = tzc(D, r.s) + r.dz, d = tp(r.x, r.s, z + 15);
+  if (d < 8 || d > 1100 || tFuera(20)) return r0;
+  scr(g); g.save(); g.globalAlpha = clamp((1100 - d) / 200, 0, 1) * tNiebla(d);
+  var fs = d < 350 ? 13 : 12, x = TPX, y = TPY - 9;
+  g.font = '900 ' + fs + 'px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  var tw = g.measureText(r.nom).width, w = tw + 14, h = fs + 7, claro = tclClaro(r.col);
+  g.beginPath(); g.moveTo(x - 5, y + h / 2 - 0.5); g.lineTo(x, y + h / 2 + 5); g.lineTo(x + 5, y + h / 2 - 0.5); g.closePath();   // el pico, hacia él
+  g.fillStyle = r.col; g.fill(); g.lineWidth = 1.6; g.strokeStyle = INK; g.stroke();
+  rrect(g, x - w / 2, y - h / 2, w, h, h / 2, r.col, INK, 1.8);
+  if (claro) { g.fillStyle = INK; g.fillText(r.nom, x, y + 0.5); }
+  else { g.lineWidth = 2.6; g.strokeStyle = 'rgba(20,16,12,0.55)'; g.strokeText(r.nom, x, y + 0.5); g.fillStyle = '#ffffff'; g.fillText(r.nom, x, y + 0.5); }
+  g.restore(); scr(g);
+  return r0;
+};
+
+/* ---------- arriba a la izquierda: la lista no se mete debajo del aviso ---------- */
+var tclHUD0 = tiroHUD25;
+tiroHUD25 = function (g, T) {
+  if (TCL.vivo && T && T.MU) {
+    var meta = 84, el = typeof AV !== 'undefined' && AV.cur ? $('aviso') : null, cv = $('cv');
+    if (el && cv && el.classList.contains('on')) {
+      var a = el.getBoundingClientRect(), c = cv.getBoundingClientRect();
+      if (a.left - c.left < 200 && a.bottom > c.top) meta = Math.max(84, Math.round(a.bottom - c.top + 12));
+    }
+    var ah = T.anim || 0, dt = TCL.t0 != null ? clamp(ah - TCL.t0, 0, 0.1) : 0.016; TCL.t0 = ah;   // (con el reloj del juego)
+    TCL.ly += (meta - TCL.ly) * Math.min(1, dt * 9); if (Math.abs(meta - TCL.ly) < 0.5) TCL.ly = meta;
+    TZM.listaY = TCL.ly;
+  } else TZM.listaY = 84;
+  tclHUD0(g, T);
+};
+
+/* ---------- los letreros que salen a la vez, uno encima de otro (no montados) ---------- */
+var tclPops0 = tiroPops;
+tiroPops = function (g, T, D) {
+  if (!TCL.vivo) { tclPops0(g, T, D); return; }
+  var L = [], i, p, yMin = 1e9;
+  T.pops.forEach(function (p) {                                               // primero, dónde iría cada uno
+    var x, y, k = p.t / p.dur;
+    if (p.m === 'r') { if (T.hx == null) return; x = T.hx; y = T.hy - 34 * (T.hk || 3) * 0.35 - p.t * 26; }
+    else { var d = tp(p.x, p.sp, p.z); if (d < 6) return; x = TPX; y = TPY - p.t * 20; }
+    L.push({ p: p, x: x, y: y, k: k });
+  });
+  for (i = L.length - 1; i >= 0; i--) {                                       // los de encima del guiri: del más nuevo al más viejo, cada uno por encima del anterior
+    if (L[i].p.m !== 'r') continue;
+    if (L[i].y > yMin - 20 * L[i].p.sz) L[i].y = yMin - 20 * L[i].p.sz;
+    yMin = L[i].y;
+  }
+  tM(g, 1, 0, 0, 1, 0, 0);
+  L.forEach(function (q) {
+    p = q.p;
+    var k = q.k, al = k > 0.72 ? 1 - (k - 0.72) / 0.28 : 1, sc = k < 0.14 ? easeOutBack(k / 0.14) : 1, x = q.x, y = q.y;
+    g.font = '900 15px ' + FONT; var hw = g.measureText(p.s).width * p.sz / 2 + 8;
+    x = clamp(x, TC.W2 - V.w / 2 + hw, TC.W2 + V.w / 2 - hw); y = clamp(y, 70, V.h - 150);
+    g.save(); g.translate(x, y); g.scale(sc * p.sz, sc * p.sz); g.globalAlpha = Math.max(0, al);
+    g.font = '900 15px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    g.lineWidth = 5; g.strokeStyle = INK; g.strokeText(p.s, 0, 0); g.fillStyle = p.c; g.fillText(p.s, 0, 0);
+    g.restore();
+  });
+};
+
+/* para las pruebas */
+window.__TCL = {
+  fuerza: function () { var T = TIRO; return T ? { fz: T.fz, cansado: !!T.cansado, empuja: !!T.empuja } : null; },
+  colores: function () { var T = TIRO; return T && T.MU ? T.MU.map(function (r) { return r.nom + ' ' + r.col; }) : null; }
+};
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
