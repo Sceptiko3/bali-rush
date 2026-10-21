@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V225</title>
+<title>Bali Rush Completo V226</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V225', FECHA = '21-10-2026';
+var VERSION = 'Completo V226', FECHA = '21-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -39599,7 +39599,7 @@ sliceGround = function (g, i, re) {
   var vill = th === 'pueblo' || th === 'templo' || th === 'fiesta', acera = T.gut === 'hormigon', tierra = enTierra(ym);
   /* ---- cunetas, aceras y bordillos ---- */
   for (s = -1; s <= 1; s += 2) {
-    if (inside || br) break;
+    if (inside || br || L.D.quad) break;                                   // (V226: el sendero del quad no tiene cuneta: su orilla la pinta qslTierra)
     QNIV = 2;
     if (T.gut === 'canal') {                                               // acequia del arrozal
       sideStrip(g, i, s, 0, GUT, '#6fae9e');
@@ -39630,7 +39630,7 @@ sliceGround = function (g, i, re) {
   /* ---- arcén y asfalto ---- */
   QNIV = 4;
   var SHD = vill ? '#a99a7c' : '#b4a37d';
-  if (!acera || inside) { sideStrip(g, i, -1, -5, 0.3, SHD); sideStrip(g, i, 1, -5, 0.3, SHD); }
+  if ((!acera || inside) && !L.D.quad) { sideStrip(g, i, -1, -5, 0.3, SHD); sideStrip(g, i, 1, -5, 0.3, SHD); }
   var bi = bite(BY[i]), bj = bite(BY[j]), ci = bite(BY[i] + 77), cj = bite(BY[j] + 77);
   if (acera && !inside) { bi = bj = ci = cj = 0; }                         // contra el bordillo, el asfalto llega entero
   var tono = carTono(ym), asf = shadeCol(br ? '#6f7074' : (CAR.asf[th] || '#606369'), tono);   // V154: el tono de cada trozo de asfalto, fundido con el siguiente (juegos/carreras/588)
@@ -99736,9 +99736,9 @@ function caminoDetras(g) {                                                 // la
     var ym = (y0 + y1) / 2, th = secAt(ym).s.th, T = THEMES[th] || THEMES.arrozal, c0 = cxAt(y0), c1 = cxAt(y1), h0 = hwAt(y0), h1 = hwAt(y1), z0 = zAt(y0), z1 = zAt(y1), vis = false;
     if (onBridge(ym)) { nada++; continue; }
     var acera = T.gut === 'hormigon', vill = th === 'pueblo' || th === 'templo' || th === 'fiesta', gc = CCE.cuneta[T.gut] || CCE.cunetaOtra;
-    for (s = -1; s <= 1; s += 2) { cceTrozo(c0, c1, y0, y1, z0, z1, s * h0, s * (h0 + GUT), s * h1, s * (h1 + GUT), acera ? 2.4 : 0.05); vis = cceQuad(g, gc) || vis; }
+    for (s = -1; s <= 1; s += 2) { cceTrozo(c0, c1, y0, y1, z0, z1, s * h0, s * (h0 + GUT), s * h1, s * (h1 + GUT), acera ? 2.4 : 0.05); vis = cceQuad(g, L.D.quad ? '#4e7a36' : gc) || vis; }   // (V226: en el sendero del quad, la orilla de hierba)
     var asf = L.D.quad ? '#9a7148' : shadeCol(CAR.asf[th] || '#606369', carTono(ym));   // V225: el camino de tierra del quad
-    if (!acera) for (s = -1; s <= 1; s += 2) { cceTrozo(c0, c1, y0, y1, z0, z1, s * (h0 - 5), s * (h0 + 0.3), s * (h1 - 5), s * (h1 + 0.3), 0.08); vis = cceQuad(g, vill ? '#a99a7c' : '#b4a37d') || vis; }
+    if (!acera && !L.D.quad) for (s = -1; s <= 1; s += 2) { cceTrozo(c0, c1, y0, y1, z0, z1, s * (h0 - 5), s * (h0 + 0.3), s * (h1 - 5), s * (h1 + 0.3), 0.08); vis = cceQuad(g, vill ? '#a99a7c' : '#b4a37d') || vis; }
     cceTrozo(c0, c1, y0, y1, z0, z1, -h0 + (acera ? 0 : 3), h0 - (acera ? 0 : 3), -h1 + (acera ? 0 : 3), h1 - (acera ? 0 : 3), 0.1); vis = cceQuad(g, asf) || vis;
     if (Math.min(h0, h1) >= 30 && !L.D.quad) {
       if (!acera) for (s = -1; s <= 1; s += 2) { if (hash(Math.floor(ym / 64) * 1.9 + s * 0.37) < 0.22) continue; cceTrozo(c0, c1, y0, y1, z0, z1, s * (h0 - 5.4), s * (h0 - 4), s * (h1 - 5.4), s * (h1 - 4), 0.12); cceQuad(g, CAR.raya); }
@@ -109415,58 +109415,92 @@ window.__TCL = {
    defensa, portabultos delante, asiento largo para dos, estribos
    anchos, pilotos y matrícula detrás. El color, el de la moto.
    ================================================================ */
+var QMD = { num: ['25', '7', '12', '33', '48', '51'], llanta: '#f2c230', muelle: '#f2a51a' };   // V226: el número de cada uno (tú, el 25) y el color de las llantas y los muelles
+function qmdMuelle(C, a, b, r) {                                           // un amortiguador con su muelle: la barra y las espiras (anillos de color)
+  k3Tubo(a, b, r * 0.45, r * 0.45, '#8a8478', { borde: 0.6 });
+  for (var k = 0; k < 5; k++) { var p = k3Med(a, b, 0.15 + k * 0.17); k3Bola(p, r, k % 2 ? QMD.muelle : darken(QMD.muelle, 0.8), { borde: 0.6, sombra: 0, pr: -0.1 }); }
+}
+function qmdNumero(C, c, rx, rz, num, lado) {                              // una placa blanca ovalada con el número (c: centro; lado: hacia dónde mira, +1 delante, ±2 los costados)
+  var P = [], n = 14, k, a, B = C.B, d;
+  for (k = 0; k < n; k++) {
+    a = k / n * TAU; d = [Math.cos(a) * rx, Math.sin(a) * rz];
+    P.push(lado === 1 ? B(c[0], c[1] + d[0], c[2] + d[1]) : B(c[0] + d[0], c[1], c[2] + d[1]));
+  }
+  k3Poli(P, '#fbfaf4', { borde: 0.9, pr: -0.8, deco: function (g) {
+    var q = B(c[0], c[1], c[2]), s = q[2];
+    g.fillStyle = '#24170c'; g.font = '900 ' + (rz * 1.5 * s).toFixed(1) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(num, q[0], q[1] + 0.1 * s);
+  } });
+}
 function mdlCuerpoQuad(C) {
-  var B = C.B, Dm = C.Dm, colM = C.colM, colM2 = C.colM2, colM3 = C.colM3, gi = C.gi, UP = C.UP, MW = C.MW, d;
-  var negro = '#3a3036', negro2 = '#2b2530', llanta = '#d9d4c8';
-  /* ---- las ruedas: detrás, más gordas; delante, giran con el manillar ---- */
+  var B = C.B, Dm = C.Dm, colM = C.colM, colM2 = C.colM2, colM3 = C.colM3, gi = C.gi, UP = C.UP, MW = C.MW, d, q;
+  var llanta = Math.abs(parseInt(colM.slice(1, 3), 16) - 242) + Math.abs(parseInt(colM.slice(3, 5), 16) - 194) < 90 ? '#4a4550' : QMD.llanta;   // (un quad amarillo, con las llantas oscuras)
+  var negro = '#3a3036', negro2 = '#2b2530', alu = '#c7ccd2', num = QMD.num[C.LK && C.LK.qslR != null ? C.LK.qslR + 1 : 0] || '25';
+  /* ---- las ruedas, gordas y con las llantas de color: detrás, más anchas; delante, giran con el manillar ---- */
   for (d = -1; d <= 1; d += 2) {
-    mdlRueda(C, [-12.6, d * 9.8, 6.6], 6.6, 5.4, 0, { tacos: true, ll: 0.58, col: llanta }, d * C.gv < 0 ? -1 : 1.5);
-    mdlRueda(C, [13.4, d * 9.4, 6], 6, 4.6, gi, { tacos: true, ll: 0.58, col: llanta }, d * C.gv < 0 ? -1.5 : 1);
+    mdlRueda(C, [-12.8, d * 11.4, 7], 7, 6.4, 0, { tacos: true, ll: 0.56, col: llanta }, d * C.gv < 0 ? -1 : 1.5);
+    mdlRueda(C, [13.6, d * 11, 6.4], 6.4, 5.4, gi, { tacos: true, ll: 0.56, col: llanta }, d * C.gv < 0 ? -1.5 : 1);
   }
-  /* ---- el chasis por debajo, los ejes y los estribos ---- */
-  k3Masa([B(-14.6, -3.4, 8.6), B(-14.6, 3.4, 8.6), B(11.6, -3.2, 8.2), B(11.6, 3.2, 8.2)], 1.7, negro, { pr: 1, sombra: C.som });
+  /* ---- el chasis por debajo, los brazos, los amortiguadores con su muelle y los estribos ---- */
+  k3Masa([B(-14.6, -3.6, 8.8), B(-14.6, 3.6, 8.8), B(11.6, -3.4, 8.4), B(11.6, 3.4, 8.4)], 1.8, negro, { pr: 1, sombra: C.som });
   for (d = -1; d <= 1; d += 2) {
-    k3Tubo(B(-12.6, d * 3, 8), k3(-12.6, d * 7.4, 6.6), 0.8, 0.8, '#5a5560', { borde: 0.7, pr: 1 });
-    k3Tubo(B(13, d * 3, 8.6), k3(13.4, d * 7.2, 6), 0.7, 0.7, '#5a5560', { borde: 0.7, pr: 1 });
-    k3Bloque([-5.6, 5.4, d < 0 ? -10.8 : 5, d < 0 ? -5 : 10.8, 8.4], [-5.6, 5.4, d < 0 ? -10.8 : 5, d < 0 ? -5 : 10.8, 9.6], negro2, { top: '#4a4048', borde: 0.8 });   // el estribo
+    k3Tubo(B(-12.8, d * 3, 8.2), k3(-12.8, d * 8.4, 7), 0.85, 0.85, '#5a5560', { borde: 0.7, pr: 1 });
+    k3Tubo(B(12.4, d * 3, 8.6), k3(13.6, d * 8.2, 6.6), 0.75, 0.75, '#5a5560', { borde: 0.7, pr: 1 });       // los brazos de delante
+    k3Tubo(B(10.6, d * 3, 10.6), k3(13.6, d * 8.2, 7.6), 0.6, 0.6, '#5a5560', { borde: 0.7, pr: 1 });
+    qmdMuelle(C, k3(13.4, d * 7.6, 7.6), B(11.4, d * 4.8, 15), 1);             // los muelles de delante
+    qmdMuelle(C, k3(-12, d * 6.4, 8.4), B(-9.2, d * 4.2, 15.4), 1.05);          // y los de detrás
+    k3Bloque([-5.8, 5.6, d < 0 ? -12.6 : 5.2, d < 0 ? -5.2 : 12.6, 8.6], [-5.8, 5.6, d < 0 ? -12.6 : 5.2, d < 0 ? -5.2 : 12.6, 9.8], negro2, { top: '#4a4048', borde: 0.8,   // el estribo, con su chapa de lágrimas
+      decoTop: !C.lod ? null : function (c) { for (var k = 1; k < 5; k++) vQuad(c, k / 5 - 0.03, k / 5 + 0.03, 0.12, 0.88, '#6d6874'); } });
   }
-  /* ---- el motor y el escape ---- */
-  k3Masa([B(-6, -3.8, 10.6), B(-6, 3.8, 10.6), B(3, -3.6, 10.6), B(3, 3.6, 10.6), B(-2, 0, 15)], 1.6, '#8a8478', { pr: 0.6, sombra: C.som });
-  mdlEscape(C, [-4, 4.4, 10.4], [-19.4, 5.6, 13.4], 0.95);
-  /* ---- detrás: el cuerpo bajo el asiento y los dos guardabarros ---- */
-  k3Masa([B(-18.4, -4.6, 13.2), B(-18.4, 4.6, 13.2), B(-4, -4.8, 13.4), B(-4, 4.8, 13.4), B(-19.6, 0, 16.4), B(-5, 0, 17.2)], [2, 2, 2, 2, 1.6, 1.6], colM2, { pr: 0.8 });
-  for (d = -1; d <= 1; d += 2) k3Masa([B(-5.6, d * 9.8, 13.6), B(-9.4, d * 10, 15.8), B(-14.6, d * 10.1, 16), B(-19, d * 9.9, 14.6), B(-20.8, d * 9.6, 11.8)],
-    [2.6, 3.1, 3.2, 3, 2.3], colM, { pr: d * C.gv < 0 ? -0.4 : 0.6, deco: !C.lod ? null : (function (dd) { return function (c, s) {   // el canto blanco del guardabarros
-      if (dd * C.gv > -0.1) return; var a = B(-6, dd * 12.4, 14.4), m = B(-12.6, dd * 12.8, 17.2), b = B(-19.6, dd * 12.4, 13.6);
-      c.beginPath(); c.moveTo(a[0], a[1]); c.quadraticCurveTo(m[0], m[1], b[0], b[1]); c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = Math.max(0.7, 0.32 * s); c.stroke(); }; })(d) });
-  /* ---- el asiento largo, para dos ---- */
-  mdlAsiento(C, [B(-18.4, -3.4, 19.4), B(-18.4, 3.4, 19.4), B(-2.6, -3.8, 19.8), B(-2.6, 3.8, 19.8), B(0.6, 0, 19.4)], [2.1, 2.1, 2.3, 2.3, 2], '#2f2a33');
+  /* ---- el motor, la chapa de abajo y el escape ---- */
+  k3Masa([B(-6, -4, 10.6), B(-6, 4, 10.6), B(3, -3.8, 10.6), B(3, 3.8, 10.6), B(-2, 0, 15)], 1.6, '#8a8478', { pr: 0.6, sombra: C.som });
+  k3Masa([B(6, -3.4, 6.6), B(6, 3.4, 6.6), B(18.4, -3.6, 7.8), B(18.4, 3.6, 7.8)], 1.1, alu, { pr: -0.2, luz: 'rgba(255,255,255,.7)' });   // la chapa que protege los bajos
+  mdlEscape(C, [-4, 4.6, 10.4], [-20, 6, 14], 1);
+  /* ---- detrás: el cuerpo bajo el asiento y los dos guardabarros, con su número ---- */
+  k3Masa([B(-18.4, -5, 13.2), B(-18.4, 5, 13.2), B(-4, -5.2, 13.4), B(-4, 5.2, 13.4), B(-19.6, 0, 16.4), B(-5, 0, 17.2)], [2, 2, 2, 2, 1.6, 1.6], colM2, { pr: 0.8 });
+  for (d = -1; d <= 1; d += 2) k3Masa([B(-5.4, d * 11.2, 13.8), B(-9.4, d * 11.6, 16.4), B(-14.6, d * 11.7, 16.6), B(-19.4, d * 11.4, 15), B(-21.2, d * 11.1, 12)],
+    [2.8, 3.4, 3.5, 3.2, 2.4], colM, { pr: d * C.gv < 0 ? -0.4 : 0.6, deco: !C.lod ? null : (function (dd) { return function (c, s) {   // la franja blanca del guardabarros
+      var a = B(-5.4, dd * 13.2, 15.6), m = B(-12.6, dd * 13.8, 19.2), b = B(-20.4, dd * 13.2, 15.4);
+      c.beginPath(); c.moveTo(a[0], a[1]); c.quadraticCurveTo(m[0], m[1], b[0], b[1]); c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = Math.max(0.8, 0.7 * s); c.stroke(); }; })(d) });
+  if (Math.abs(C.gv) > 0.3) qmdNumero(C, [-12.6, C.ladoV * 15.2, 13.8], 2.6, 2, num, 2);   // el número en el costado que da a la cámara
+  /* ---- el asiento largo, para dos, con su costura ---- */
+  mdlAsiento(C, [B(-18.4, -3.6, 19.4), B(-18.4, 3.6, 19.4), B(-2.6, -4, 19.8), B(-2.6, 4, 19.8), B(0.6, 0, 19.4)], [2.1, 2.1, 2.3, 2.3, 2], '#2f2a33');
   /* ---- el portabultos de atrás, los pilotos y la matrícula ---- */
-  for (d = -1; d <= 1; d += 2) k3Tubo(B(-19.6, d * 5.6, 18), B(-22.8, d * 5.6, 18.2), 0.5, 0.5, negro2, { borde: 0.7, pr: 0.5 });
-  k3Tubo(B(-22.8, -5.6, 18.2), B(-22.8, 5.6, 18.2), 0.5, 0.5, negro2, { borde: 0.7, pr: 0.5 });
+  for (d = -1; d <= 1; d += 2) k3Tubo(B(-19.6, d * 6, 18), B(-23, d * 6, 18.2), 0.5, 0.5, negro2, { borde: 0.7, pr: 0.5 });
+  k3Tubo(B(-23, -6, 18.2), B(-23, 6, 18.2), 0.5, 0.5, negro2, { borde: 0.7, pr: 0.5 });
   if (C.atras) {
-    for (d = -1; d <= 1; d += 2) mdlLuz(C, [B(-21.2, d * 3.4, 15.4), B(-21.2, d * 6.2, 15.4), B(-20.9, d * 6.2, 13.8), B(-20.9, d * 3.4, 13.8)], C.o.frena ? '#ff2a1a' : '#e8453a', -1);
+    for (d = -1; d <= 1; d += 2) mdlLuz(C, [B(-21.2, d * 3.4, 15.6), B(-21.2, d * 6.6, 15.6), B(-20.9, d * 6.6, 13.8), B(-20.9, d * 3.4, 13.8)], C.o.frena ? '#ff2a1a' : '#e8453a', -1);
     mdlMatricula(C, -21.3, 13.2, 5);
   }
-  /* ---- delante: los guardabarros, el morro con los faros, la defensa y el portabultos ---- */
-  for (d = -1; d <= 1; d += 2) k3Masa([B(7, d * 9.4, 12.6), B(10.4, d * 9.6, 14.6), B(15.4, d * 9.6, 14.6), B(19.4, d * 9.4, 12.2), B(20.6, d * 9.2, 9.6)],
-    [2.4, 3, 3, 2.7, 2], colM, { pr: d * C.gv < 0 ? -0.6 : 0.4 });
-  k3Masa([B(6, -5, 15.2), B(6, 5, 15.2), B(17.6, -5.2, 13.4), B(17.6, 5.2, 13.4), B(19.6, 0, 12.2), B(9, 0, 18.2), B(15, 0, 16.4)], [2.4, 2.4, 2.2, 2.2, 2.2, 2, 2], colM, { pr: 0.2,
-    deco: !C.lod ? null : function (c, s) { var a = B(8, 0, 20.2), b = B(19.8, 0, 14.2); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.strokeStyle = colM3; c.lineWidth = Math.max(0.6, 0.28 * s); c.stroke(); } });
-  if (C.front) for (d = -1; d <= 1; d += 2) k3Bola(B(20.6, d * 3.6, 13.2), 1.45, '#fff6c8', { pr: -3, borde: 0.9, sombra: 0.6 });
-  for (d = -1; d <= 1; d += 2) k3Tubo(B(21.8, d * 6.4, 8.4), B(19.4, d * 6.4, 12.6), 0.55, 0.55, negro2, { borde: 0.7, pr: -0.4 });
-  k3Tubo(B(21.8, -6.4, 8.4), B(21.8, 6.4, 8.4), 0.6, 0.6, negro2, { borde: 0.7, pr: -0.4 });
-  for (d = -1; d <= 1; d += 2) k3Tubo(B(11.6, d * 6.2, 18), B(18.6, d * 6.2, 16.2), 0.45, 0.45, negro2, { borde: 0.7, pr: -0.2 });
-  for (var q = 0; q < 3; q++) { var uq = 12.4 + q * 2.8, wq = 17.8 - q * 0.62; k3Tubo(B(uq, -6.2, wq), B(uq, 6.2, wq), 0.4, 0.4, negro2, { borde: 0.6, pr: -0.2 }); }
-  /* ---- el depósito, la columna y el manillar ancho ---- */
-  k3Masa([B(1.4, -4, 19.6), B(1.4, 4, 19.6), B(7.6, -3.8, 19.2), B(7.6, 3.8, 19.2), B(4, 0, 22)], [1.8, 1.8, 1.6, 1.6, 1.6], colM, { pr: 0.3 });
+  /* ---- delante: los guardabarros con su franja, el morro con los faros y el número, la defensa y el portabultos con la barra de luces ---- */
+  for (d = -1; d <= 1; d += 2) k3Masa([B(6.8, d * 10.8, 12.8), B(10.4, d * 11.2, 15), B(15.6, d * 11.2, 15), B(19.8, d * 11, 12.4), B(21, d * 10.8, 9.6)],
+    [2.6, 3.2, 3.2, 2.9, 2.1], colM, { pr: d * C.gv < 0 ? -0.6 : 0.4, deco: !C.lod ? null : (function (dd) { return function (c, s) {
+      var a = B(7.4, dd * 12.8, 14.6), m = B(13, dd * 13.4, 17.8), b = B(20.4, dd * 12.8, 13.6);
+      c.beginPath(); c.moveTo(a[0], a[1]); c.quadraticCurveTo(m[0], m[1], b[0], b[1]); c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = Math.max(0.8, 0.7 * s); c.stroke(); }; })(d) });
+  k3Masa([B(6, -5.6, 15.2), B(6, 5.6, 15.2), B(17.6, -5.8, 13.4), B(17.6, 5.8, 13.4), B(19.8, 0, 12.2), B(9, 0, 18.4), B(15, 0, 16.6)], [2.4, 2.4, 2.2, 2.2, 2.2, 2, 2], colM, { pr: 0.2,
+    deco: !C.lod ? null : function (c, s) {                                   // dos franjas blancas por encima del morro
+      for (var k = -1; k <= 1; k += 2) { var a = B(7.4, k * 1.6, 20.4), b = B(20.4, k * 1.6, 14.6); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.strokeStyle = '#fbfaf4'; c.lineWidth = Math.max(0.8, 0.85 * s); c.stroke(); }
+    } });
+  if (C.front) {
+    for (d = -1; d <= 1; d += 2) { k3Bola(B(20.8, d * 4, 13.4), 1.6, '#fff6c8', { pr: -3, borde: 0.9, sombra: 0.6 }); k3Bola(B(21.2, d * 4, 13.4), 0.7, '#ffffff', { pr: -3.2, borde: 0, sombra: 0 }); }
+    qmdNumero(C, [21.4, 0, 11], 2.4, 1.7, num, 1);
+  }
+  for (d = -1; d <= 1; d += 2) k3Tubo(B(22.6, d * 7, 8.2), B(19.6, d * 7, 13.4), 0.7, 0.7, negro2, { borde: 0.7, pr: -0.4 });   // la defensa, gorda
+  k3Tubo(B(22.6, -7, 8.2), B(22.6, 7, 8.2), 0.75, 0.75, negro2, { borde: 0.7, pr: -0.4 });
+  k3Tubo(B(23.2, -4, 10.6), B(23.2, 4, 10.6), 0.7, 0.7, negro2, { borde: 0.7, pr: -0.5 });
+  for (d = -1; d <= 1; d += 2) k3Tubo(B(11.6, d * 6.6, 18.2), B(18.8, d * 6.6, 16.2), 0.45, 0.45, negro2, { borde: 0.7, pr: -0.2 });
+  for (q = 0; q < 3; q++) { var uq = 12.4 + q * 2.8, wq = 18 - q * 0.62; k3Tubo(B(uq, -6.6, wq), B(uq, 6.6, wq), 0.4, 0.4, negro2, { borde: 0.6, pr: -0.2 }); }
+  k3Masa([B(18.4, -5.4, 18), B(18.4, 5.4, 18)], 1, negro2, { pr: -0.6 });     // la barra de luces, en el portabultos
+  if (C.front) for (q = -3; q <= 3; q += 2) k3Bola(B(19.3, q * 1.5, 18), 0.62, '#fff9d8', { pr: -0.9, borde: 0.5, sombra: 0 });
+  /* ---- el depósito, la columna y el manillar ancho con sus paramanos ---- */
+  k3Masa([B(1.4, -4.2, 19.6), B(1.4, 4.2, 19.6), B(7.6, -4, 19.2), B(7.6, 4, 19.2), B(4, 0, 22)], [1.8, 1.8, 1.6, 1.6, 1.6], colM, { pr: 0.3 });
   k3Tubo(Dm(UP, 0, MW, 1), B(8.6, 0, 18.6), 0.7, 0.7, negro, { borde: 0.7 });
   k3Masa([Dm(UP - 0.6, -2.6, MW + 0.4, 1), Dm(UP - 0.6, 2.6, MW + 0.4, 1), Dm(UP + 1.2, 0, MW + 0.6, 1)], 1.3, colM2, { pr: -0.4 });   // la tapa del manillar
-  mdlManillar(C, UP, MW, 14.8, negro, negro2);
+  mdlManillar(C, UP, MW, 15.8, negro, negro2);
+  for (d = -1; d <= 1; d += 2) k3Masa([Dm(UP + 1.6, d * 13.6, MW + 0.4, 1), Dm(UP + 2.6, d * 16.2, MW + 0.2, 1)], [1.1, 0.9], colM, { pr: -0.6 });   // los paramanos
 }
 var FM_QUAD = fmDef({ id: 'quad', nom: 'El quad', txt: 'Cuatro ruedas de tacos para la selva.', cuerpo: mdlCuerpoQuad,
-  UP: 11.2, MW: 27.2, gu: 9.6, gv: 13.8, rw: 1.4, codo: [4.8, 15, 31.2],
-  pie: [5.8, 8.6, 22.2, 2.4, 8.4, 11.8, 6.8, 8.6, 10.2], pieSaca: [5.8, 8.6, 22.2, 2.4, 8.4, 11.8, 6.8, 8.6, 10.2],
+  UP: 11.2, MW: 27.2, gu: 9.6, gv: 14.8, rw: 1.4, codo: [4.8, 15.6, 31.2],
+  pie: [5.8, 9.4, 22.2, 2.4, 9.2, 12, 6.8, 9.4, 10.4], pieSaca: [5.8, 9.4, 22.2, 2.4, 9.2, 12, 6.8, 9.4, 10.4],
   cesta: [0, 0], ofr: [0, 0], pas: [-11.6, 22], carga: 0 });
 var fmPerfil224 = fmPerfil;
 fmPerfil = function (LK) { return LK && LK.quad ? FM_QUAD : fmPerfil224(LK); };
@@ -109803,6 +109837,179 @@ window.addEventListener('keydown', function (e) {                         // en 
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza juegos/quad/644_quad_sendero.js*/
+/* ================================================================
+   V226 · EL QUAD: UN SENDERO DE SELVA, CON SUS ESTRECHOS Y EL ACANTILADO
+   Jose Javier (21-10-2026), con la V225: «algunos cambios, algo más
+   chulo el quad y un pelín más ancho, tiene que tener las cosas del
+   antiguo, cascada, cueva, paso de piedras, estrechar mucho».
+   Preguntado: lo ancho, el quad; y estrechar: «que no sea como la
+   carretera otra pero marrón, me gustaba el acantilado, que hubiese
+   partes que cupieran un par de quad como mucho o incluso uno».
+   Esta es la primera parte (el paso de piedras con la cascada y la
+   cueva vienen después):
+   - EL SENDERO (qslTierra, desde 510; 588 y 569): la tierra con los
+     bordes ondulados, sin cuneta ni arcén de carretera: a cada lado
+     una orilla de hierba con matas (se puede pisar: traquetea y
+     frena un poco), dos rodadas, hierba en medio y manchas húmedas.
+     Las señales de tráfico de las curvas pasan a ser tablas de madera
+     con una flecha pintada, en su estaca.
+   - LOS ESTRECHOS (GEN.angosto): tramos donde caben dos quads como
+     mucho (QSN.dos) o solo uno (QSN.uno), con rocas y troncos a los
+     lados.
+   - EL ACANTILADO (el tema «cornisa»): la pared de roca a la derecha
+     y a la izquierda el precipicio, con la selva muy abajo. Si te
+     pasas del borde (QSN.cae más allá de la tierra), te caes: un casco.
+   QSN.vivo = false: el camino de la V225.
+   ================================================================ */
+var QSN = { vivo: true, dos: 24, uno: 12, cae: 3, fondo: -320, pared: 96, tablas: null,
+  D: { n: 'Quad', t: 'La selva', dest: 'al warung', seed: 2511, tod: 'sombra', inv: 0, quad: true, secs: [
+    { len: 600, th: 'selva', curv: 0.08, hw: 40, g: [['carril']] },
+    { len: 1100, th: 'selva', curv: 0.3, hill: 10, hw: 35, g: [['angosto', 'dos', 0.32], ['barro', 1], ['raices', 0.6], ['gallos', 0.35]] },
+    { len: 900, th: 'selva', curv: 0.46, hill: 6, hw: 34, g: [['monos', 0.35, 0.3], ['barro', 0.5]] },             // horquillas
+    { len: 900, th: 'cornisa', curv: 0.2, hill: 3, hw: 20, g: [] },                                                // el acantilado
+    { len: 1000, th: 'selva', curv: 0.25, hill: 16, hw: 35, g: [['angosto', 'uno', 0.24], ['rasante', 2], ['raices', 0.5]] },   // rampas, y un paso de uno
+    { len: 1000, th: 'selva', curv: 0.35, hill: 8, hw: 35, g: [['angosto', 'dos', 0.3], ['barro', 1], ['vacas', 1], ['monos', 0.3, 0.3]] },
+    { len: 900, th: 'selva', curv: 0.47, hill: 6, hw: 34, g: [['angosto', 'uno', 0.22], ['barro', 0.8], ['raices', 0.5], ['heal']] },   // horquillas
+    { len: 450, th: 'selva', curv: 0, hw: 44, g: [['meta']] }] } };
+if (QSN.vivo && typeof QSL !== 'undefined') QSL.D = QSN.D;
+function qsnSi() { return QSN.vivo && L && L.D && L.D.quad; }
+
+/* ---------- el acantilado: su tema, su relieve y su suelo ---------- */
+THEMES.cornisa = { base: '#355f34', gut: 'musgo', side: ['barranco', 'muro'] };
+REL.P.cornisa = { '-1': [[8, QSN.fondo]], '1': [[9, QSN.pared]] };          // (lo plantado: a la izquierda, abajo del todo; a la derecha, encima de la pared)
+var sueloTema225 = sueloTema;
+sueloTema = function (g, i, th, T, S, br) {
+  if (th !== 'cornisa' || !REL.vivo) { sueloTema225.apply(this, arguments); return; }
+  var f = fogK(BD[i]), sky = (SKY[L.D.tod] || SKY.manana)[2], ai = relAmp(S, BY[i]), aj = relAmp(S, BY[i + 1]), H = QSN.fondo, W = QSN.pared;
+  function m(c) { return relMezcla(c, sky, f); }
+  relBase(g, i, m('#3a6b39'), 2, 2);
+  carLim(i, -1);                                                           // a la izquierda: la selva, muy abajo (copas oscuras), con su río a lo lejos
+  relOndas(g, i, -1, 8, 1700, H * ai, H * aj, ['#234a26', '#2b5a2e', '#1d4222', '#30612f'], 34, f, sky);
+  relQ(g, i, -1, 8, H * ai, H * aj, 60, H * ai, H * aj, m('#16301a'));     // al pie del precipicio, en sombra
+  relQ(g, i, -1, 60, H * ai, H * aj, 90, H * ai, H * aj, m('#1c3a1f'));
+  var rio = 260 + Math.sin(BY[i] * 0.004) * 60;
+  relQ(g, i, -1, rio, H * ai, H * aj, rio + 30, H * ai, H * aj, m('#5f9ea6'));
+  relQ(g, i, -1, 140, H * 0.5 * ai, H * 0.5 * aj, 700, H * 0.5 * ai, H * 0.5 * aj, 'rgba(220,234,232,.12)');   // algo de neblina, lejos
+  relQ(g, i, -1, 0, 0, 0, 2.8, 0, 0, m('#9a9284'));                          // el canto de roca del precipicio
+  relQ(g, i, -1, 2.6, 0, 0, 3.4, -3 * ai, -3 * aj, m('#3a352e'));            // y su sombra, donde empieza la caída
+  carLim(i, 1);                                                            // a la derecha: la pared de roca, casi vertical, a bloques, y la selva encima
+  relOndas(g, i, 1, 9, 1700, W * ai, W * aj, ['#2f6a37', '#296031', '#377641'], 50, f, sky);
+  var o0 = 1.4, o1 = 9, ym = (BY[i] + BY[i + 1]) / 2, b = Math.floor(ym / 34), hb = hash(b * 1.37), ROCA = ['#7a7062', '#6c6356', '#837a6b', '#665e52'];
+  function franja(t0, t1, col) { relQ(g, i, 1, o0 + (o1 - o0) * t0, W * t0 * ai, W * t0 * aj, o0 + (o1 - o0) * t1, W * t1 * ai, W * t1 * aj, col); }
+  franja(0, 1, m(ROCA[Math.floor(hb * 4)]));                               // cada bloque de roca, de su tono
+  if (ym - b * 34 < 2.2) franja(0, 1, m('#3f3a33'));                        // la grieta entre bloque y bloque
+  var c0 = 0.15 + hash(b * 2.1) * 0.45; franja(c0, c0 + 0.08 + hash(b * 3.3) * 0.12, m(ROCA[Math.floor(hash(b * 5.7) * 4)]));   // una losa de otro tono
+  var mz = 0.72 + hash(b * 4.4) * 0.12; franja(mz, 1, m('#3f6a32'));        // el musgo de arriba, que baja más o menos
+  if (hash(b * 6.1) < 0.45) franja(mz - 0.25 - hash(b * 7.2) * 0.2, mz, 'rgba(60,105,45,.55)');   // y alguna enredadera que cuelga
+  relQ(g, i, 1, 0, 0, 0, o0, 0, 0, m('#6f6a5e'));                            // las piedras caídas al pie
+};
+var update225q = update;
+update = function (dt) {                                                   // pasarse del borde del acantilado: te caes
+  update225q(dt);
+  if (!qsnSi() || !QSL.on || G.mode !== 'level' || G.state !== 'play' || P.state !== 'ride' || P.z > 0) return;
+  var S = secAt(P.y); if (S.s.th !== 'cornisa' || relAmp(S, P.y) < 0.6) return;
+  var u = P.x - cxAt(P.y), hw = hwAt(P.y);
+  if (!L.qsnAviso) { L.qsnAviso = true; avisar('¡El acantilado! No te acerques al borde de la izquierda', '⚠️'); }
+  if (u < -(hw + QSN.cae)) { offRoad(-1); return; }
+  if (u < -(hw - 3) && G.t - (QSN.avT || -9) > 1.4) { QSN.avT = G.t; pop(pickM(['¡Cuidado!', '¡Uy, el borde!', '¡Que te caes!']), P.x, P.y + 26, '#ffd1a8', 1); shake(0.12); dust(P.x - 6, P.y, 3); }
+};
+
+/* ---------- los estrechos ---------- */
+GEN.angosto = function (S, cual, frac) {
+  var hwN = QSN[cual] || +cual || QSN.dos, len = (S.y1 - S.y0) * (frac || 0.3), mid = (S.y0 + S.y1) / 2 + (L.rnd() - 0.5) * (S.y1 - S.y0) * 0.2, y0 = mid - len / 2, y1 = mid + len / 2, R = 120, q;
+  for (q = Math.floor((y0 - R) / SEG); q <= Math.ceil((y1 + R) / SEG); q++) {
+    if (q < 1 || q >= L.N - 1) continue;
+    var y = q * SEG, sl = (L.CX[q + 1] - L.CX[q - 1]) / (2 * SEG), k = y < y0 ? smooth(clamp((y - (y0 - R)) / R, 0, 1)) : y > y1 ? smooth(clamp((y1 + R - y) / R, 0, 1)) : 1;
+    L.HW[q] = lerp(L.HW[q], Math.min(L.HW[q], hwN * Math.sqrt(1 + sl * sl)), k);
+  }
+  (L.qsnAng = L.qsnAng || []).push({ y0: y0, y1: y1, hw: hwN });
+};
+function qsnPasoDeco() {                                                   // rocas y troncos a los lados de cada estrecho: que se vea por qué se estrecha
+  var r = mulberry(L.D.seed + 77);
+  (L.qsnAng || []).forEach(function (A) {
+    for (var y = A.y0 - 40; y < A.y1 + 40; y += 22 + r() * 16) for (var s = -1; s <= 1; s += 2) {
+      var e = hwAt(y) + GUT, k = r();
+      if (k < 0.55) L.deco.ground.push({ s: rp94(SP.rock, r), y: y + r() * 8, x: cxAt(y) + s * (e + 4 + r() * 6), a: r() * TAU, sc: 1.5 + r() * 1.3 });
+      else if (k < 0.8) L.deco.ground.push({ s: ESN.s.helecho, y: y, x: cxAt(y) + s * (e + 2 + r() * 8), a: r() * TAU, sc: 1.2 + r() * 0.6 });
+      else L.deco.top.push({ s: ESN.s.selva, y: y, x: cxAt(y) + s * (e + 16 + r() * 10), a: r() * TAU, sc: 0.9 + r() * 0.3 });
+    }
+  });
+}
+var escPuebla225 = escPuebla;
+escPuebla = function (S, g0, t0) {                                         // lo que crece en el acantilado: la selva de abajo y la de encima de la pared
+  escPuebla225.apply(this, arguments);
+  if (S.s.th !== 'cornisa') return;
+  var r = escRnd(S), y, e;
+  for (y = S.y0 + 4; y < S.y1; y += 11 + r() * 9) {
+    e = hwAt(y) + GUT;
+    L.deco.top.push({ s: ESN.s.selva, y: y + r() * 8, x: cxAt(y) - (hwAt(y) + 55 + r() * 60), a: r() * TAU, sc: 1 + r() * 0.4 });   // las copas de abajo, pegadas al precipicio
+    if (r() < 0.8) L.deco.top.push({ s: ESN.s.selva, y: y + r() * 8, x: cxAt(y) - (e + 70 + r() * 140), a: r() * TAU, sc: 1.2 + r() * 0.6 });
+    if (r() < 0.6) L.deco.top.push({ s: ESN.s.selva, y: y + r() * 8, x: cxAt(y) - (e + 220 + r() * 300), a: r() * TAU, sc: 1.3 + r() * 0.6 });
+    if (r() < 0.5) L.deco.top.push({ s: ESN.s.selva, y: y + r() * 10, x: cxAt(y) + (hwAt(y) + 14 + r() * 40), a: r() * TAU, sc: 0.9 + r() * 0.3 });   // encima de la pared
+    if (r() < 0.5) L.deco.ground.push({ s: ESN.s.helecho, y: y + r() * 10, x: cxAt(y) + (hwAt(y) + 10 + r() * 8), a: r() * TAU, sc: 1.1 + r() * 0.5 });
+    if (r() < 0.12) L.deco.ground.push({ s: rp94(SP.rock, r), y: y, x: cxAt(y) - (hwAt(y) + 1.4), a: r() * TAU, sc: 0.7 + r() * 0.4 });   // piedras sueltas en el borde
+  }
+};
+
+/* ---------- las tablas de madera de las curvas (en vez de las señales de tráfico) ---------- */
+function qsnTablas() {
+  if (QSN.tablas) return QSN.tablas;
+  var sr = SR, T = []; SR = 6;
+  try {
+    [-1, 1].forEach(function (d) {
+      T.push(mk(20, 11, function (g) {
+        rrect(g, -9.6, -5, 19.2, 10, 1.6, '#9a6a3c', '#3a2414', 0.9);
+        g.strokeStyle = 'rgba(70,40,20,.45)'; g.lineWidth = 0.5; for (var k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(-9, k * 2.6); g.lineTo(9, k * 2.6 + 0.4); g.stroke(); }
+        g.save(); g.scale(d, 1);
+        poly(g, [-6, -3, 1, -3, 6, 0, 1, 3, -6, 3, -1.6, 0], '#e84a2e', '#fff3d6', 0.9);   // la flecha pintada
+        g.restore();
+      }));
+    });
+  } finally { SR = sr; }
+  QSN.tablas = T.map(function (t) { return { esc: 'senal3d', k: 'bb', c: t.c, w: t.w, h: t.h, tex: t, a: 9.6, b: 5, H: 13, postes: [0], pr: 0.95, palo: '#6b4a2a', espalda: '#7a5530', grueso: 0.9 }; });
+  return QSN.tablas;
+}
+
+/* ---------- montar: lo de arriba, solo en el quad ---------- */
+var buildLevel225s = buildLevel;
+buildLevel = function (li) {
+  var r = buildLevel225s.apply(this, arguments);
+  if (!qsnSi()) return r;
+  var T = typeof TSE !== 'undefined' && TSE.d ? TSE.d : null, Tb = qsnTablas();
+  L.deco.ground.forEach(function (d) {
+    var s = d.s; if (!s) return;
+    var i = s === BB.chev[0] || s === BB.curva[0] || (T && (s === T.chev[0] || s === T.curva[0])) ? 0 : s === BB.chev[1] || s === BB.curva[1] || (T && (s === T.chev[1] || s === T.curva[1])) ? 1 : -1;
+    if (i >= 0) { d.s = Tb[i]; d.sc = 1.15; }
+  });
+  L.deco.ground = L.deco.ground.filter(function (d) { return d.s !== SP.sign && !(T && d.s === T.aviso); });
+  qsnPasoDeco();
+  L.deco.ground.sort(byY); L.deco.top.sort(byY);
+  return r;
+};
+
+/* ---------- el sendero: la tierra con los bordes ondulados y la orilla de hierba ---------- */
+var qslTierra225 = qslTierra;
+qslTierra = function (g, i, hi, hj) {
+  if (!QSN.vivo) { qslTierra225(g, i, hi, hj); return; }
+  var j = i + 1, yi = BY[i], yj = BY[j], ym = (yi + yj) / 2, th = secAt(ym).s.th, pk = Math.floor(yi / 48);
+  var ka = Math.min(1, (hi + hj) / 64);
+  function w(y, s) { return ka * (Math.sin(y * 0.047 + s * 1.9) * 3.6 + Math.sin(y * 0.13 + s * 0.7) * 2.2 + Math.sin(y * 0.29 + s * 2.3) * 1.1); }
+  var li = -hi - w(yi, -1), ri = hi + w(yi, 1), lj = -hj - w(yj, -1), rj = hj + w(yj, 1), O = GUT - 1;
+  QNIV = 5;
+  if (th === 'cornisa') band2(g, i, ri, ri + 1.6, rj, rj + 1.6, '#6f6a5e');   // al pie de la pared, piedras; al otro lado, el borde de roca (lo pinta el suelo)
+  else {
+    band2(g, i, li - O, li, lj - O, lj, '#4e7a36'); band2(g, i, ri, ri + O, rj, rj + O, '#4e7a36');   // la orilla de hierba, a los dos lados
+    band2(g, i, li - O * 0.55, li - O * 0.3, lj - O * 0.55, lj - O * 0.3, 'rgba(40,80,30,.4)'); band2(g, i, ri + O * 0.3, ri + O * 0.55, rj + O * 0.3, rj + O * 0.55, 'rgba(40,80,30,.4)');
+  }
+  band2(g, i, li, ri, lj, rj, '#9a7148'); QNIV = 6;
+  var cw = (ri - li) / 2, cwj = (rj - lj) / 2, ci = (li + ri) / 2, cj = (lj + rj) / 2;
+  if (hash(pk * 1.7) < 0.5) { var a0 = -0.8 + hash(pk * 2.3) * 0.9, a1 = a0 + 0.35 + hash(pk * 3.1) * 0.5; band2(g, i, ci + a0 * cw, ci + Math.min(a1, 0.9) * cw, cj + a0 * cwj, cj + Math.min(a1, 0.9) * cwj, 'rgba(110,78,48,.55)'); }
+  if (cw > 16) for (var t = 0; t < 2; t++) { var f = [-0.5, 0.3][t]; band2(g, i, ci + f * cw, ci + (f + 0.2) * cw, cj + f * cwj, cj + (f + 0.2) * cwj, 'rgba(92,62,36,.5)'); }   // las rodadas (en los pasos estrechos, una sola: la del medio)
+  else band2(g, i, ci - 0.25 * cw, ci + 0.25 * cw, cj - 0.25 * cwj, cj + 0.25 * cwj, 'rgba(92,62,36,.5)');
+  if (cw > 16) { var wm = 0.06 + 0.03 * Math.sin(ym * 0.02); band2(g, i, ci - wm * cw, ci + wm * cw, cj - wm * cwj, cj + wm * cwj, 'rgba(96,128,58,.7)'); }   // la hierba del medio
+  band2(g, i, li, li + 0.12 * cw, lj, lj + 0.12 * cwj, th === 'cornisa' ? 'rgba(80,70,60,.4)' : 'rgba(96,128,58,.5)'); band2(g, i, ri - 0.12 * cw, ri, rj - 0.12 * cwj, rj, 'rgba(96,128,58,.5)');   // la hierba que se come la tierra por los bordes
+};
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
