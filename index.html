@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V226</title>
+<title>Bali Rush Completo V227</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V226', FECHA = '21-10-2026';
+var VERSION = 'Completo V227', FECHA = '21-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -109869,6 +109869,7 @@ var QSN = { vivo: true, dos: 24, uno: 12, cae: 3, fondo: -320, pared: 96, tablas
     { len: 900, th: 'selva', curv: 0.46, hill: 6, hw: 34, g: [['monos', 0.35, 0.3], ['barro', 0.5]] },             // horquillas
     { len: 900, th: 'cornisa', curv: 0.2, hill: 3, hw: 20, g: [] },                                                // el acantilado
     { len: 1000, th: 'selva', curv: 0.25, hill: 16, hw: 35, g: [['angosto', 'uno', 0.24], ['rasante', 2], ['raices', 0.5]] },   // rampas, y un paso de uno
+    { len: 640, th: 'selva', curv: 0.04, hill: 0, hw: 30, g: [['vado']] },                                         // V227: el paso de piedras y la cascada
     { len: 1000, th: 'selva', curv: 0.35, hill: 8, hw: 35, g: [['angosto', 'dos', 0.3], ['barro', 1], ['vacas', 1], ['monos', 0.3, 0.3]] },
     { len: 900, th: 'selva', curv: 0.47, hill: 6, hw: 34, g: [['angosto', 'uno', 0.22], ['barro', 0.8], ['raices', 0.5], ['heal']] },   // horquillas
     { len: 450, th: 'selva', curv: 0, hw: 44, g: [['meta']] }] } };
@@ -110009,6 +110010,169 @@ qslTierra = function (g, i, hi, hj) {
   else band2(g, i, ci - 0.25 * cw, ci + 0.25 * cw, cj - 0.25 * cwj, cj + 0.25 * cwj, 'rgba(92,62,36,.5)');
   if (cw > 16) { var wm = 0.06 + 0.03 * Math.sin(ym * 0.02); band2(g, i, ci - wm * cw, ci + wm * cw, cj - wm * cwj, cj + wm * cwj, 'rgba(96,128,58,.7)'); }   // la hierba del medio
   band2(g, i, li, li + 0.12 * cw, lj, lj + 0.12 * cwj, th === 'cornisa' ? 'rgba(80,70,60,.4)' : 'rgba(96,128,58,.5)'); band2(g, i, ri - 0.12 * cw, ri, rj - 0.12 * cwj, rj, 'rgba(96,128,58,.5)');   // la hierba que se come la tierra por los bordes
+};
+/*#pieza juegos/quad/646_quad_vado.js*/
+/* ================================================================
+   V227 · EL QUAD: EL PASO DE PIEDRAS Y LA CASCADA (parte 3 de 4)
+   De lo que pidió con la V225 («tiene que tener las cosas del
+   antiguo, cascada, cueva, paso de piedras, estrechar mucho»).
+   - EL VADO (GEN.vado, en su tramo recto y llano): un río cruza el
+     sendero de lado a lado. El camino se estrecha (medio ancho
+     QVD.hw) y se pasa por una fila de piedras planas; si te sales de
+     ellas (más de QVD.cae del centro), ¡PLOF!, al agua: un casco.
+     Los rivales lo pasan en fila y más despacio (QVD.rv).
+   - EL RÍO: el agua, con sus orillas de piedra y barro y la espuma
+     que corre, se pinta trozo a trozo con el suelo (qvdRio, desde
+     qslTierra): a la izquierda se pierde en la selva; a la derecha
+     sale de la poza de la cascada.
+   - LA CASCADA (ESN.fn.qvdCascada), a la derecha, río arriba: la
+     pared de roca con musgo, el chorro que cae con sus hilos de
+     espuma, la poza y la neblina.
+   QVD.vivo = false: sin el vado (el tramo queda como un sendero).
+   ================================================================ */
+var QVD = { vivo: true, hw: 14, cae: 10, largo: 150, rv: 125, dcha: 64, izq: 1400, sPiedra: { esc: 'qvdPiedra', k: 'bb', w: 14, h: 6 }, sCascada: { esc: 'qvdCascada', k: 'bb', w: 90, h: 90 } };
+function qvdEn(y, m) { var V = L && L.qvd; return !!V && y >= V.y0 + (m || 0) && y <= V.y1 - (m || 0); }
+
+/* ---------- montar el vado en su tramo ---------- */
+GEN.vado = function (S) {
+  if (!QVD.vivo) return;
+  var mid = (S.y0 + S.y1) / 2, y0 = mid - QVD.largo / 2, y1 = mid + QVD.largo / 2, R = 140, q;
+  for (q = Math.floor((y0 - 30 - R) / SEG); q <= Math.ceil((y1 + 30 + R) / SEG); q++) {           // el sendero se estrecha hasta el ancho de las piedras
+    if (q < 1 || q >= L.N - 1) continue;
+    var y = q * SEG, a = y0 - 30, b = y1 + 30, k = y < a ? smooth(clamp((y - (a - R)) / R, 0, 1)) : y > b ? smooth(clamp((b + R - y) / R, 0, 1)) : 1;
+    L.HW[q] = lerp(L.HW[q], Math.min(L.HW[q], QVD.hw), k);
+  }
+  L.qvd = { y0: y0, y1: y1, yc: mid };
+};
+function qvdMonta() {                                                      // las piedras, la cascada y lo que no puede estar en el agua
+  var V = L.qvd; if (!V) return;
+  var r = mulberry(L.D.seed + 313), y, cx, keep = function (d) { var u = Math.abs(d.x - cxAt(d.y)); return !(d.y > V.y0 - 14 && d.y < V.y1 + 14 && u < QVD.izq); };
+  L.deco.ground = L.deco.ground.filter(keep); L.deco.top = L.deco.top.filter(keep);
+  L.decal = L.decal.filter(function (d) { return d.y < V.y0 - 6 || d.y > V.y1 + 6; });
+  L.stat = L.stat.filter(function (s) { return s.t === 'flor' || s.y < V.y0 - 20 || s.y > V.y1 + 20; });
+  L.dyn = L.dyn.filter(function (e) { return e.ay < V.y0 - 80 || e.ay > V.y1 + 40; });
+  for (y = V.y0 + 6; y < V.y1 - 2; y += 15 + r() * 3) {                    // la fila de piedras planas
+    cx = cxAt(y);
+    L.deco.ground.push({ s: QVD.sPiedra, y: y, x: cx + (r() - 0.5) * 2.4, a: r() * TAU, sc: 0.95 + r() * 0.2, v: Math.floor(r() * 3) });
+  }
+  for (y = V.y0 - 8; y < V.y1 + 10; y += 9) for (var s = -1; s <= 1; s += 2) {   // piedras y helechos en las orillas, junto al sendero
+    if (Math.abs(y - V.y0) > 10 && Math.abs(y - V.y1) > 10) continue;
+    cx = cxAt(y);
+    L.deco.ground.push({ s: r() < 0.6 ? rp94(SP.rock, r) : ESN.s.helecho, y: y + (r() - 0.5) * 4, x: cx + s * (QVD.hw + 6 + r() * 26), a: r() * TAU, sc: 0.9 + r() * 0.6 });
+  }
+  L.deco.ground.push({ s: QVD.sCascada, y: V.yc + 30, x: cxAt(V.yc) + QVD.dcha + 22, a: -Math.PI / 2 - 0.5, sc: 1.4 });   // la cascada, río arriba, a la derecha
+  L.deco.ground.sort(byY); L.deco.top.sort(byY); L.stat.sort(byY);
+}
+var buildLevel226v = buildLevel;
+buildLevel = function (li) {
+  var r = buildLevel226v.apply(this, arguments);
+  if (L && L.D && L.D.quad) qvdMonta();
+  return r;
+};
+
+/* ---------- el río, trozo a trozo con el suelo ---------- */
+function qvdQuad(g, ya, yb, o0, o1, dz, col) {                             // un trozo de suelo de ya a yb, del desplazamiento o0 al o1 respecto al centro del camino
+  var c0 = cxAt(ya), c1 = cxAt(yb), z0 = zAt(ya) + dz, z1 = zAt(yb) + dz;
+  proj(c0 + o0, ya, z0); var ax = PX, ay = PY; proj(c0 + o1, ya, z0); var bx = PX, by = PY;
+  proj(c1 + o1, yb, z1); var cx = PX, cy = PY; proj(c1 + o0, yb, z1);
+  quad(g, ax, ay, bx, by, cx, cy, PX, PY, col);
+}
+function qvdRio(g, i) {
+  var V = L.qvd; if (!V || !QVD.vivo) return;
+  var ya = Math.max(BY[i], V.y0 - 5), yb = Math.min(BY[i + 1], V.y1 + 5); if (yb <= ya) return;
+  var n0 = QNIV; QNIV = 6;
+  var L0 = -QVD.izq, R0 = QVD.dcha;
+  function trozo(a, b, o0, o1, dz, col) { var p = Math.max(ya, a), q = Math.min(yb, b); if (q > p) qvdQuad(g, p, q, o0, o1, dz, col); }
+  trozo(V.y0 - 5, V.y0 + 2, L0, R0, 0.05, '#7a6448');                       // las orillas: barro y piedra
+  trozo(V.y1 - 2, V.y1 + 5, L0, R0, 0.05, '#7a6448');
+  trozo(V.y0 + 1, V.y1 - 1, L0, R0, -0.4, '#4f9dad');                        // el agua
+  trozo(V.y0 + 1, V.y0 + 9, L0, R0, -0.35, '#6fb7c2'); trozo(V.y1 - 9, V.y1 - 1, L0, R0, -0.35, '#6fb7c2');   // lo poco hondo, junto a las orillas
+  trozo(V.y0 + 30, V.y1 - 30, L0, R0, -0.38, '#3f8a9c');                     // lo hondo, en medio
+  for (var k = 0; k < 14; k++) {                                           // la espuma que baja con la corriente (de derecha a izquierda)
+    var yy = V.y0 + 12 + (k % 7) * ((V.y1 - V.y0 - 24) / 6), xx = R0 - ((G.t * (34 + (k % 3) * 9) + k * 137) % (R0 - L0 * 0.35));
+    trozo(yy - 0.7, yy + 0.7, xx - 16, xx, -0.3, 'rgba(255,255,255,.55)');
+  }
+  QNIV = n0;
+}
+var qslTierra226v = qslTierra;
+qslTierra = function (g, i, hi, hj) {
+  qslTierra226v(g, i, hi, hj);
+  if (L.qvd) qvdRio(g, i);
+};
+
+/* ---------- las piedras ---------- */
+ESN.fn.qvdPiedra = function (g, d, zg, fa) {
+  var dd = proj(d.x, d.y, zg); if (dd < 12 || PX < -120 || PX > V.w + 120) return;
+  scr(g);
+  var k = d.sc || 1, t = G.t + d.y * 0.1, col = ['#8e897d', '#9a948a', '#837e72'][d.v || 0];
+  k3Abre(d.x, d.y, zg - 0.6, d.a || 0, 0, 0, k);
+  k3Fn(k3(0, 0, 0)[3] + 3, function (c) {                                   // la espuma alrededor, que se mueve
+    var p = k3(0, 0, 0.2), s = p[2]; c.globalAlpha = 0.55 * fa; c.fillStyle = '#e8fbff';
+    c.beginPath(); c.ellipse(p[0] + Math.sin(t * 3) * s, p[1], (8.6 + Math.sin(t * 2.4) * 0.8) * s, 3.6 * s, 0, 0, TAU); c.fill(); c.globalAlpha = 1;
+  });
+  k3Masa([k3(-4.8, -3.2, 1.2), k3(-4.6, 3.4, 1.2), k3(4.4, -3.6, 1.2), k3(4.8, 3, 1.2), k3(0, 0, 2.2)], [2.2, 2.2, 2.2, 2.2, 2.4], col, { borde: 0.8, luz: 'rgba(255,255,255,.35)' });
+  k3Masa([k3(-2.4, -1.4, 3.2), k3(2.2, 1.2, 3.2)], 0.9, 'rgba(90,120,70,.6)', { borde: 0, pr: -0.5 });   // un poco de musgo encima
+  k3Pinta(g);
+};
+
+/* ---------- la cascada ---------- */
+ESN.fn.qvdCascada = function (g, d, zg, fa) {
+  var dd = proj(d.x, d.y, zg); if (dd < 20 || PX < -400 || PX > V.w + 400) return;
+  scr(g);
+  var k = d.sc || 1, t = G.t, i;
+  k3Abre(d.x, d.y, zg, d.a || 0, 0, 0, k);
+  var ROC = ['#6e675b', '#7b7366', '#655e53', '#837a6c'];
+  for (i = 0; i < 9; i++) {                                                // la pared de roca, en bloques
+    var v = -34 + i * 8.5, h = 46 + Math.sin(i * 1.7) * 10 + (Math.abs(v) < 12 ? 10 : 0), uu = -6 - Math.abs(Math.sin(i * 2.3)) * 6;
+    k3Masa([k3(uu, v - 4, 2), k3(uu, v + 4, 2), k3(uu - 2, v - 3, h * 0.55), k3(uu - 2, v + 3, h * 0.55), k3(uu - 4, v, h)], [5, 5, 5.5, 5.5, 4.6], ROC[i % 4], { borde: 0.9, pr: 2 });
+    k3Masa([k3(uu - 4, v - 2, h + 2), k3(uu - 4, v + 2, h + 2)], 3.6, i % 2 ? '#4d6b3a' : '#3f5f33', { borde: 0.8, pr: 1.5 });   // el musgo y las matas de arriba
+  }
+  for (i = -1; i <= 1; i += 2) k3Masa([k3(4, i * 30, 1.5), k3(-2, i * 36, 6)], [6, 7], ROC[(i + 1) & 3], { borde: 0.9, pr: 1 });   // las rocas de los lados de la poza
+  var top = 62, bot = 2, uL = -1.5, w0 = 7, w1 = 10;                       // el chorro: de la boca de arriba a la poza
+  var A = k3(uL, -w0, top), B = k3(uL, w0, top), C = k3(4, w1, bot), D = k3(4, -w1, bot), dA = (A[3] + C[3]) / 2;
+  k3Fn(dA - 1, function (c) {
+    c.globalAlpha = 0.92 * fa;
+    var gr = c.createLinearGradient(0, A[1], 0, C[1]); gr.addColorStop(0, '#d9f3f6'); gr.addColorStop(0.5, '#a6dbe6'); gr.addColorStop(1, '#eafaff');
+    c.beginPath(); c.moveTo(A[0], A[1]); c.lineTo(B[0], B[1]); c.lineTo(C[0], C[1]); c.lineTo(D[0], D[1]); c.closePath(); c.fillStyle = gr; c.fill();
+    c.strokeStyle = 'rgba(40,90,110,.5)'; c.lineWidth = Math.max(0.6, 0.4 * A[2]); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineCap = 'round';
+    for (var j = 0; j < 9; j++) {                                          // los hilos de espuma que caen
+      var f = (j + 0.5) / 9, x0 = lerp(A[0], B[0], f), y0 = lerp(A[1], B[1], f), x1 = lerp(D[0], C[0], f), y1 = lerp(D[1], C[1], f), ph = (t * 1.6 + j * 0.37) % 1;
+      c.lineWidth = Math.max(0.6, (0.5 + (j % 3) * 0.25) * A[2]);
+      c.beginPath(); c.moveTo(lerp(x0, x1, ph * 0.8), lerp(y0, y1, ph * 0.8)); c.lineTo(lerp(x0, x1, Math.min(1, ph * 0.8 + 0.22)), lerp(y0, y1, Math.min(1, ph * 0.8 + 0.22))); c.stroke();
+    }
+    c.globalAlpha = 1;
+  });
+  var P0 = k3(16, 0, 0.3);                                                 // la poza, con su espuma
+  k3Fn(P0[3] + 2, function (c) {
+    var s = P0[2], q = k3(16, 26, 0.3), r = k3(26, 0, 0.3), rx = Math.abs(q[0] - P0[0]) + Math.abs(r[0] - P0[0]) * 0.2, ry = Math.abs(r[1] - P0[1]) + Math.abs(q[1] - P0[1]) * 0.2 + 2 * s;
+    c.globalAlpha = fa; c.fillStyle = '#4f9dad'; c.beginPath(); c.ellipse(P0[0], P0[1], rx, ry, 0, 0, TAU); c.fill();
+    c.fillStyle = '#3f8a9c'; c.beginPath(); c.ellipse(P0[0], P0[1], rx * 0.6, ry * 0.55, 0, 0, TAU); c.fill();
+    var F = k3(4.5, 0, 0.5);
+    c.fillStyle = 'rgba(255,255,255,.75)'; c.beginPath(); c.ellipse(F[0], F[1], (11 + Math.sin(t * 5) * 1.2) * s, (4 + Math.sin(t * 4) * 0.6) * s, 0, 0, TAU); c.fill();
+    c.globalAlpha = 1;
+  });
+  for (i = 0; i < 3; i++) {                                                // la neblina que sube
+    var ph = (t * 0.35 + i / 3) % 1, M = k3(6 + ph * 6, (i - 1) * 7, 3 + ph * 22);
+    k3Fn(M[3] - 3, (function (M2, ph2) { return function (c) { c.globalAlpha = 0.35 * (1 - ph2) * fa; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(M2[0], M2[1], (6 + ph2 * 10) * M2[2], 0, TAU); c.fill(); c.globalAlpha = 1; }; })(M, ph));
+  }
+  k3Pinta(g);
+};
+
+/* ---------- pasar el vado: por las piedras o al agua ---------- */
+var update226v = update;
+update = function (dt) {
+  update226v(dt);
+  if (!QVD.vivo || !L || !L.qvd || !(typeof QSL !== 'undefined' && QSL.on) || G.mode !== 'level' || G.state !== 'play') return;
+  var V = L.qvd, i, R;
+  for (i = 0; i < RIV.L.length; i++) { R = RIV.L[i]; if (!R.cae && R.fin == null && qvdEn(R.y, -40) && R.v > QVD.rv) R.v = Math.max(QVD.rv, R.v - 260 * dt); }   // los rivales, en fila y más despacio
+  if (P.state !== 'ride' || P.z > 0) return;
+  if (!L.qvdAviso && P.y > V.y0 - 420 && P.y < V.y0) { L.qvdAviso = true; avisar('¡El paso de piedras! Ve por las piedras o te caes al río', '🪨'); }
+  if (!qvdEn(P.y, 4)) return;
+  var u = P.x - cxAt(P.y);
+  if (Math.abs(u) > QVD.cae) { splash(P.x, P.y, 22); SFX.splash(); crash('agua', '¡PLOF!', u < 0 ? -1 : 1); return; }
+  if (Math.random() < dt * 6) splash(P.x + rr(-8, 8), P.y - 4, 2);
+  if (Math.floor(P.y / 16) !== Math.floor(P.py / 16) && P.speed > 40) { P.bounce = 0.16; if (Math.random() < 0.5) SFX.thud(); }   // de piedra en piedra
 };
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
