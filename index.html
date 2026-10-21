@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V230</title>
+<title>Bali Rush Completo V231</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V230', FECHA = '21-10-2026';
+var VERSION = 'Completo V231', FECHA = '21-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -110172,7 +110172,7 @@ update = function (dt) {
   var u = P.x - cxAt(P.y);
   if (Math.abs(u) > QVD.cae) { splash(P.x, P.y, 22); SFX.splash(); crash('agua', '¡PLOF!', u < 0 ? -1 : 1); return; }
   if (Math.random() < dt * 6) splash(P.x + rr(-8, 8), P.y - 4, 2);
-  if (Math.floor(P.y / 16) !== Math.floor(P.py / 16) && P.speed > 40) { P.bounce = 0.16; if (Math.random() < 0.5) SFX.thud(); }   // de piedra en piedra
+  if (Math.abs(u) <= (QVD.sobre || QVD.cae) && Math.floor(P.y / 16) !== Math.floor(P.py / 16) && P.speed > 40) { P.bounce = 0.16; if (Math.random() < 0.5) SFX.thud(); }   // de piedra en piedra (V231: QVD.sobre, hasta dónde llegan las piedras)
 };
 /*#pieza juegos/quad/648_quad_cueva.js*/
 /* ================================================================
@@ -111158,25 +111158,30 @@ ST.qgrava = {
   flat: function (g, s) {
     var d0 = proj(s.x, s.y, zAt(s.y)); if (d0 < 12 || d0 > 900) return;
     scr(g);
-    var cx = cxAt(s.y), i, n = d0 > 500 ? 40 : s.P.length, CO = ['#c9bba0', '#9a8d7a', '#b3a690', '#e0d4ba'];
-    var nq = QNIV; QNIV = 6;                                              // el tramo de grava, más claro que la tierra
-    for (i = 0; i < 6; i++) { var y0 = s.y - s.l / 2 + s.l * i / 6, y1 = y0 + s.l / 6, f = Math.sin(Math.PI * (i + 0.5) / 6), hwg = s.w / 2 * (0.55 + 0.45 * f); qcvQ(g, y0, y1, s.u - hwg, s.u + hwg, 0.1, 'rgba(176,160,132,' + (0.35 * f + 0.1).toFixed(2) + ')'); }
+    var i, n = d0 > 500 ? 40 : s.P.length, CO = ['#d9cdb2', '#a89a86', '#c4b7a0', '#efe4cc'];
+    var nq = QNIV; QNIV = 6;                                              // el tramo de grava: una mancha clara con el borde más oscuro, que se vea desde lejos
+    for (i = 0; i < 8; i++) { var y0 = s.y - s.l / 2 + s.l * i / 8, y1 = y0 + s.l / 8, f = Math.sin(Math.PI * (i + 0.5) / 8), hwg = s.w / 2 * (0.5 + 0.5 * f); qcvQ(g, y0, y1, s.u - hwg - 1.6, s.u + hwg + 1.6, 0.1, 'rgba(120,100,76,' + (0.5 * f + 0.1).toFixed(2) + ')'); qcvQ(g, y0, y1, s.u - hwg, s.u + hwg, 0.11, 'rgba(214,198,166,' + (0.7 * f + 0.15).toFixed(2) + ')'); }
     QNIV = nq;
     for (i = 0; i < n; i++) {
-      var p = s.P[i], y = s.y + p[1], x = cxAt(y) + s.u + p[0], dd = proj(x, y, zAt(y) + 0.15); if (dd < 10) continue;
-      var r = p[2] * PS; if (r < 0.35) continue;
-      g.fillStyle = CO[p[3]]; g.beginPath(); g.ellipse(PX, PY, r, r * 0.6, 0, 0, TAU); g.fill();
-      if (r > 1.2) { g.fillStyle = 'rgba(40,30,20,.35)'; g.beginPath(); g.ellipse(PX + r * 0.2, PY + r * 0.35, r * 0.9, r * 0.35, 0, 0, TAU); g.fill(); }
+      var p = s.P[i], y = s.y + p[1], x = cxAt(y) + s.u + p[0], dd = proj(x, y, zAt(y) + 0.2); if (dd < 10) continue;
+      var r = p[2] * PS * 1.25; if (r < 0.35) continue;
+      g.fillStyle = 'rgba(50,38,26,.5)'; g.beginPath(); g.ellipse(PX + r * 0.25, PY + r * 0.45, r * 0.95, r * 0.42, 0, 0, TAU); g.fill();
+      g.fillStyle = CO[p[3]]; g.beginPath(); g.ellipse(PX, PY, r, r * 0.62, 0, 0, TAU); g.fill();
+      if (r > 1.6) { g.strokeStyle = 'rgba(60,45,30,.55)'; g.lineWidth = Math.max(0.5, r * 0.18); g.stroke(); }
     }
-    void cx;
   },
   hit: function (s) {
     if (P.state !== 'ride' || P.air) return;
     if (Math.abs(P.y - s.y) > s.l / 2 || Math.abs(P.x - (cxAt(P.y) + s.u)) > s.w / 2 + 4) return;
-    if (!L.qobAvG) { L.qobAvG = true; avisar('¡Piedrecitas! Si vas muy rápido, botas', '🪨'); }
-    var rap = P.speed > QOB.grava.v * MAXV;
-    if (QOB.hz <= 0 && rap) { QOB.vz = 46 + (P.speed - QOB.grava.v * MAXV) * 0.5; QOB.hz = 0.01; P.wob = Math.max(P.wob || 0, 0.32); P.speed *= 0.985; SFX.thud(); if (Math.random() < 0.3) dust(P.x, P.y - 4, 2, '190,175,150'); if (!s.dijo) { s.dijo = true; pop(pickM(['¡Bote!', '¡Ay, ay, ay!', '¡Brrr!']), P.x, P.y + 30, '#ffffff', 0.9); } }
-    else if (!rap && Math.random() < 0.08) shake(0.03);
+    if (!L.qobAvG) { L.qobAvG = true; avisar('¡Piedrecitas! Si vas muy rápido, botas y frenas', '🪨'); }
+    var rap = P.speed > QOB.grava.v * MAXV, dt = STEP;
+    if (rap) {                                                             // rápido: botas una y otra vez, frenas y la moto baila
+      P.speed = Math.max(QOB.grava.v * MAXV * 0.92, P.speed - 150 * dt); P.wob = Math.max(P.wob || 0, 0.45);
+      if (QOB.hz <= 0) { QOB.vz = 72 + (P.speed - QOB.grava.v * MAXV) * 0.6; QOB.hz = 0.01; shake(0.1); SFX.thud(); dust(P.x + rr(-6, 6), P.y - 4, 3, '200,185,160'); if (!s.dijo) { s.dijo = true; pop(pickM(['¡Bote!', '¡Ay, ay, ay!', '¡Brrr!']), P.x, P.y + 30, '#ffffff', 0.9); } }
+    } else {                                                               // despacio: traqueteo y algo de freno
+      P.speed = Math.max(0, P.speed - 28 * dt); if (Math.random() < 0.12) { shake(0.04); if (Math.random() < 0.3) dust(P.x + rr(-5, 5), P.y - 4, 1, '200,185,160'); }
+      if (QOB.hz <= 0 && Math.random() < dt * 4) { QOB.vz = 24; QOB.hz = 0.01; }
+    }
   }
 };
 /* ---------- los troncos ---------- */
@@ -111295,11 +111300,166 @@ rivChoques = function (dt) {
 
 (function () {
   var N = {
-    '¡Piedrecitas! Si vas muy rápido, botas': ['Loose gravel! Go too fast and you bounce', 'Kerikil! Kalau terlalu cepat, kamu terpental'],
+    '¡Piedrecitas! Si vas muy rápido, botas y frenas': ['Loose gravel! Go too fast and you bounce and slow down', 'Kerikil! Kalau terlalu cepat, kamu terpental dan melambat'],
     '¡Bote!': ['Bump!', 'Dug!'], '¡Ay, ay, ay!': ['Ow, ow, ow!', 'Aduh, aduh!'], '¡Brrr!': ['Brrr!', 'Brrr!'],
     '¡TOC!': ['THUNK!', 'TOK!'], '¡HOP!': ['HOP!', 'HOP!'],
     '¡Desprendimiento! Ojo con las piedras que caen': ['Rockfall! Watch out for falling rocks', 'Longsor! Awas batu jatuh'],
     '¡CATAPUM!': ['KABOOM!', 'GEDEBUK!'], '¡Pum!': ['Bump!', 'Buk!'], '¡Roca!': ['Rock!', 'Batu!'], '¡Ay, la piedra!': ['Ouch, the rock!', 'Aduh, batunya!']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza juegos/quad/654_quad_agua.js*/
+/* ================================================================
+   V231 · EL QUAD: EL AGUA QUE FRENA, LAS PIEDRAS DEL RÍO MÁS ANCHAS
+   Y LA ESQUINA DE LA ÚLTIMA CURVA, DESPEJADA
+   Jose Javier, con la V230: «la esquina de la última curva sigue muy
+   densa y no se ve … quiero cascada y agua que haga que vaya más
+   despacio, no solo caerse, y algo más anchas las piedras del río».
+   - EL VADO: las piedras, más anchas (y de través al camino). Si te
+     sales de ellas caes al agua poco profunda: vas muy despacio,
+     chapoteando (QAG.vado.v), y la moto baila; solo más allá
+     (QVD.cae) está lo hondo: ¡PLOF!, un casco. El camino del vado es
+     algo más ancho (QVD.hw) para que quepa esa agua.
+   - LOS ARROYOS (QAG.arroyos): dos riachuelos cruzan el camino de
+     lado a lado (orillas de barro, el agua, la espuma que corre);
+     al cruzarlos frenas (QAG.arroyo.v), salpicas y «¡CHOF!». A los
+     rivales también les frenan.
+   - EL CHARCO DE CADA CASCADA del acantilado también frena un poco.
+   - LA ÚLTIMA CURVA (y todas las cerradas): por dentro de cada una,
+     fuera los árboles que tapaban el camino de después (qagDespeja).
+   QAG.vivo = false: nada de esto (como la V230).
+   ================================================================ */
+var QAG = { vivo: true, vado: { v: 48, hw: 18, sobre: 10, cae: 17 }, arroyo: { v: 70, n: 2, l: 36, rv: 95, k: 10 }, charco: { v: 110, k: 8 }, despeja: { y0: -150, y1: 700, r: 100 }, piedra: { u: 4.4, v: 7.4 } };
+function qagSi() { return QAG.vivo && G.mode === 'level' && L && L.D && L.D.quad; }
+if (QAG.vivo && typeof QVD !== 'undefined') { QVD.hw = QAG.vado.hw; QVD.cae = QAG.vado.cae; QVD.sobre = QAG.vado.sobre; }
+
+/* ---------- montar: las piedras más anchas, los arroyos y las curvas despejadas ---------- */
+var buildLevel230a = buildLevel;
+buildLevel = function (li) {
+  var r = buildLevel230a.apply(this, arguments);
+  if (!QAG.vivo || !L || !L.D || !L.D.quad) return r;
+  var rnd = mulberry(L.D.seed + 6161);
+  if (typeof QVD !== 'undefined') L.deco.ground.forEach(function (d) { if (d.s === QVD.sPiedra) { d.a = (rnd() - 0.5) * 0.5; d.sc = 1.1 + rnd() * 0.2; } });   // las piedras, de través y un poco mayores
+  qagArroyos(rnd); qagDespeja();
+  L.decal.sort(byY); L.stat.sort(byY); L.deco.ground.sort(byY); L.deco.top.sort(byY);
+  return r;
+};
+function qagLibre(y, m) {                                                  // ¿sin nada más en ese trozo de camino?
+  if (typeof qobEn === 'function' && qobEn(y, m)) return false;
+  if ((L.qsnAng || []).some(function (A) { return y > A.y0 - 70 && y < A.y1 + 70; })) return false;
+  if ((L.giros || []).some(function (gr) { return Math.abs(gr.y - y) < m + 120; })) return false;
+  if (L.stat.some(function (s) { return ((s.t === 'qtronco' || s.t === 'qgrava') && Math.abs(s.y - y) < m) || ((s.t === 'barro' || s.t === 'raiz') && Math.abs(s.y - y) < 30); })) return false;
+  if ((L.qcs || []).some(function (C) { return Math.abs(C.y - y) < m; })) return false;
+  return true;
+}
+function qagArroyos(rnd) {
+  L.qag = { arroyos: [] };
+  var S2 = L.secs.filter(function (S) { return S.s.th === 'selva' && S.y0 >= 500 && !S.s.g.some(function (g) { return g[0] === 'meta' || g[0] === 'vado' || g[0] === 'cueva'; }); }), n = 0, k, t;
+  for (k = 0; k < S2.length && n < QAG.arroyo.n; k++) {
+    var S = S2[k]; if (n && S.y0 - L.qag.arroyos[n - 1].y < 900) continue;   // (separados)
+    for (t = 0; t < 30; t++) {
+      var y = lerp(S.y0 + 120, S.y1 - 120, rnd());
+      if (!qagLibre(y, 110) || Math.abs(slopeAt(y)) > 0.2 || Math.abs(slopeAt(y + 40) - slopeAt(y - 40)) > 0.2) continue;   // (en un trozo recto: la banda de agua va de lado a lado, no a lo largo)
+      L.qag.arroyos.push({ y: y, l: QAG.arroyo.l, sd: rnd() * 7 }); n++; break;
+    }
+  }
+  L.qag.arroyos.forEach(function (A) {                                     // en el agua no hay flores ni nada en el suelo; en las orillas, piedras y helechos
+    var a = A.y - A.l / 2 - 4, b = A.y + A.l / 2 + 4;
+    L.decal = L.decal.filter(function (d) { return d.y < a || d.y > b; });
+    L.stat = L.stat.filter(function (s) { return s.y < a - 6 || s.y > b + 6; });
+    L.deco.ground = L.deco.ground.filter(function (d) { var u = Math.abs(d.x - cxAt(d.y)), e = hwAt(d.y) + GUT; return !(d.y > a - 4 && d.y < b + 4 && u < e + 90) && !(d.y > a - 40 && d.y < b + 40 && u < e + 70 && typeof qobEsMata === 'function' && qobEsMata(d.s)); });   // (en el agua nada; en las orillas, solo lo que se pone ahora)
+    for (var s = -1; s <= 1; s += 2) for (var q = 0; q < 2; q++) {           // (una cosa por orilla y lado: sin amontonar)
+      var yy = (q ? b + 10 : a - 10) + (rnd() - 0.5) * 4, e = hwAt(yy) + GUT;
+      L.deco.ground.push({ s: rnd() < 0.6 ? rp94(SP.rock, rnd) : ESN.s.helecho, y: yy, x: cxAt(yy) + s * (e + 4 + rnd() * 10), a: rnd() * TAU, sc: 1 + rnd() * 0.5 });
+    }
+  });
+}
+function qagDespeja() {                                                    // en cada curva cerrada, fuera lo alto que queda a menos de QAG.despeja.r del camino (en las horquillas, un árbol «lejos» de un trozo del camino está encima del siguiente)
+  var n = 0;
+  (L.giros || []).forEach(function (gr) {
+    var filtra = function (d) {
+      if (!d.s || d.x == null || d.y < gr.y + QAG.despeja.y0 || d.y > gr.y + QAG.despeja.y1 || d.y > L.finishY - 60) return true;
+      var alto = d.s.esc === 'arbol' || d.s.esc === 'palma' || d.s === ESN.s.selva || d.s === ESN.s.banyan || (d.s.h || 0) > 40;
+      if (alto && enCalzada(d.x, d.y, QAG.despeja.r)) { n++; return false; }
+      return true;
+    };
+    L.deco.top = L.deco.top.filter(filtra); L.deco.ground = L.deco.ground.filter(filtra);
+  });
+  L.qagQuita = n;
+}
+
+/* ---------- las piedras del río, más anchas ---------- */
+if (typeof QVD !== 'undefined') ESN.fn.qvdPiedra = function (g, d, zg, fa) {
+  var dd = proj(d.x, d.y, zg); if (dd < 12 || PX < -120 || PX > V.w + 120) return;
+  scr(g);
+  var k = d.sc || 1, t = G.t + d.y * 0.1, col = ['#8e897d', '#9a948a', '#837e72'][d.v || 0], U = QAG.piedra.u, W = QAG.piedra.v;
+  k3Abre(d.x, d.y, zg - 0.6, d.a || 0, 0, 0, k);
+  k3Fn(k3(0, 0, 0)[3] + 3, function (c) {                                   // la espuma alrededor, que se mueve
+    var p = k3(0, 0, 0.2), s = p[2]; c.globalAlpha = 0.55 * fa; c.fillStyle = '#e8fbff';
+    c.beginPath(); c.ellipse(p[0] + Math.sin(t * 3) * s, p[1], (W + 3.2 + Math.sin(t * 2.4) * 0.8) * s, (U + 1.2) * s, 0, 0, TAU); c.fill(); c.globalAlpha = 1;
+  });
+  k3Masa([k3(-U, -W, 1.2), k3(-U * 0.9, W, 1.2), k3(U * 0.95, -W * 0.95, 1.2), k3(U, W * 0.9, 1.2), k3(0, -W * 0.5, 2.3), k3(0, W * 0.5, 2.3)], [2.3, 2.3, 2.3, 2.3, 2.5, 2.5], col, { borde: 0.8, luz: 'rgba(255,255,255,.35)' });
+  k3Masa([k3(-1.8, -2.2, 3.3), k3(1.6, 2.4, 3.3)], 0.95, 'rgba(90,120,70,.6)', { borde: 0, pr: -0.5 });   // un poco de musgo encima
+  k3Pinta(g);
+};
+
+/* ---------- los arroyos: el agua, trozo a trozo con el suelo ---------- */
+var qslTierra230a = qslTierra;
+qslTierra = function (g, i, hi, hj) {
+  qslTierra230a(g, i, hi, hj);
+  if (!QAG.vivo || !L.qag || !L.qag.arroyos.length) return;
+  var n0 = QNIV; QNIV = 6;
+  L.qag.arroyos.forEach(function (A) {
+    var a = A.y - A.l / 2, b = A.y + A.l / 2, ya = Math.max(BY[i], a - 5), yb = Math.min(BY[i + 1], b + 5); if (yb <= ya) return;
+    var W = Math.max(hi, hj) + GUT + 60, L0 = -W - 160, R0 = W + 160;
+    function trozo(p, q, o0, o1, dz, col) { var y0 = Math.max(ya, p), y1 = Math.min(yb, q); if (y1 > y0) qvdQuad(g, y0, y1, o0, o1, dz, col); }
+    trozo(a - 5, a + 1.5, L0, R0, 0.05, '#7a6448'); trozo(b - 1.5, b + 5, L0, R0, 0.05, '#7a6448');   // las orillas de barro
+    trozo(a + 1, b - 1, L0, R0, -0.3, '#5aa6b4');                             // el agua
+    trozo(a + 1, a + 6, L0, R0, -0.25, '#7cc2cc'); trozo(b - 6, b - 1, L0, R0, -0.25, '#7cc2cc');   // lo poco hondo, junto a las orillas
+    trozo(a + 10, b - 10, L0, R0, -0.28, '#4a96a6');
+    for (var k = 0; k < 10; k++) {                                         // la espuma, que corre
+      var yy = a + 5 + (k % 5) * ((A.l - 10) / 4), xx = R0 - ((G.t * (30 + (k % 3) * 8) + k * 131 + A.sd * 40) % (R0 - L0));
+      trozo(yy - 0.6, yy + 0.6, xx - 14, xx, -0.2, 'rgba(255,255,255,.55)');
+    }
+  });
+  QNIV = n0;
+};
+
+/* ---------- el agua frena ---------- */
+function qagFrena(v, dt, k) { if (P.speed > v) P.speed -= (P.speed - v) * expo(k || 3.2, dt); }
+var update230a = update;
+update = function (dt) {
+  update230a(dt);
+  if (!qagSi() || !(typeof QSL !== 'undefined' && QSL.on) || G.state !== 'play') return;
+  var i, A, R;
+  if (L.qag) for (i = 0; i < RIV.L.length; i++) {                           // los rivales, en los arroyos
+    R = RIV.L[i]; if (R.cae || R.fin != null) continue;
+    for (var k = 0; k < L.qag.arroyos.length; k++) { A = L.qag.arroyos[k]; if (Math.abs(R.y - A.y) < A.l / 2 && R.v > QAG.arroyo.rv) R.v = Math.max(QAG.arroyo.rv, R.v - 300 * dt); }
+  }
+  if (P.state !== 'ride' || P.z > 0.5) return;
+  var u = P.x - cxAt(P.y), agua = false;
+  if (L.qvd && typeof qvdEn === 'function' && qvdEn(P.y, 4) && Math.abs(u) > QAG.vado.sobre && Math.abs(u) <= QVD.cae) {   // el vado, fuera de las piedras: el agua poco profunda
+    qagFrena(QAG.vado.v, dt, 5); agua = true; P.wob = Math.max(P.wob || 0, 0.3);
+    if (!L.qagVado) { L.qagVado = true; pop('¡CHOF! ¡Al agua!', P.x, P.y + 30, '#e8fbff', 1); SFX.splash(); splash(P.x, P.y, 14); shake(0.15); }
+  }
+  if (L.qag) for (i = 0; i < L.qag.arroyos.length; i++) {
+    A = L.qag.arroyos[i];
+    if (Math.abs(P.y - A.y) > A.l / 2 + 1) continue;
+    if (!A.aviso && !L.qagAviso) { L.qagAviso = true; avisar('¡Un arroyo! Frena y os mojáis', '💦'); }
+    if (!A.dijo) { A.dijo = true; A.aviso = true; pop('¡CHOF!', P.x, P.y + 30, '#e8fbff', 1.1); SFX.splash(); splash(P.x, P.y, 16); shake(0.12); }
+    qagFrena(QAG.arroyo.v, dt, QAG.arroyo.k); agua = true; P.wob = Math.max(P.wob || 0, 0.2);
+  }
+  if (L.qcs) for (i = 0; i < L.qcs.length; i++) {                           // el charco de cada cascada
+    var C = L.qcs[i];
+    if (Math.abs(P.y - C.y) < 9 && Math.abs(u - C.u) < 12) { qagFrena(QAG.charco.v, dt, QAG.charco.k); agua = true; }
+  }
+  if (agua && P.speed > 15 && Math.random() < dt * (6 + P.speed * 0.05)) splash(P.x + rr(-9, 9), P.y - 4, 2);
+};
+
+(function () {
+  var N = {
+    '¡CHOF! ¡Al agua!': ['SPLOSH! Into the water!', 'BYUR! Nyemplung!'], '¡CHOF!': ['SPLOSH!', 'BYUR!'],
+    '¡Un arroyo! Frena y os mojáis': ['A stream! It slows you and you get wet', 'Sungai kecil! Memperlambat dan kalian basah']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
