@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V224</title>
+<title>Bali Rush Completo V225</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V224', FECHA = '21-10-2026';
+var VERSION = 'Completo V225', FECHA = '21-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -39635,7 +39635,8 @@ sliceGround = function (g, i, re) {
   if (acera && !inside) { bi = bj = ci = cj = 0; }                         // contra el bordillo, el asfalto llega entero
   var tono = carTono(ym), asf = shadeCol(br ? '#6f7074' : (CAR.asf[th] || '#606369'), tono);   // V154: el tono de cada trozo de asfalto, fundido con el siguiente (juegos/carreras/588)
   QNIV = 5;
-  if (tierra) {                                                            // en obras: tierra con trozos de asfalto viejo
+  if (L.D.quad) qslTierra(g, i, hi, hj);                                // V225: el camino de tierra del quad (juegos/quad/642)
+  else if (tierra) {                                                       // en obras: tierra con trozos de asfalto viejo
     band2(g, i, -hi - 2, hi + 2, -hj - 2, hj + 2, '#9d978c'); QNIV = 6;
     var pk = Math.floor(BY[i] / 55);
     if (hash(pk * 1.7) < 0.45) { var a0 = -hi * (0.2 + hash(pk * 2.3) * 0.6), a1 = a0 + hi * (0.6 + hash(pk * 3.1) * 0.7); band2(g, i, a0, Math.min(a1, hi - 3), a0 * hj / hi, Math.min(a1, hi - 3) * hj / hi, '#6f6c68'); }
@@ -46199,8 +46200,8 @@ function espDibuja(g) {
     if (raya) { g.strokeStyle = raya; g.lineWidth = 1; g.stroke(); }
   }
   franja(GUT + 3, pueblo ? '#a99a7c' : '#b4a37d', null);
-  franja(0, enTierra(py - 40) ? '#9d978c' : '#606369', 'rgba(255,255,255,.28)');
-  if (!pueblo && !enTierra(py - 40)) {                       // la raya del centro, a trozos (como en la carretera)
+  franja(0, L.D.quad ? '#9a7148' : enTierra(py - 40) ? '#9d978c' : '#606369', 'rgba(255,255,255,.28)');   // V225: el camino de tierra del quad
+  if (!pueblo && !enTierra(py - 40) && !L.D.quad) {                       // la raya del centro, a trozos (como en la carretera)
     g.strokeStyle = 'rgba(255,255,255,.75)';
     for (i = Math.floor((py - 8) / 44); i * 44 > py - ESP.lejos && i >= 0; i--) {
       var ya = i * 44, yb = ya + 16, xa = cxAt(ya) - px, xb = cxAt(yb) - px, ba = -(xa * sy + (ya - py) * cy), bb = -(xb * sy + (yb - py) * cy);
@@ -99736,10 +99737,10 @@ function caminoDetras(g) {                                                 // la
     if (onBridge(ym)) { nada++; continue; }
     var acera = T.gut === 'hormigon', vill = th === 'pueblo' || th === 'templo' || th === 'fiesta', gc = CCE.cuneta[T.gut] || CCE.cunetaOtra;
     for (s = -1; s <= 1; s += 2) { cceTrozo(c0, c1, y0, y1, z0, z1, s * h0, s * (h0 + GUT), s * h1, s * (h1 + GUT), acera ? 2.4 : 0.05); vis = cceQuad(g, gc) || vis; }
-    var asf = shadeCol(CAR.asf[th] || '#606369', carTono(ym));
+    var asf = L.D.quad ? '#9a7148' : shadeCol(CAR.asf[th] || '#606369', carTono(ym));   // V225: el camino de tierra del quad
     if (!acera) for (s = -1; s <= 1; s += 2) { cceTrozo(c0, c1, y0, y1, z0, z1, s * (h0 - 5), s * (h0 + 0.3), s * (h1 - 5), s * (h1 + 0.3), 0.08); vis = cceQuad(g, vill ? '#a99a7c' : '#b4a37d') || vis; }
     cceTrozo(c0, c1, y0, y1, z0, z1, -h0 + (acera ? 0 : 3), h0 - (acera ? 0 : 3), -h1 + (acera ? 0 : 3), h1 - (acera ? 0 : 3), 0.1); vis = cceQuad(g, asf) || vis;
-    if (Math.min(h0, h1) >= 30) {
+    if (Math.min(h0, h1) >= 30 && !L.D.quad) {
       if (!acera) for (s = -1; s <= 1; s += 2) { if (hash(Math.floor(ym / 64) * 1.9 + s * 0.37) < 0.22) continue; cceTrozo(c0, c1, y0, y1, z0, z1, s * (h0 - 5.4), s * (h0 - 4), s * (h1 - 5.4), s * (h1 - 4), 0.12); cceQuad(g, CAR.raya); }
       if (Math.min(h0, h1) >= 38) {
         var curva = Math.abs(slopeAt(ym + 36) - slopeAt(ym - 36)) > 0.085;
@@ -109396,6 +109397,412 @@ window.__TCL = {
   fuerza: function () { var T = TIRO; return T ? { fz: T.fz, cansado: !!T.cansado, empuja: !!T.empuja } : null; },
   colores: function () { var T = TIRO; return T && T.MU ? T.MU.map(function (r) { return r.nom + ' ' + r.col; }) : null; }
 };
+/*#pieza juegos/quad/640_quad_modelo.js*/
+/* ================================================================
+   V225 · EL QUAD, COMO LAS MOTOS DEL TALLER
+   Jose Javier (21-10-2026): «Cambio absoluto la parte del quad, al
+   igual que hemos hecho otras motos, haremos uno extra el quad, pero
+   tendremos la misma dinámica que utilizamos en las carreras y taxis,
+   solo que haremos un escenario de selva … el que actual es de una
+   calidad pésima, hay que rehacerlo». Preguntado: el quad, solo en su
+   carrera de selva (no en el taller); la selva, la del quad de ahora.
+   Es un perfil más de 574 (como los de 585): su cuerpo, y dónde van
+   el asiento, el manillar, los pies y quien va de paquete. Mismo kit
+   3D y misma tinta que las motos. No está en la lista del taller
+   (FMOD): lo lleva quien pinta con look.quad (la carrera del quad).
+   Cuatro ruedas gordas de tacos (las de delante giran con el
+   manillar), guardabarros redondos, el morro con dos faros y la
+   defensa, portabultos delante, asiento largo para dos, estribos
+   anchos, pilotos y matrícula detrás. El color, el de la moto.
+   ================================================================ */
+function mdlCuerpoQuad(C) {
+  var B = C.B, Dm = C.Dm, colM = C.colM, colM2 = C.colM2, colM3 = C.colM3, gi = C.gi, UP = C.UP, MW = C.MW, d;
+  var negro = '#3a3036', negro2 = '#2b2530', llanta = '#d9d4c8';
+  /* ---- las ruedas: detrás, más gordas; delante, giran con el manillar ---- */
+  for (d = -1; d <= 1; d += 2) {
+    mdlRueda(C, [-12.6, d * 9.8, 6.6], 6.6, 5.4, 0, { tacos: true, ll: 0.58, col: llanta }, d * C.gv < 0 ? -1 : 1.5);
+    mdlRueda(C, [13.4, d * 9.4, 6], 6, 4.6, gi, { tacos: true, ll: 0.58, col: llanta }, d * C.gv < 0 ? -1.5 : 1);
+  }
+  /* ---- el chasis por debajo, los ejes y los estribos ---- */
+  k3Masa([B(-14.6, -3.4, 8.6), B(-14.6, 3.4, 8.6), B(11.6, -3.2, 8.2), B(11.6, 3.2, 8.2)], 1.7, negro, { pr: 1, sombra: C.som });
+  for (d = -1; d <= 1; d += 2) {
+    k3Tubo(B(-12.6, d * 3, 8), k3(-12.6, d * 7.4, 6.6), 0.8, 0.8, '#5a5560', { borde: 0.7, pr: 1 });
+    k3Tubo(B(13, d * 3, 8.6), k3(13.4, d * 7.2, 6), 0.7, 0.7, '#5a5560', { borde: 0.7, pr: 1 });
+    k3Bloque([-5.6, 5.4, d < 0 ? -10.8 : 5, d < 0 ? -5 : 10.8, 8.4], [-5.6, 5.4, d < 0 ? -10.8 : 5, d < 0 ? -5 : 10.8, 9.6], negro2, { top: '#4a4048', borde: 0.8 });   // el estribo
+  }
+  /* ---- el motor y el escape ---- */
+  k3Masa([B(-6, -3.8, 10.6), B(-6, 3.8, 10.6), B(3, -3.6, 10.6), B(3, 3.6, 10.6), B(-2, 0, 15)], 1.6, '#8a8478', { pr: 0.6, sombra: C.som });
+  mdlEscape(C, [-4, 4.4, 10.4], [-19.4, 5.6, 13.4], 0.95);
+  /* ---- detrás: el cuerpo bajo el asiento y los dos guardabarros ---- */
+  k3Masa([B(-18.4, -4.6, 13.2), B(-18.4, 4.6, 13.2), B(-4, -4.8, 13.4), B(-4, 4.8, 13.4), B(-19.6, 0, 16.4), B(-5, 0, 17.2)], [2, 2, 2, 2, 1.6, 1.6], colM2, { pr: 0.8 });
+  for (d = -1; d <= 1; d += 2) k3Masa([B(-5.6, d * 9.8, 13.6), B(-9.4, d * 10, 15.8), B(-14.6, d * 10.1, 16), B(-19, d * 9.9, 14.6), B(-20.8, d * 9.6, 11.8)],
+    [2.6, 3.1, 3.2, 3, 2.3], colM, { pr: d * C.gv < 0 ? -0.4 : 0.6, deco: !C.lod ? null : (function (dd) { return function (c, s) {   // el canto blanco del guardabarros
+      if (dd * C.gv > -0.1) return; var a = B(-6, dd * 12.4, 14.4), m = B(-12.6, dd * 12.8, 17.2), b = B(-19.6, dd * 12.4, 13.6);
+      c.beginPath(); c.moveTo(a[0], a[1]); c.quadraticCurveTo(m[0], m[1], b[0], b[1]); c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = Math.max(0.7, 0.32 * s); c.stroke(); }; })(d) });
+  /* ---- el asiento largo, para dos ---- */
+  mdlAsiento(C, [B(-18.4, -3.4, 19.4), B(-18.4, 3.4, 19.4), B(-2.6, -3.8, 19.8), B(-2.6, 3.8, 19.8), B(0.6, 0, 19.4)], [2.1, 2.1, 2.3, 2.3, 2], '#2f2a33');
+  /* ---- el portabultos de atrás, los pilotos y la matrícula ---- */
+  for (d = -1; d <= 1; d += 2) k3Tubo(B(-19.6, d * 5.6, 18), B(-22.8, d * 5.6, 18.2), 0.5, 0.5, negro2, { borde: 0.7, pr: 0.5 });
+  k3Tubo(B(-22.8, -5.6, 18.2), B(-22.8, 5.6, 18.2), 0.5, 0.5, negro2, { borde: 0.7, pr: 0.5 });
+  if (C.atras) {
+    for (d = -1; d <= 1; d += 2) mdlLuz(C, [B(-21.2, d * 3.4, 15.4), B(-21.2, d * 6.2, 15.4), B(-20.9, d * 6.2, 13.8), B(-20.9, d * 3.4, 13.8)], C.o.frena ? '#ff2a1a' : '#e8453a', -1);
+    mdlMatricula(C, -21.3, 13.2, 5);
+  }
+  /* ---- delante: los guardabarros, el morro con los faros, la defensa y el portabultos ---- */
+  for (d = -1; d <= 1; d += 2) k3Masa([B(7, d * 9.4, 12.6), B(10.4, d * 9.6, 14.6), B(15.4, d * 9.6, 14.6), B(19.4, d * 9.4, 12.2), B(20.6, d * 9.2, 9.6)],
+    [2.4, 3, 3, 2.7, 2], colM, { pr: d * C.gv < 0 ? -0.6 : 0.4 });
+  k3Masa([B(6, -5, 15.2), B(6, 5, 15.2), B(17.6, -5.2, 13.4), B(17.6, 5.2, 13.4), B(19.6, 0, 12.2), B(9, 0, 18.2), B(15, 0, 16.4)], [2.4, 2.4, 2.2, 2.2, 2.2, 2, 2], colM, { pr: 0.2,
+    deco: !C.lod ? null : function (c, s) { var a = B(8, 0, 20.2), b = B(19.8, 0, 14.2); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.strokeStyle = colM3; c.lineWidth = Math.max(0.6, 0.28 * s); c.stroke(); } });
+  if (C.front) for (d = -1; d <= 1; d += 2) k3Bola(B(20.6, d * 3.6, 13.2), 1.45, '#fff6c8', { pr: -3, borde: 0.9, sombra: 0.6 });
+  for (d = -1; d <= 1; d += 2) k3Tubo(B(21.8, d * 6.4, 8.4), B(19.4, d * 6.4, 12.6), 0.55, 0.55, negro2, { borde: 0.7, pr: -0.4 });
+  k3Tubo(B(21.8, -6.4, 8.4), B(21.8, 6.4, 8.4), 0.6, 0.6, negro2, { borde: 0.7, pr: -0.4 });
+  for (d = -1; d <= 1; d += 2) k3Tubo(B(11.6, d * 6.2, 18), B(18.6, d * 6.2, 16.2), 0.45, 0.45, negro2, { borde: 0.7, pr: -0.2 });
+  for (var q = 0; q < 3; q++) { var uq = 12.4 + q * 2.8, wq = 17.8 - q * 0.62; k3Tubo(B(uq, -6.2, wq), B(uq, 6.2, wq), 0.4, 0.4, negro2, { borde: 0.6, pr: -0.2 }); }
+  /* ---- el depósito, la columna y el manillar ancho ---- */
+  k3Masa([B(1.4, -4, 19.6), B(1.4, 4, 19.6), B(7.6, -3.8, 19.2), B(7.6, 3.8, 19.2), B(4, 0, 22)], [1.8, 1.8, 1.6, 1.6, 1.6], colM, { pr: 0.3 });
+  k3Tubo(Dm(UP, 0, MW, 1), B(8.6, 0, 18.6), 0.7, 0.7, negro, { borde: 0.7 });
+  k3Masa([Dm(UP - 0.6, -2.6, MW + 0.4, 1), Dm(UP - 0.6, 2.6, MW + 0.4, 1), Dm(UP + 1.2, 0, MW + 0.6, 1)], 1.3, colM2, { pr: -0.4 });   // la tapa del manillar
+  mdlManillar(C, UP, MW, 14.8, negro, negro2);
+}
+var FM_QUAD = fmDef({ id: 'quad', nom: 'El quad', txt: 'Cuatro ruedas de tacos para la selva.', cuerpo: mdlCuerpoQuad,
+  UP: 11.2, MW: 27.2, gu: 9.6, gv: 13.8, rw: 1.4, codo: [4.8, 15, 31.2],
+  pie: [5.8, 8.6, 22.2, 2.4, 8.4, 11.8, 6.8, 8.6, 10.2], pieSaca: [5.8, 8.6, 22.2, 2.4, 8.4, 11.8, 6.8, 8.6, 10.2],
+  cesta: [0, 0], ofr: [0, 0], pas: [-11.6, 22], carga: 0 });
+var fmPerfil224 = fmPerfil;
+fmPerfil = function (LK) { return LK && LK.quad ? FM_QUAD : fmPerfil224(LK); };
+/*#pieza juegos/quad/642_quad_carrera.js*/
+/* ================================================================
+   V225 · EL QUAD, CON EL MOTOR DE LAS CARRERAS (parte 1)
+   Jose Javier (21-10-2026): «tendremos la misma dinámica que
+   utilizamos en las carreras y taxis, solo que haremos un escenario
+   de selva, estilo a lo que hicimos la otra vez, pero nos daría una
+   optimización con lo que hay ya hecho». Preguntado: la selva, la
+   del quad de ahora; el zoo y el paseo con Wayan, rehacerlos después.
+   Por dentro es una carrera de ofrendas más (la carretera, la cámara,
+   el manejo, el velocímetro, el espejo, los cinco rivales, las
+   flores, los cascos…) con su propio trazado: como la autoescuela,
+   se monta poniendo un momento QSL.D en el sitio de la carrera de
+   Sangeh (la del bosque: su luz de sombra y su templo del bosque a
+   la llegada) y no cuenta para ella (ni récords, ni historia, ni
+   niveles de las carreras). Lo que cambia:
+   - Tú y los cinco, en quad (640): tú con Wayan de paquete; cada
+     rival con un turista. El quad apenas se ladea.
+   - El camino es de tierra: dos rodadas, hierba en medio, charcos
+     de barro (frenan, salpican) y raíces que cruzan (botan).
+   - Su tarjeta, sus niveles de rivales (se abren ganando), su
+     premio y su récord. Ropa de siempre (no es una ceremonia).
+   Aún no (parte 2): el vado, la cornisa, el puente de bambú y la
+   cueva. El paseo con Wayan y el zoo siguen siendo los de antes.
+   QSL.vivo = false: el quad de la V224.
+   ================================================================ */
+var QSL = { vivo: true, on: false, pide: false, LI: 3, inclK: 0.16,
+  ritmo1: 0.9, ritmo12: 1,                                                // los rivales, en este camino: del 90 % de su ritmo de las carreras en el nivel 1 al 100 % en el 12 (medido con los pilotos de las pruebas)
+  premio: [0, 40, 25, 15, 8, 4, 0], premioNiv: 0.2,
+  barro: { v: 110, k: 0.985, rk: 0.988 },                                   // en el barro: por encima de v, cada paso se queda en k de lo que llevaba (los rivales, rk)
+  D: { n: 'Quad', t: 'La selva', dest: 'al warung', seed: 2511, tod: 'sombra', inv: 0, quad: true, secs: [
+    { len: 600, th: 'selva', curv: 0.08, hw: 50, g: [['carril']] },
+    { len: 1200, th: 'selva', curv: 0.32, hill: 10, hw: 46, g: [['barro', 1], ['raices', 0.6], ['gallos', 0.35]] },
+    { len: 1000, th: 'selva', curv: 0.46, hill: 6, hw: 46, g: [['monos', 0.35, 0.3], ['barro', 0.5]] },             // horquillas
+    { len: 1100, th: 'selva', curv: 0.25, hill: 16, hw: 46, g: [['rasante', 2], ['raices', 0.6], ['barro', 0.4]] },   // rampas
+    { len: 1100, th: 'selva', curv: 0.35, hill: 8, hw: 44, g: [['barro', 1], ['vacas', 1], ['monos', 0.3, 0.3], ['raices', 0.4]] },
+    { len: 1000, th: 'selva', curv: 0.3, hill: 14, hw: 46, g: [['rasante', 1], ['gallos', 0.5], ['heal'], ['barro', 0.5]] },
+    { len: 1000, th: 'selva', curv: 0.48, hill: 6, hw: 46, g: [['barro', 1], ['raices', 0.6], ['monos', 0.4, 0.3]] },   // horquillas
+    { len: 450, th: 'selva', curv: 0, hw: 50, g: [['meta']] }] },
+  fin: null, spr: null };
+function qslHay() { return QSL.vivo; }
+function qslQuad() { return !!(QSL.on && G.mode === 'level' && L && L.D && L.D.quad); }
+function qslTope() { return clamp(SAVE.qslMax || 1, 1, RIV.nivMax); }
+function qslNivel() { return clamp(SAVE.qslNv || 1, 1, esDev() ? RIV.nivMax : qslTope()); }
+function qslPremio(pos, niv) { return Math.round((QSL.premio[pos] || 0) * (1 + QSL.premioNiv * ((niv || 1) - 1))); }
+
+/* ---------- el barro y las raíces ---------- */
+GEN.barro = function (S, d) {
+  var n = Math.round((S.y1 - S.y0) / 1000 * 3.2 * d);
+  for (var i = 0; i < n; i++) tryPlace(S, function (y, hw) {
+    return ['barro', (L.rnd() * 2 - 1) * (hw - 16), { r: 15 + L.rnd() * 9, v: Math.floor(L.rnd() * 3), a: L.rnd() * TAU }, 80, 40];
+  });
+};
+GEN.raices = function (S, d) {
+  var n = Math.round((S.y1 - S.y0) / 1000 * 4 * d);
+  for (var i = 0; i < n; i++) tryPlace(S, function (y, hw) {
+    var side = L.rnd() < 0.5 ? -1 : 1, lg = hw * (0.55 + L.rnd() * 0.35);
+    return ['raiz', side * (hw - lg / 2), { r: lg / 2, lado: side, v: Math.floor(L.rnd() * 2) }, 90, 26];
+  });
+};
+function qslSprites() {
+  if (QSL.spr) return QSL.spr;
+  var S0 = SR; SR = 4;
+  var barro = [0, 1, 2].map(function (v) {
+    return mk(64, 44, function (g) {
+      var r = mulberry(31 + v * 7), i, P = [], n = 14;
+      for (i = 0; i < n; i++) { var a = i / n * TAU, k = 0.78 + r() * 0.32; P.push(Math.cos(a) * 29 * k, Math.sin(a) * 19 * k); }
+      g.beginPath(); g.moveTo(P[0], P[1]); for (i = 2; i < P.length; i += 2) g.lineTo(P[i], P[i + 1]); g.closePath();
+      g.fillStyle = '#5e3f26'; g.fill(); g.lineWidth = 1.6; g.strokeStyle = 'rgba(52,32,18,.7)'; g.stroke();
+      g.save(); g.clip();
+      g.fillStyle = '#4a311d'; g.beginPath(); g.ellipse(-3 + r() * 6, 2, 19, 11, 0.2, 0, TAU); g.fill();                    // lo hondo, con agua
+      g.fillStyle = 'rgba(122,96,70,.85)'; g.beginPath(); g.ellipse(-2 + r() * 4, 1, 14, 7.5, 0.2, 0, TAU); g.fill();
+      g.fillStyle = 'rgba(214,226,232,.55)'; g.beginPath(); g.ellipse(-6, -1.5, 7, 2, 0.15, 0, TAU); g.fill();              // el brillo del agua
+      g.strokeStyle = 'rgba(40,24,12,.55)'; g.lineWidth = 3.2;                                                              // las rodadas que la cruzan
+      for (i = -1; i <= 1; i += 2) { g.beginPath(); g.moveTo(i * 11 - 2, -24); g.bezierCurveTo(i * 12, -8, i * 10, 8, i * 11 + 2, 24); g.stroke(); }
+      g.restore();
+      for (i = 0; i < 7; i++) { g.fillStyle = i % 2 ? '#6b4a2c' : '#4f341f'; g.beginPath(); g.arc((r() - 0.5) * 70, (r() - 0.5) * 44, 1.2 + r() * 2, 0, TAU); g.fill(); }   // las salpicaduras de alrededor
+    });
+  });
+  var raiz = [0, 1].map(function (v) {
+    return mk(92, 26, function (g) {
+      var r = mulberry(91 + v * 13), i;
+      function rama(x0, y0, x1, y1, w) {
+        var mx = (x0 + x1) / 2 + (r() - 0.5) * 10, my = (y0 + y1) / 2 + (r() - 0.5) * 8;
+        g.lineCap = 'round';
+        g.strokeStyle = '#2b1a10'; g.lineWidth = w + 2.2; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(mx, my, x1, y1); g.stroke();
+        g.strokeStyle = '#7a5434'; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(mx, my, x1, y1); g.stroke();
+        g.strokeStyle = 'rgba(214,170,120,.55)'; g.lineWidth = w * 0.3; g.beginPath(); g.moveTo(x0, y0 - w * 0.25); g.quadraticCurveTo(mx, my - w * 0.25, x1, y1 - w * 0.25); g.stroke();
+      }
+      rama(-46, -3, 44, 4 - v * 6, 5.2);
+      rama(-40, 6, 10, -8, 3.4);
+      rama(-6, 2, 40, 10, 3);
+      for (i = 0; i < 3; i++) { var x = -30 + i * 26 + r() * 8; g.fillStyle = '#5a3a22'; g.beginPath(); g.ellipse(x, (r() - 0.5) * 6, 3.2, 2.2, 0, 0, TAU); g.fill(); }   // los nudos
+    });
+  });
+  SR = S0;
+  return (QSL.spr = { barro: barro, raiz: raiz });
+}
+ST.barro = {
+  flat: function (g, s) { dS(g, qslSprites().barro[s.v || 0], s.x, s.y, s.a || 0, s.r / 24); },
+  hit: function (s) {
+    if (P.state !== 'ride' || P.z > 0 || !pHit(s.x, s.y, s.r * 0.75)) return;
+    if (P.speed > QSL.barro.v) P.speed *= QSL.barro.k;
+    if (Math.random() < 0.5) part({ k: 'dust', x: P.x + rr(-6, 6), y: P.y - 6, vx: rr(-30, 30), vy: rr(-30, -5), t: 0, m: rr(0.4, 0.8), s: rr(2, 3.6), c: '96,66,40' });
+    if (!s.ya) { s.ya = true; SFX.splash(); shake(0.12); P.wob = Math.max(P.wob || 0, 0.18); if (G.t - (QSL.popB || -9) > 3) { QSL.popB = G.t; pop(pickM(['¡Barro!', '¡CHOF!', '¡Pringado!']), P.x, P.y + 30, '#e8c49a', 1); } }
+  }
+};
+ST.raiz = {
+  flat: function (g, s) { dS(g, qslSprites().raiz[s.v || 0], s.x, s.y, Math.atan(slopeAt(s.y)), s.r / 40); },
+  hit: function (s) {
+    if (s.cool || P.state !== 'ride' || P.z > 0) return;
+    var dx = P.x - s.x; if (Math.abs(dx) > s.r + 4 || Math.abs(P.y - s.y) > 6) return;
+    s.cool = true; jolt(1 - 0.1 * lvMoto().bache, pickM(['¡TOC!', '¡Raíz!', '¡PATAPLÁN!'])); hintDone('steer');
+  }
+};
+var rivChoques224q = rivChoques;
+rivChoques = function (dt) {                                                 // los rivales también: el barro los frena y las raíces los botan
+  rivChoques224q(dt);
+  if (!qslQuad()) return;
+  var A = RIV.L, i, j, R, s;
+  for (i = 0; i < A.length; i++) {
+    R = A[i]; if (R.cae || R.fin != null) continue;
+    for (j = lowerBound(L.stat, R.y - 30); j < L.stat.length && L.stat[j].y < R.y + 30; j++) {
+      s = L.stat[j];
+      if (s.t === 'barro') { var ax = R.x - s.x, ay = R.y - s.y, rr2 = s.r * 0.75; if (ax * ax + ay * ay < rr2 * rr2 && R.v > QSL.barro.v) R.v *= QSL.barro.rk; }
+      else if (s.t === 'raiz' && R.bacheT <= 0 && Math.abs(R.x - s.x) < s.r && Math.abs(R.y - s.y) < 6) { R.bacheT = 0.7; R.bote = 0.24; R.v *= 0.9; }
+    }
+  }
+};
+
+/* ---------- el camino de tierra (lo pide 510: dos rodadas, hierba en medio y manchas de humedad) ---------- */
+function qslTierra(g, i, hi, hj) {
+  var BYm = (BY[i] + BY[i + 1]) / 2, pk = Math.floor(BY[i] / 48);
+  band2(g, i, -hi - 2, hi + 2, -hj - 2, hj + 2, '#9a7148'); QNIV = 6;
+  if (hash(pk * 1.7) < 0.5) { var a0 = -hi * (0.1 + hash(pk * 2.3) * 0.7), a1 = a0 + hi * (0.35 + hash(pk * 3.1) * 0.6); band2(g, i, a0, Math.min(a1, hi - 3), a0 * hj / hi, Math.min(a1, hi - 3) * hj / hi, 'rgba(110,78,48,.55)'); }
+  for (var t = 0; t < 2; t++) { var f = [-0.52, 0.3][t]; band2(g, i, f * hi, (f + 0.22) * hi, f * hj, (f + 0.22) * hj, 'rgba(92,62,36,.5)'); }   // las rodadas
+  var w = 0.07 + 0.03 * Math.sin(BYm * 0.02);
+  band2(g, i, -w * hi, w * hi, -w * hj, w * hj, 'rgba(96,128,58,.7)');                                       // la hierba del medio
+  band2(g, i, -hi - 2, -hi * 0.86, -hj - 2, -hj * 0.86, 'rgba(96,128,58,.45)'); band2(g, i, hi * 0.86, hi + 2, hj * 0.86, hj + 2, 'rgba(96,128,58,.45)');   // y la de los bordes
+}
+
+/* ---------- empezar: la carrera de Sangeh con otro trazado ---------- */
+function qslArranca(directo) {
+  G.enMenu = false; showPad(TOUCH); G.started = !!directo; G.zoo = false;
+  QSL.pide = true; startLevel(QSL.LI);
+  if (!directo) qslReady();
+}
+var startLevel224q = startLevel;
+startLevel = function (li) {
+  QSL.on = QSL.vivo && !!QSL.pide && li === QSL.LI; QSL.pide = false; QSL.fin = null;
+  if (!QSL.on) return startLevel224q.apply(this, arguments);
+  var D0 = LEVELS[li], nf = RIV.nivFijo, r;
+  LEVELS[li] = QSL.D; RIV.nivFijo = qslNivel();
+  try { r = startLevel224q.call(this, li); } finally { LEVELS[li] = D0; RIV.nivFijo = nf; }
+  ropaNormal();                                                              // no es una ceremonia: la ropa de siempre
+  var kr = lerp(QSL.ritmo1, QSL.ritmo12, (RIV.niv - 1) / (RIV.nivMax - 1));
+  RIV.L.forEach(function (R, k) {                                            // los cinco, en quad y con su ropa de calle y casco
+    R.rec *= kr; R.cur *= kr;
+    R.look = { moto: R.look.moto, tubo: 0, cabeza: 1, cinta: 0, camisa: (k + 1) % 5, quad: 1, qslR: k };
+    R.cart = {}; var cm = COL_CAMISA[R.look.camisa] || '#2f86d6';
+    R.fig = { piel: R.piel, pelo: '#1d1512', hombre: true, pies: '#3a2a1c', torso: cm, manga: cm, muslo: '#3d4654', casco: { col: '#f4f1ea', tipo: 'jet' } };   // por los aires, también de calle
+  });
+  return r;
+};
+var buildLevel224q = buildLevel;
+buildLevel = function (li) {
+  var r = buildLevel224q.apply(this, arguments);
+  if (L && L.D && L.D.quad) {
+    L.obras = [];                                                            // la tierra la pinta qslTierra (510); el quad agarra en ella como la moto en el asfalto: sin el aviso de obras, la polvareda ni el traqueteo
+    L.decal = L.decal.filter(function (d) { return d.s === SP.hojasD; });    // nada de grietas ni parches de asfalto
+    L.dyn = L.dyn.filter(function (e) { return e.t !== 'cobra'; });        // en la selva del quad no hay cobras (las pone la selva de las carreras): monos, gallinas y vacas
+    L.deco.ground = L.deco.ground.filter(function (d) { return d.s !== BB.cono && d.s !== BB.grava; });
+  }
+  return r;
+};
+var decoObras224q = decoObras;
+decoObras = function () { if (L && L.D && L.D.quad) return; decoObras224q(); };   // sin conos ni cartel de obras
+
+var update224q = update;
+update = function (dt) {                                                       // al ir lanzado por la tierra húmeda, algo de barro detrás de cada quad
+  update224q(dt);
+  if (!qslQuad() || G.state !== 'play') return;
+  function salpica(x, y, v, th) { if (v > 110 && Math.random() < dt * (v - 100) * 0.05) part({ k: 'dust', x: x - Math.sin(th) * 14 + rr(-7, 7), y: y - Math.cos(th) * 14, vx: rr(-14, 14), vy: rr(-24, -4), t: 0, m: rr(0.35, 0.6), s: rr(1.4, 2.4), c: '112,80,50' }); }
+  if (P.state === 'ride' && P.z <= 0) salpica(P.x, P.y, P.speed, Math.atan(slopeAt(P.y)) + (P.a || 0));
+  for (var i = 0; i < RIV.L.length; i++) { var R = RIV.L[i]; if (!R.cae && Math.abs(R.y - P.y) < 600) salpica(R.x, R.y, R.v, R.th); }
+};
+
+/* ---------- cómo se pintan: los quads ---------- */
+function qslTurista(n) { return typeof qaTuristaQ === 'function' ? qaTuristaQ(n) : null; }
+var motoGuiri3D224q = motoGuiri3D;
+motoGuiri3D = function (g, x, y, z, ang, o) {
+  if (o && QSL.on && G.mode === 'level') {
+    if (!o.look) { var LK = lookGet(), q = {}, k; for (k in LK) q[k] = LK[k]; q.quad = 1; o.look = q; if (!o.sinGuiri && typeof qaWayanQ === 'function') o.pasajero = qaWayanQ(); }
+    if (o.look.quad) {
+      o.cesta = 'no'; o.ofrenda = null; o.sobre = null;
+      if (!o.sinGuiri) o.incl = (o.incl || 0) * QSL.inclK;
+      if (o.look.qslR != null) { o.vestir = null; if (!o.sinGuiri) o.pasajero = qslTurista(o.look.qslR); }
+    }
+  }
+  return motoGuiri3D224q.apply(this, arguments);
+};
+
+/* ---------- la tarjeta de antes de salir ---------- */
+function qslLi(ico, txt) { return '<li><i class="gi">' + ico + '</i><span>' + TT(txt) + '</span></li>'; }
+function qslReady() {
+  var nv = qslNivel(), tope = qslTope(), eleg = esDev() ? RIV.nivMax : tope, pips = '', i, R = SAVE.qslR;
+  for (i = 1; i <= RIV.nivMax; i++) pips += '<i class="' + (i <= nv ? 'on' : '') + (i > tope ? ' no' : '') + '"></i>';
+  card('<div class="r-izq"><div class="logo"><span>BALI</span><span>QUAD</span></div>' +
+    '<p class="lead">' + TT('Seis quads por la selva de Wayan: barro, raíces, curvas cerradas y rampas. ¡A ver quién llega antes!') + '</p>' +
+    '<div class="rivc"><p class="rivs">🏁 ' + TT('Contra') + ' ' + RIV.L.map(function (q) { return '<i style="background:' + q.col + '"></i>' + q.nom; }).join(' ') + '</p>' +
+      '<div class="rivsel"><button class="b3" data-act="qsl:nv-"' + (nv <= 1 ? ' disabled' : '') + ' aria-label="' + TT('Nivel') + ' −">◀' + (TOUCH ? '' : ' <kbd>−</kbd>') + '</button>' +
+      '<span><b>' + TT('Rivales · nivel') + ' ' + nv + '</b><span class="rpip">' + pips + '</span></span>' +
+      '<button class="b3" data-act="qsl:nv+"' + (nv >= eleg ? ' disabled' : '') + ' aria-label="' + TT('Nivel') + ' +">' + (TOUCH ? '' : '<kbd>+</kbd> ') + (nv >= eleg && nv < RIV.nivMax ? '🔒' : '▶') + '</button></div>' +
+      '<p class="rivn">' + TT('Premio al primero') + ': <b>' + qslPremio(1, nv) + ' ✿</b>' + (nv >= tope && nv < RIV.nivMax ? ' · ' + TT('Gana y se abre el nivel ' + (nv + 1)) : '') + '</p></div>' +
+    (R ? '<p class="mirec">🏆 ' + TT('Tu récord') + ': ⏱ <b>' + fmtT(R.tm) + '</b>' + (R.pos ? ' · ' + TT('tu mejor puesto') + ': <b>' + rivOrd(R.pos) + '</b>' : '') + '</p>' : '') + '</div>' +
+    '<div class="r-der"><button class="b3 como" data-act="como">' + TT('¿Cómo se juega?') + '</button><ul class="how' + ((SAVE.qslJ || 0) < 2 || V.w > V.h ? '' : ' plegado') + '">' +
+      qslLi(TOUCH ? '🕹️' : '⌨️', TOUCH ? 'Se lleva como la moto: la <b>palanca</b> para girar, <b>GAS</b> y <b>FRENO</b>' : 'Se lleva como la moto: <b>← →</b> giran, <b>↑</b> gas, <b>↓</b> freno') +
+      qslLi('🟤', 'El <b>barro</b> te frena; las <b>raíces</b> te hacen botar') +
+      qslLi('↩️', 'Curvas cerradas: <b>frena antes</b> de entrar') +
+      qslLi('🛻', 'Rampas: si vas lanzado, <b>saltas</b>') +
+      qslLi('🏁', 'Llega el <b>primero</b> y se abre el nivel siguiente') +
+    '</ul></div>' +
+    '<div class="acc clara"><button class="b1" data-act="go">🏁 ' + TT('¡A correr!') + '</button>' +
+    '<div class="row qr-fila"><button class="b3" data-act="qsl:paseo">🌺 ' + TT('Paseo con Wayan (tú solo)') + '</button>' +
+    (bonusAbierto('zoo') ? '<button class="b3" data-act="modo:zoo">🐅 ' + TT('Ruta 2: el zoo') + '</button>' : '') + '</div>' + botonMenu() +
+    (TOUCH ? '' : '<p class="keys">' + TT('Flechas ← → para girar, ↑ gas, ↓ freno. Espacio: TIN TIN') + '</p>') + '</div>', 'ready tiro');
+}
+function qslElegir(d) {
+  if (!QSL.on || G.state !== 'ready') return;
+  var n0 = qslNivel(), n = clamp(n0 + d, 1, esDev() ? RIV.nivMax : qslTope());
+  if (n === n0) { SFX.eh(); return; }
+  SAVE.qslNv = n; writeSave(); SFX.pick(n % 8);
+  qslArranca(false);
+}
+var showIntro224q = showIntro;
+showIntro = function (li) {
+  if (!QSL.on) { showIntro224q(li); return; }
+  var el = $('intro');
+  el.innerHTML = '<small>🌿 ' + TT('Quad con Wayan') + '</small><b>' + TT('La selva') + '</b><span>' + TT('Barro, raíces y cinco rivales') + '</span>';
+  el.classList.remove('hide', 'out'); void el.offsetWidth; el.classList.add('in');
+  clearTimeout(showIntro.tm); showIntro.tm = setTimeout(function () { el.classList.add('out'); setTimeout(function () { el.classList.add('hide'); }, 450); }, 2400);
+};
+
+/* ---------- la llegada ---------- */
+var finishLevel224q = finishLevel;
+finishLevel = function () {
+  if (!QSL.on) { finishLevel224q(); return; }
+  P.state = 'finish'; P.endT = 0; P.inv = 0;
+  SFX.win(); petals(P.x, P.y + 40, 40); shake(0.2); pop('¡Meta!', P.x, P.y + 40, '#ffe27a', 1.2);
+  var pos = 1 + RIV.orden.length, niv = RIV.niv, F = { pos: pos, niv: niv, premio: qslPremio(pos, niv), tiempo: G.time, clasi: rivClasi(), sube: false, rec: false };
+  G.fl += F.premio; F.fl = G.fl; G.pos = pos; G.clasi = F.clasi;
+  if (!G.admTrampa) {
+    if (pos === 1 && niv >= qslTope() && niv < RIV.nivMax) { SAVE.qslMax = niv + 1; SAVE.qslNv = niv + 1; F.sube = true; }
+    var R = SAVE.qslR || {};
+    if (!R.tm || G.time < R.tm) { R.tm = G.time; F.rec = true; }
+    if (!R.pos || pos < R.pos) R.pos = pos;
+    SAVE.qslR = R;
+  }
+  SAVE.qslJ = (SAVE.qslJ || 0) + 1;
+  QSL.fin = F; writeSave();
+};
+var RIV_TIT_Q = ['', '¡Primero!', '¡Segundo!', '¡Tercero!', 'Cuarto', 'Quinto', 'Sexto'];
+var showWin224q = showWin;
+showWin = function () {
+  if (!QSL.on || !QSL.fin) { showWin224q(); return; }
+  var F = QSL.fin;
+  pokiStop(); if (!G.vistaPrevia) guardaFlores(F.fl);
+  var h = '<h2 class="stk">🌿 ' + TT('¡Fuera de la selva!') + '</h2>' +
+    '<div class="clasi p' + F.pos + '"><div class="cl-p"><i>' + (['', '🥇', '🥈', '🥉'][F.pos] || '🏁') + '</i><b>' + TT(RIV_TIT_Q[F.pos]) + '</b><small>' + rivOrd(F.pos) + ' ' + TT('de') + ' ' + F.clasi.length + (F.premio ? ' · +' + F.premio + ' ✿' : '') + '</small><em>' + TT('Nivel') + ' ' + F.niv + '</em></div><ol>';
+  F.clasi.forEach(function (c) { h += '<li' + (c.yo ? ' class="yo"' : '') + '><i style="background:' + c.c + '"></i>' + (c.yo ? TT('Tú') : c.n) + (c.k ? ' <u>💥</u>' : '') + '</li>'; });
+  h += '</ol></div>' +
+    (F.pos === 1 ? '<p class="rivn gana">⭐ <b>' + TT('¡Nivel ' + F.niv + ' superado!') + '</b>' + (F.sube ? ' ' + TT('Se abre el nivel ' + (F.niv + 1) + ': rivales más rápidos y más premio') : '') + '</p>' : '') +
+    '<div class="res"><p><span>⏱ ' + TT('Tiempo') + '</span><b>' + fmtT(F.tiempo) + (F.rec ? ' · ' + TT('¡Nuevo récord!') : '') + '</b></p>' +
+    '<p class="tot"><span>' + TT('Flores al bolsillo') + '</span><b class="bla">❀ +' + F.fl + '</b></p></div>' +
+    '<div class="acc"><button class="b1" data-act="qsl:otra">↻ ' + TT(F.pos === 1 ? 'Otra carrera' : 'Revancha') + '</button>' +
+    '<div class="row"><button class="b3" data-act="qsl:paseo">🌺 ' + TT('Paseo con Wayan') + '</button>' + botonMenu() + '</div></div>';
+  card(h, 'win');
+};
+var showKo224q = showKo;
+showKo = function () {
+  if (!QSL.on || G.mode !== 'level') { showKo224q(); return; }
+  pokiStop();
+  card('<h2 class="stk ko">' + TT('¡Sin cascos!') + '</h2>' + helms(0) + '<p class="joke">' + TT(CHISTE[G.lastCrash] || 'La selva no perdona.') + '</p>' +
+    '<div class="acc"><button class="b1" data-act="qsl:otra">' + TT('Otra vez') + '</button>' + botonMenu() + '</div>', 'ko');
+};
+
+/* ---------- los botones ---------- */
+var menuAct224q = menuAct;
+menuAct = function (a) {
+  if (QSL.vivo && a === 'modo:quad' && !QSL.viejo) {
+    if (!bonusEntra('quad')) return true;
+    qslArranca(false); return true;
+  }
+  if (a.indexOf('qsl:') === 0) {
+    var q = a.slice(4);
+    if (q === 'nv-') { qslElegir(-1); return true; }
+    if (q === 'nv+') { qslElegir(1); return true; }
+    if (q === 'otra') { hideScr(); pokiPausa(function () { qslArranca(true); pokiStart(); }); return true; }
+    if (q === 'paseo') {                                                       // el paseo de antes (se rehace después)
+      QSL.on = false; QSL.viejo = true; hideScr();
+      try { menuAct224q('modo:quad'); } finally { QSL.viejo = false; }
+      return menuAct224q('quad:solo');
+    }
+  }
+  if (a === 'modo:zoo' || a === 'quad:carrera') QSL.on = false;
+  return menuAct224q(a);
+};
+var act224q = act;
+act = function (a) {
+  if (a === 'retry' && QSL.on && G.mode === 'level') { hideScr(); pokiPausa(function () { qslArranca(true); pokiStart(); }); return; }
+  act224q(a);
+};
+window.addEventListener('keydown', function (e) {                         // en el ordenador: − y + cambian el nivel desde la tarjeta de antes de salir
+  if (!QSL.on || G.state !== 'ready' || G.mode !== 'level' || !document.querySelector('#scr .card.ready .rivsel')) return;
+  if (e.key === '-' || e.key === '_') qslElegir(-1); else if (e.key === '+' || e.key === '=') qslElegir(1);
+});
+
+/* ---------- los textos ---------- */
+(function () {
+  var N = {
+    'Seis quads por la selva de Wayan: barro, raíces, curvas cerradas y rampas. ¡A ver quién llega antes!': ['Six quads through Wayan\'s jungle: mud, roots, hairpins and jumps. Let\'s see who gets there first!', 'Enam ATV menembus hutan Wayan: lumpur, akar, tikungan tajam dan tanjakan. Siapa yang sampai duluan?'],
+    'Se lleva como la moto: la <b>palanca</b> para girar, <b>GAS</b> y <b>FRENO</b>': ['It rides like the scooter: the <b>stick</b> to steer, <b>GAS</b> and <b>BRAKE</b>', 'Dikendarai seperti motor: <b>tuas</b> untuk belok, <b>GAS</b> dan <b>REM</b>'],
+    'Se lleva como la moto: <b>← →</b> giran, <b>↑</b> gas, <b>↓</b> freno': ['It rides like the scooter: <b>← →</b> steer, <b>↑</b> gas, <b>↓</b> brake', 'Dikendarai seperti motor: <b>← →</b> belok, <b>↑</b> gas, <b>↓</b> rem'],
+    'El <b>barro</b> te frena; las <b>raíces</b> te hacen botar': ['<b>Mud</b> slows you down; <b>roots</b> make you bounce', '<b>Lumpur</b> memperlambat; <b>akar</b> membuatmu terpental'],
+    'Curvas cerradas: <b>frena antes</b> de entrar': ['Hairpins: <b>brake before</b> you go in', 'Tikungan tajam: <b>rem sebelum</b> masuk'],
+    'Rampas: si vas lanzado, <b>saltas</b>': ['Ramps: go fast and you <b>jump</b>', 'Tanjakan: kalau kencang, kamu <b>melompat</b>'],
+    'Llega el <b>primero</b> y se abre el nivel siguiente': ['Finish <b>first</b> and the next level opens', 'Sampai <b>pertama</b> dan level berikutnya terbuka'],
+    'Quad con Wayan': ['Quad with Wayan', 'ATV bersama Wayan'], 'La selva': ['The jungle', 'Hutan'], 'Barro, raíces y cinco rivales': ['Mud, roots and five rivals', 'Lumpur, akar dan lima lawan'],
+    '¡Fuera de la selva!': ['Out of the jungle!', 'Keluar dari hutan!'], 'Otra carrera': ['Another race', 'Balapan lagi'], 'Paseo con Wayan': ['Ride with Wayan', 'Jalan-jalan dengan Wayan'],
+    'La selva no perdona.': ['The jungle shows no mercy.', 'Hutan tidak kenal ampun.'],
+    '¡Barro!': ['Mud!', 'Lumpur!'], '¡CHOF!': ['SPLOSH!', 'CROT!'], '¡Pringado!': ['Covered in mud!', 'Belepotan!'], '¡Raíz!': ['Root!', 'Akar!'], '¡PATAPLÁN!': ['KA-BOOM!', 'GEDUBRAK!'], '¡Meta!': ['Finish!', 'Finis!']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
