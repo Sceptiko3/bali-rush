@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V228</title>
+<title>Bali Rush Completo V229</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V228', FECHA = '21-10-2026';
+var VERSION = 'Completo V229', FECHA = '21-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -110820,6 +110820,244 @@ update = function (dt) {
     '¡El acantilado! No te acerques al borde de la izquierda': ['The cliff! Keep away from the left edge', 'Tebing! Jangan dekat-dekat tepi kiri'],
     '¡PLOF!': ['SPLASH!', 'BYUR!'], '¡Cuidado!': ['Careful!', 'Awas!'], '¡Uy, el borde!': ['Whoa, the edge!', 'Eh, tepinya!'], '¡Que te caes!': ['You\'ll fall!', 'Nanti jatuh!']
   };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza juegos/quad/650_quad_cascadas.js*/
+/* ================================================================
+   V229 · EL QUAD: LAS CASCADAS Y LA CAÍDA POR EL PRECIPICIO
+   Jose Javier, con la V228: «No has puesto cascada, … si te caes, que
+   te caigas por el precipicio abajo pero se tiene que ver».
+   - LAS CASCADAS DEL ACANTILADO (como «Las cascadas» del quad antiguo:
+     «pasa por debajo: ¡premio!»): tres chorros que caen desde lo alto
+     de la pared de roca y llegan a la mitad derecha del camino, con su
+     espuma, su neblina, la roca mojada y el charco. Si pasas por
+     debajo: ¡empapados!, +3 flores y gotas en la pantalla.
+   - LA CASCADA DEL VADO, más grande y más cerca del camino (la de la
+     V227 apenas se veía).
+   - LA CAÍDA: si te sales por el borde del acantilado, el quad se va
+     por el aire dando vueltas, con Wayan y el guiri encima, y cae
+     hasta la selva de abajo (hojas, polvo, ¡CATAPLÁN!). La cámara sale
+     sobre el precipicio y lo sigue con la mirada; luego vuelve y sigues
+     en el borde, con un casco menos (como antes).
+   QCS.vivo = false: sin nada de esto (como la V228).
+   ================================================================ */
+var QCS = { vivo: true, n: [0.3, 0.55, 0.79], uL: 0.42, premio: 3, kc: 0, dron: null, yaw0: 0, gotas: 0, G: [], ch: [],
+  s: { esc: 'qcsCascada', k: 'bb', w: 40, h: 100 } };
+function qcsSi() { return QCS.vivo && G.mode === 'level' && L && L.D && L.D.quad; }
+function qcsCornisa() { var S = null; if (L && L.secs) L.secs.forEach(function (s) { if (s.s.th === 'cornisa') S = s; }); return S; }
+
+/* ---------- montar: las cascadas en el acantilado y la del vado, más a la vista ---------- */
+var buildLevel228s = buildLevel;
+buildLevel = function (li) {
+  var r = buildLevel228s.apply(this, arguments);
+  if (!QCS.vivo || !L || !L.D || !L.D.quad) return r;
+  var S = qcsCornisa(); L.qcs = [];
+  if (S) QCS.n.forEach(function (f) {
+    var y = S.y0 + (S.y1 - S.y0) * f, u = hwAt(y) * QCS.uL;
+    L.qcs.push({ y: y, u: u });
+    L.deco.ground.push({ s: QCS.s, y: y, x: cxAt(y) + u, a: 0, sc: 1 });
+  });
+  if (S) L.deco.top.forEach(function (d) {                                  // los árboles de encima de la pared, más apartados (pegados al borde, al pasar tapaban media pantalla)
+    if (d.y < S.y0 || d.y > S.y1) return;
+    var u = d.x - cxAt(d.y), e = hwAt(d.y);
+    if (u > e + 10 && u < e + 60) d.x = cxAt(d.y) + e + 52 + (u - e - 14) * 1.4;
+  });
+  if (typeof QVD !== 'undefined' && L.qvd) L.deco.ground.forEach(function (d) {   // la del vado: más grande, más cerca y de cara al que llega
+    if (d.s === QVD.sCascada) { d.y = L.qvd.yc + 30; d.x = cxAt(L.qvd.yc) + 92; d.a = -Math.PI / 2 - 0.85; d.sc = 1.9; }
+  });
+  L.deco.ground.sort(byY);
+  return r;
+};
+
+/* ---------- la cascada: de lo alto de la pared al camino ---------- */
+function qcsAlto(y) { var S = secAt(y); return QSN.pared * relAmp(S, y); }
+ESN.fn.qcsCascada = function (g, d, zg) {
+  var dd = proj(d.x, d.y, zg + 40); if (dd < 16 || PX < -200 || PX > V.w + 200) return;
+  scr(g);
+  var hw = hwAt(d.y), u0 = d.x - cxAt(d.y), vTop = hw + 8.4 - u0, hTop = qcsAlto(d.y) - 1, t = G.t, i, sky = (SKY[L.D.tod] || SKY.manana)[2], f = fogK(dd);
+  function m(c) { return relMezcla(c, sky, f); }
+  k3Abre(d.x, d.y, zg, 0, 0, 0, 1);                                        // (u: a lo largo del camino; v: hacia la pared)
+  var N = 7, A = [], B = [], k;
+  for (k = 0; k <= N; k++) { var s = k / N, v = vTop * (1 - s), h = hTop * (1 - s * s), w = 6 + 5.5 * s; A.push(k3(-w, v, h)); B.push(k3(w, v, h)); }
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  var W0 = k3(-7, vTop + 0.2, hTop * 0.02), W1 = k3(7, vTop + 0.2, hTop * 0.02), W2 = k3(5.5, vTop - 0.1, hTop), W3 = k3(-5.5, vTop - 0.1, hTop);   // la roca mojada, detrás
+  g.beginPath(); g.moveTo(W0[0], W0[1]); g.lineTo(W1[0], W1[1]); g.lineTo(W2[0], W2[1]); g.lineTo(W3[0], W3[1]); g.closePath(); g.fillStyle = 'rgba(30,44,48,.35)'; g.fill();
+  g.beginPath(); g.moveTo(A[0][0], A[0][1]); for (k = 1; k <= N; k++) g.lineTo(A[k][0], A[k][1]); for (k = N; k >= 0; k--) g.lineTo(B[k][0], B[k][1]); g.closePath();
+  var gr = g.createLinearGradient(0, A[0][1], 0, A[N][1]); gr.addColorStop(0, m('#e4f6fa')); gr.addColorStop(0.55, m('#b4e0ea')); gr.addColorStop(1, m('#f2fcff'));
+  g.globalAlpha = 0.84; g.fillStyle = gr; g.fill(); g.globalAlpha = 1;
+  g.strokeStyle = 'rgba(60,110,125,.45)'; g.lineWidth = Math.max(0.6, 0.35 * A[0][2]); g.stroke();
+  for (i = 0; i < 9; i++) {                                                // los hilos de agua que bajan
+    var fr = (i + 0.5) / 9, ph = (t * 1.5 + i * 0.37) % 1, a0 = Math.floor(ph * N), a1 = Math.min(N, a0 + 2);
+    var p = k3Med(A[a0], B[a0], fr), q = k3Med(A[a1], B[a1], fr);
+    g.strokeStyle = 'rgba(255,255,255,' + (0.55 + 0.3 * Math.sin(i * 2.1 + t * 3)).toFixed(2) + ')'; g.lineWidth = Math.max(0.6, (0.5 + (i % 3) * 0.3) * p[2]);
+    g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.stroke();
+  }
+  for (i = 0; i < 7; i++) {                                                // la espuma donde cae
+    var ang = i / 7 * TAU + t * 0.8, rr0 = 5 + ((t * 2 + i * 0.3) % 1) * 7, P0 = k3(Math.cos(ang) * rr0 * 0.8, Math.sin(ang) * rr0, 0.6 + Math.abs(Math.sin(t * 6 + i)) * 2.2);
+    g.fillStyle = 'rgba(255,255,255,' + (0.75 - ((t * 2 + i * 0.3) % 1) * 0.6).toFixed(2) + ')'; g.beginPath(); g.arc(P0[0], P0[1], Math.max(1, 2.6 * P0[2]), 0, TAU); g.fill();
+  }
+  for (i = 0; i < 4; i++) {                                                // la neblina que sube
+    var ph2 = (t * 0.4 + i / 4) % 1, M = k3((i - 1.5) * 4, -2 + ph2 * 3, 2 + ph2 * 26);
+    g.globalAlpha = 0.32 * (1 - ph2); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(M[0], M[1], (5 + ph2 * 9) * M[2], 0, TAU); g.fill(); g.globalAlpha = 1;
+  }
+};
+/* el charco que deja en el camino */
+var qslTierra228s = qslTierra;
+qslTierra = function (g, i, hi, hj) {
+  qslTierra228s(g, i, hi, hj);
+  if (!QCS.vivo || !L.qcs || !L.qcs.length) return;
+  var ya = BY[i], yb = BY[i + 1], n0 = QNIV; QNIV = 7;
+  L.qcs.forEach(function (C) {
+    var r0 = 9, a = Math.max(ya, C.y - r0), b = Math.min(yb, C.y + r0), y;
+    for (y = a; y < b - 0.01; y = Math.min(b, y + 1.6)) {
+      var y2 = Math.min(b, y + 1.6), e = (y + y2) / 2 - C.y, w = 11 * Math.sqrt(Math.max(0, 1 - (e / r0) * (e / r0)));
+      if (w > 0.4) { qcvQ(g, y, y2, C.u - w, C.u + w, 0.07, 'rgba(96,150,170,.5)'); if (w > 4) qcvQ(g, y, y2, C.u - w * 0.45 + 2, C.u + w * 0.2 + 2, 0.08, 'rgba(220,245,250,.45)'); }
+    }
+  });
+  QNIV = n0;
+};
+
+/* ---------- pasar por debajo: ¡empapados! ---------- */
+var update228s = update;
+update = function (dt) {
+  update228s(dt);
+  if (QCS.gotas > 0) QCS.gotas = Math.max(0, QCS.gotas - dt);
+  if (!qcsSi() || !L.qcs || !(typeof QSL !== 'undefined' && QSL.on) || G.state !== 'play' || P.state !== 'ride') return;
+  for (var k = 0; k < L.qcs.length; k++) {
+    var C = L.qcs[k];
+    if (!L.qcsAviso && P.y > C.y - 420 && P.y < C.y) { L.qcsAviso = true; avisar('¡Cascadas! Pasa por debajo y ganas flores', '💦'); }
+    if (C.hecho || P.py > C.y || P.y < C.y) continue;
+    C.hecho = true;
+    if (Math.abs(P.x - (cxAt(C.y) + C.u)) < 11 && P.z < 8) {
+      G.fl += QCS.premio; SFX.splash(); splash(P.x, P.y, 16); shake(0.12); QCS.gotas = 1.7; QCS.G = qcsGotas();
+      pop('¡Empapados! +' + QCS.premio + ' ✿', P.x, P.y + 34, '#dff7ff', 1.15);
+      if (!L.qcsDijo) { L.qcsDijo = true; pop('Wayan: «¡Qué fresquita!»', P.x, P.y + 52, '#fff3b0', 0.95); }
+    }
+  }
+};
+function qcsGotas() { var o = [], i; for (i = 0; i < 11; i++) o.push({ x: Math.random(), y: Math.random() * 0.8, r: 9 + Math.random() * 18, v: 0.02 + Math.random() * 0.05 }); return o; }
+
+/* ---------- la caída por el precipicio, que se vea ---------- */
+var crash228s = crash;
+crash = function (kind, txt, side) {
+  var antes = P.state;
+  crash228s.apply(this, arguments);
+  if (!QCS.vivo || antes !== 'ride' || P.state !== 'crash' || kind !== 'barranco' || !qcsSi()) return;
+  var S = secAt(P.y); if (S.s.th !== 'cornisa') return;
+  var y = P.y, cx = cxAt(y), hw = hwAt(y), borde = cx - hw - 2, sp = Math.max(90, P.vel0 || 140);
+  P.qcae = { x: Math.min(P.x, borde), y: y, z: 0, vx: -42, vy: sp * 0.7, vz: 40, cab: 0, incl: 0, vc: 2.2 + Math.random(), vi: -1.4 - Math.random(), t: 0, y0: y, borde: borde, fondo: QSN.fondo * relAmp(S, y) + 24, ang: Math.atan(slopeAt(y)) };
+  P.bike = { x: borde + 8, y: y, vx: 0, vy: 0, a: 0, va: 0, lado: -1 };
+  P.rider = { x: borde + 8, y: y, z: 0, vx: 0, vy: 0, vz: 0, rot: 0, vr: 0, landed: true };
+  QCS.yaw0 = CAM.yaw; QCS.ch = [];
+};
+var updPlayer228s = updPlayer;
+updPlayer = function (dt) { if (P.state === 'ride') P.vel0 = P.speed; return updPlayer228s.apply(this, arguments); };
+var crashUpd228s = crashUpd;
+crashUpd = function (dt) {
+  var q = P.qcae;
+  if (q) {
+    q.t += dt;
+    if (!q.golpe) {
+      q.x += q.vx * dt; q.y += q.vy * dt; q.vy *= 1 - dt * 0.4; if (P.rider) P.rider.y = q.y; q.z += q.vz * dt; q.vz -= 520 * dt; q.cab += q.vc * dt; q.incl += q.vi * dt;
+      if (q.z <= q.fondo) {                                                // contra la selva de abajo (P.rider.y va con el quad: así se pinta en su sitio)
+        q.z = q.fondo; q.golpe = true; q.tg = 0; shake(0.5); SFX.crash(); SFX.thud();
+        for (var k = 0; k < 34; k++) QCS.ch.push({ x: q.x, y: q.y, z: q.z + 6, vx: rr(-60, 60), vy: rr(-50, 50), vz: rr(40, 150), t: 0, m: rr(0.8, 1.5), c: ['#3f7d2e', '#4f8f35', '#2f6e2a', '#6aa046', '#8a6538'][k % 5], s: rr(1.6, 3.2) });
+      }
+    } else q.tg += dt;
+    for (var i = QCS.ch.length - 1; i >= 0; i--) { var c = QCS.ch[i]; c.t += dt; if (c.t > c.m) { QCS.ch.splice(i, 1); continue; } c.x += c.vx * dt; c.y += c.vy * dt; c.z += c.vz * dt; c.vz -= 160 * dt; c.vx *= 1 - dt * 1.5; c.vy *= 1 - dt * 1.5; }
+    P.crashT -= dt * 0.3;                                                  // (la caída tarda más que un golpe: ~2,6 s)
+  }
+  return crashUpd228s.apply(this, arguments);
+};
+var respawn228s = respawn;
+respawn = function () { P.qcae = null; QCS.ch = []; return respawn228s.apply(this, arguments); };
+var startLevel228s = startLevel;
+startLevel = function (li) { if (P) P.qcae = null; QCS.kc = 0; QCS.dron = null; QCS.gotas = 0; return startLevel228s.apply(this, arguments); };
+var drawPlayer3D228s = drawPlayer3D;
+drawPlayer3D = function (g) {
+  var q = P.qcae;
+  if (!q || P.state !== 'crash' || G.mode !== 'level') { drawPlayer3D228s(g); return; }
+  scr(g);
+  var z0 = zAt(q.y);
+  if (!q.golpe || q.tg < 0.12) motoGuiri3D(g, q.x, q.y, z0 + q.z, q.ang + q.t * 0.5, { incl: q.incl, cab: q.cab, t: G.t, v: 0 });
+  for (var i = 0; i < QCS.ch.length; i++) {                                // las hojas y el polvo del golpe
+    var c = QCS.ch[i], dd = proj(c.x, c.y, z0 + c.z); if (dd < 10) continue;
+    g.globalAlpha = 1 - c.t / c.m; g.fillStyle = c.c; g.beginPath(); g.ellipse(PX, PY, c.s * PS, c.s * 0.5 * PS, c.t * 6, 0, TAU); g.fill();
+  }
+  g.globalAlpha = 1;
+  if (q.golpe && q.tg < 1.2) {                                             // ¡CATAPLÁN!, allí abajo
+    var dq = proj(q.x, q.y, z0 + q.z + 30 + q.tg * 18); if (dq > 10) {
+      var sc = Math.min(1.6, 0.6 + q.tg * 4) * Math.max(0.8, Math.min(1.4, PS * 1.6)), al = q.tg > 0.9 ? 1 - (q.tg - 0.9) / 0.3 : 1;
+      g.save(); g.translate(PX, PY); g.scale(sc, sc); g.globalAlpha = al; g.font = '900 15px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+      g.lineWidth = 5; g.strokeStyle = INK; g.strokeText(TT('¡CATAPLÁN!'), 0, 0); g.fillStyle = '#ffffff'; g.fillText(TT('¡CATAPLÁN!'), 0, 0); g.restore();
+    }
+  }
+};
+/* la cámara sale sobre el precipicio y mira cómo cae */
+var updCam228s = updCam;
+updCam = function (dt) {
+  updCam228s(dt);
+  var q = P.qcae, obj = q && P.state === 'crash' && G.mode === 'level' ? 1 : 0;
+  if (!obj && !QCS.kc) return;
+  QCS.kc += (obj - QCS.kc) * expo(obj ? 3.2 : 2.6, dt); if (Math.abs(QCS.kc - obj) < 0.003) QCS.kc = obj;
+  if (obj) {
+    var D = QCS.dron || (QCS.dron = {}), tz = zAt(q.y) + q.z + 6;
+    D.x = q.borde - 108; D.y = q.y0 - 118 + (q.y - q.y0) * 0.62; D.z = zAt(q.y0) + 178 + Math.max(q.z, q.fondo) * 0.6;   // (baja con él)
+    var dx = q.x - D.x, dy = q.y - D.y, hd = Math.max(20, Math.hypot(dx, dy));
+    D.yaw = Math.atan2(dx, dy); D.p = clamp(Math.atan2(D.z - tz, hd), 0.4, 0.98);
+  }
+  var Dn = QCS.dron; if (!Dn) return;
+  var k = smooth(QCS.kc), dyaw = Dn.yaw - QCS.yaw0;
+  while (dyaw > Math.PI) dyaw -= TAU; while (dyaw < -Math.PI) dyaw += TAU;
+  CAM.x = lerp(CAM.x, Dn.x, k); CAM.y = lerp(CAM.y, Dn.y, k); CAM.z = lerp(CAM.z, Dn.z, k);
+  CAM.yaw = QCS.yaw0 + dyaw * k; CAM.sy = Math.sin(CAM.yaw); CAM.cy = Math.cos(CAM.yaw);
+  var p = lerp(0.5236, Dn.p, k); CAM.pitch = p; CAM.s = Math.sin(p); CAM.c = Math.cos(p);
+  if (!QCS.kc) { QCS.dron = null; CAM.yaw = QCS.yaw0; camPlace(); }
+};
+/* con la cámara sobre el precipicio se ve la pared de roca que baja */
+var sueloTema228s = sueloTema;
+sueloTema = function (g, i, th, T, S, br) {
+  sueloTema228s.apply(this, arguments);
+  if (th !== 'cornisa' || !REL.vivo || !QCS.vivo) return;
+  var ai = relAmp(S, BY[i]), aj = relAmp(S, BY[i + 1]), H = QSN.fondo, k;
+  if (QCS.kc > 0.02) {
+    var ROC = ['#6f6658', '#5f584c', '#776d5e', '#544e44', '#4a5a3a'];
+    carLim(i, -1);
+    for (k = 0; k < 5; k++) { var t0 = k / 5, t1 = (k + 1) / 5; relQ(g, i, -1, 2.8 + 5.2 * t0, H * ai * t0 - 3 * (1 - t0), H * aj * t0 - 3 * (1 - t0), 2.8 + 5.2 * t1, H * ai * t1, H * aj * t1, ROC[(k + Math.floor(BY[i] / 60)) % 5]); }
+  }
+  if (!L.qcs) return;
+  for (k = 0; k < L.qcs.length; k++) {                                     // la roca mojada bajo cada cascada
+    var C = L.qcs[k], ya = Math.max(BY[i], C.y - 6.5), yb = Math.min(BY[i + 1], C.y + 6.5); if (yb <= ya) continue;
+    var h0 = qcsAlto(ya), h1 = qcsAlto(yb), c0 = cxAt(ya), c1 = cxAt(yb), w0 = hwAt(ya), w1 = hwAt(yb);
+    proj(c0 + w0 + 1.4, ya, zAt(ya)); var ax = PX, ay = PY; proj(c1 + w1 + 1.4, yb, zAt(yb)); var bx = PX, by = PY;
+    proj(c1 + w1 + 9, yb, zAt(yb) + h1); var cx2 = PX, cy2 = PY; proj(c0 + w0 + 9, ya, zAt(ya) + h0);
+    quad(g, ax, ay, bx, by, cx2, cy2, PX, PY, 'rgba(28,40,44,.42)');
+  }
+};
+
+/* ---------- las gotas en la pantalla ---------- */
+var drawOverlay228s = drawOverlay;
+drawOverlay = function (g) {
+  drawOverlay228s(g);
+  if (!(QCS.gotas > 0) || G.mode !== 'level') return;
+  scr(g);
+  var a = Math.min(1, QCS.gotas / 0.6), i;
+  for (i = 0; i < QCS.G.length; i++) {
+    var o = QCS.G[i], x = o.x * V.w, y = (o.y + (1.7 - QCS.gotas) * o.v) * V.h, r = o.r;
+    var gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+    gr.addColorStop(0, 'rgba(255,255,255,' + (0.5 * a).toFixed(3) + ')'); gr.addColorStop(0.7, 'rgba(200,235,245,' + (0.22 * a).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(200,235,245,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,' + (0.55 * a).toFixed(3) + ')'; g.lineWidth = 1.4; g.beginPath(); g.arc(x, y, r * 0.8, Math.PI * 1.1, Math.PI * 1.6); g.stroke();
+  }
+};
+
+(function () {
+  var N = {
+    '¡Cascadas! Pasa por debajo y ganas flores': ['Waterfalls! Ride under them and win flowers', 'Air terjun! Lewat bawahnya dan dapat bunga'],
+    'Wayan: «¡Qué fresquita!»': ['Wayan: «So refreshing!»', 'Wayan: «Segarnya!»'],
+    '¡CATAPLÁN!': ['KA-BOOM!', 'GEDUBRAK!']
+  };
+  N['¡Empapados! +' + QCS.premio + ' ✿'] = ['Soaked! +' + QCS.premio + ' ✿', 'Basah kuyup! +' + QCS.premio + ' ✿'];
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
 /*#pieza nucleo/495_ganchos_arranque.js*/
