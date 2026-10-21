@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V227</title>
+<title>Bali Rush Completo V228</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V227', FECHA = '21-10-2026';
+var VERSION = 'Completo V228', FECHA = '21-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -110174,6 +110174,654 @@ update = function (dt) {
   if (Math.random() < dt * 6) splash(P.x + rr(-8, 8), P.y - 4, 2);
   if (Math.floor(P.y / 16) !== Math.floor(P.py / 16) && P.speed > 40) { P.bounce = 0.16; if (Math.random() < 0.5) SFX.thud(); }   // de piedra en piedra
 };
+/*#pieza juegos/quad/648_quad_cueva.js*/
+/* ================================================================
+   V228 · EL QUAD: LA CUEVA (parte 4 de 4)
+   De lo que pidió con la V225 («tiene que tener las cosas del
+   antiguo, cascada, cueva, paso de piedras, estrechar mucho»).
+   - UNA SECCIÓN NUEVA (GEN.cueva), entre la selva del estrecho de dos
+     y las últimas horquillas: un monte de roca cubierto de selva con
+     la boca de la cueva sagrada (la tela poleng encima, estalactitas
+     en el canto, lianas y musgo) y, dentro, un túnel de verdad:
+     paredes y techo de roca, trozo a trozo con el suelo (qcvTunel),
+     que tapan todo lo de fuera menos la salida, que se ve al fondo.
+   - LA CÁMARA BAJA al acercarte a la boca (QCV.cam) y vuelve a su
+     sitio al salir: con la de siempre (a 130 de alto) no cabe.
+   - LA OSCURIDAD: dentro, la luz entra por las dos bocas y por tres
+     grietas del techo (los rayos, con su polvo); lo demás, a oscuras.
+     Tus faros alumbran el suelo de delante; los rivales llevan sus
+     pilotos rojos. En la pared de la derecha, el altar con su vela y
+     dos antorchas: Wayan da las gracias («Suksma»).
+   - LOS MURCIÉLAGOS: cuelgan del techo y, al acercarte, se te echan
+     encima. Si pitas (TIN TIN), se apartan; si no, ¡aaah!: te frenan
+     y te hacen bailar (no quitan casco).
+   - LAS PAREDES: dentro no hay cuneta; si te arrimas, rozas la roca
+     y frenas. Antes de la boca, el camino te lleva hacia el centro.
+   Las franjas de la cueva se pintan cada una con lo que hay en ella
+   (grupos de uno), y la boca justo antes de la franja de delante: así
+   lo de dentro no se pinta encima de la roca.
+   QCV.vivo = false: sin la cueva (el trazado de la V227).
+   ================================================================ */
+var QCV = { vivo: true, hw: 24, W: 30, lim: 16, entra: 160, largo: 1000, boca: 125, curva: 46, bloque: 26, oscuro: '#0a090c', k: 0, murcis: 15,
+  PERF: [[30, 0], [34, 7], [36, 22], [36, 40], [34, 54], [29, 64], [20, 73], [10, 79], [0, 81]],   // la sección del túnel, de la pared al techo: [distancia al centro, altura]
+  faroW: [1, 0.95, 0.85, 0.7, 0.55, 0.42, 0.32, 0.26],                     // cuánto alumbran los faros cada trozo (el suelo, todo; el techo, poco)
+  cam: { h: 48, back: 64, p: 0.23 }, camA: 400, camR: 260, camS: 110,
+  cara: { R: 430, H: 190 },
+  sEstal: { esc: 'qcvEstal', k: 'bb', w: 6, h: 10 }, sEstalM: { esc: 'qcvEstalM', k: 'bb', w: 6, h: 10 }, sRaiz: { esc: 'qcvRaiz', k: 'bb', w: 10, h: 20 },
+  sAltar: { esc: 'qcvAltar', k: 'bb', w: 10, h: 14 }, sAntorcha: { esc: 'qcvAntorcha', k: 'bb', w: 8, h: 10 },
+  ax: [], ay: [], bx: [], by: [], tg: null, caraHecha: false };
+(function () {                                                             // la sección, en el trazado del sendero (644)
+  if (!QCV.vivo || typeof QSN === 'undefined' || !QSN.vivo) return;
+  var S = QSN.D.secs;
+  S[6].len = 700;                                                          // (la selva de antes, algo más corta: la carrera no se alarga tanto)
+  S.splice(7, 0, { len: 1360, th: 'selva', curv: 0.07, hill: 0, hw: 30, g: [['cueva']] });
+})();
+function qcvSi() { return QCV.vivo && G.mode === 'level' && L && L.D && L.D.quad && L.qcv ? L.qcv : null; }
+function qcvHex(h, f) { var n = parseInt(h.slice(1), 16), r = Math.min(255, Math.round((n >> 16 & 255) * f)), g2 = Math.min(255, Math.round((n >> 8 & 255) * f)), b = Math.min(255, Math.round((n & 255) * f)); return '#' + ((1 << 24) + (r << 16) + (g2 << 8) + b).toString(16).slice(1); }
+function qcvM(c, t) { return relMezcla(c, QCV.oscuro, t); }
+function qcvPunto(k, s, y) {                                               // un punto de la sección, deformado a lo largo (la roca no es un tubo): QCV.pX, QCV.pH
+  var C = L.qcv, P = QCV.PERF[k], m = C ? smooth(clamp((y - C.y0) / 34, 0, 1)) * smooth(clamp((C.y1 - y) / 34, 0, 1)) : 0, ap = k === QCV.PERF.length - 1, sd = ap ? 0 : s;
+  var dX = ap ? 0 : (k === 0 ? 0.35 : 1) * (2.8 * Math.sin(y * 0.029 + k * 1.31 + sd * 2.1) + 1.6 * Math.sin(y * 0.083 + k * 0.57 + sd * 0.9));
+  var dh = (k >= 4 ? 1 : k === 0 ? 0 : 0.35) * (2.4 * Math.sin(y * 0.037 + k * 0.9 + sd * 1.7) + 1.3 * Math.sin(y * 0.11 + k * 2.3 + sd * 0.4));
+  QCV.pX = P[0] + dX * m; QCV.pH = P[1] + dh * m;
+}
+function qcvTecho(X, y) {                                                  // la altura del techo a esa distancia del centro (y, si se da, con su deformación)
+  var n = QCV.PERF.length, a = Math.abs(X), s = X < 0 ? -1 : 1, k, x0, h0, x1, h1;
+  if (y == null) { var P = QCV.PERF; if (a >= P[4][0]) return P[4][1]; for (k = 4; k < n - 1; k++) if (a <= P[k][0] && a >= P[k + 1][0]) return lerp(P[k + 1][1], P[k][1], (a - P[k + 1][0]) / ((P[k][0] - P[k + 1][0]) || 1)); return P[n - 1][1]; }
+  qcvPunto(4, s, y); x0 = QCV.pX; h0 = QCV.pH; if (a >= x0) return h0;
+  for (k = 5; k < n; k++) { qcvPunto(k, s, y); x1 = QCV.pX; h1 = QCV.pH; if (a >= x1) return lerp(h1, h0, (a - x1) / ((x0 - x1) || 1)); x0 = x1; h0 = h1; }
+  return h0;
+}
+function qcvLum(y) {                                                       // la luz que llega ahí: por las bocas, por las grietas y la de las antorchas
+  var C = L.qcv; if (!C || y < C.y0 || y > C.y1) return 1;
+  var a = Math.min(y - C.y0, C.y1 - y), l = 0.05 + 0.95 * (1 - smooth(clamp(a / QCV.boca, 0, 1))), k, d;
+  for (k = 0; k < C.luz.length; k++) { d = Math.abs(y - C.luz[k].y); if (d < 46) l = Math.max(l, 0.52 * (1 - smooth(d / 46))); }
+  d = Math.abs(y - C.altar.y); if (d < 64) l = Math.max(l, 0.32 * (1 - smooth(d / 64)));
+  return l;
+}
+function qcvFaro(y) {                                                      // lo que alumbran tus faros
+  var C = L.qcv, d = y - P.y; if (!C || d < -100 || P.y < C.y0 - 80 || P.y > C.y1 + 10 || P.state === 'ko') return 0;
+  if (d < -10) return 0.41 * (1 - smooth((-d - 10) / 90));                  // lo que rebota alrededor del quad (sin esto, lo de al lado queda negro)
+  if (d < 25) return 0.82 * lerp(0.5, 1, smooth((d + 10) / 35));
+  return 0.82 * (1 - smooth(clamp((d - 25) / 230, 0, 1)));
+}
+function qcvOsc(y, w) { return 0.92 * (1 - qcvLum(y)) * (1 - qcvFaro(y) * w); }   // cuánto se oscurece un color ahí (w: cuánto le dan los faros)
+function qcvQ(g, ya, yb, o0, o1, dz, col) {                                // un trozo de suelo, de ya a yb, entre dos distancias al centro
+  var c0 = cxAt(ya), c1 = cxAt(yb), z0 = zAt(ya) + dz, z1 = zAt(yb) + dz;
+  proj(c0 + o0, ya, z0); var ax = PX, ay = PY; proj(c0 + o1, ya, z0); var bx = PX, by = PY;
+  proj(c1 + o1, yb, z1); var cx = PX, cy = PY; proj(c1 + o0, yb, z1);
+  quad(g, ax, ay, bx, by, cx, cy, PX, PY, col);
+}
+/* lo de la boca puede quedar muy cerca de la cámara: se recorta por delante antes de proyectarlo */
+function qcvVista(x, y, z) {
+  var dx = x - CAM.x, dy = y - CAM.y, vz = z - CAM.z, vx = dx * CAM.cy - dy * CAM.sy, vy = dx * CAM.sy + dy * CAM.cy;
+  return [vx, vy * CAM.c - vz * CAM.s, vy * CAM.s + vz * CAM.c];
+}
+function qcvRecorta(P3, dmin) {
+  var out = [], n = P3.length, k;
+  for (k = 0; k < n; k++) {
+    var a = P3[k], b = P3[(k + 1) % n], ia = a[1] >= dmin, ib = b[1] >= dmin;
+    if (ia) out.push(a);
+    if (ia !== ib) { var t = (dmin - a[1]) / (b[1] - a[1]); out.push([a[0] + (b[0] - a[0]) * t, dmin, a[2] + (b[2] - a[2]) * t]); }
+  }
+  return out;
+}
+function qcvTraza(g, P3) {
+  for (var k = 0; k < P3.length; k++) { var p = P3[k], s = CAM.F / p[1], x = CAM.W2 + p[0] * s + V.shx, y = CAM.H2 - p[2] * s + V.shy; if (k) g.lineTo(x, y); else g.moveTo(x, y); }
+  g.closePath();
+}
+function qcvCaraH(X) {                                                     // el perfil del monte, visto de frente
+  var R = QCV.cara.R, a = Math.abs(X) / R; if (a >= 1) return 0;
+  return Math.pow(1 - a * a, 0.6) * (QCV.cara.H + 12 * Math.sin(X * 0.037 + 0.6) + 8 * Math.sin(X * 0.091 + 2.1));
+}
+
+/* ---------- montar la cueva en su sección ---------- */
+GEN.cueva = function (S) {
+  if (!QCV.vivo) return;
+  var y0 = S.y0 + QCV.entra, y1 = y0 + QCV.largo, R = 140, a = y0 - 110, b = y1 + 60, q, r = mulberry(((L.D && L.D.seed) | 0) + 907);
+  var ca = y0 - 90, cb = y1 + 90, sd = r() < 0.5 ? -1 : 1;                 // dentro, una curva suave: desde la boca no se ve la salida
+  for (q = Math.max(1, Math.floor(ca / SEG)); q <= Math.min(L.N - 1, Math.ceil(cb / SEG)); q++) { var tq = clamp((q * SEG - ca) / (cb - ca), 0, 1), sq = Math.sin(Math.PI * tq); L.CX[q] += sd * QCV.curva * sq * sq; }
+  for (q = Math.floor((a - R) / SEG); q <= Math.ceil((b + R) / SEG); q++) {   // el camino se estrecha al ancho de la cueva (caben dos quads)
+    if (q < 1 || q >= L.N - 1) continue;
+    var y = q * SEG, sl = (L.CX[q + 1] - L.CX[q - 1]) / (2 * SEG), k = y < a ? smooth(clamp((y - (a - R)) / R, 0, 1)) : y > b ? smooth(clamp((b + R - y) / R, 0, 1)) : 1;
+    L.HW[q] = lerp(L.HW[q], Math.min(L.HW[q], QCV.hw * Math.sqrt(1 + sl * sl)), k);
+  }
+  var n = y1 - y0;
+  L.qcv = { y0: y0, y1: y1,
+    luz: [0.24, 0.55, 0.85].map(function (f) { return { y: y0 + n * f + (r() - 0.5) * 30, X: (r() - 0.5) * 22 }; }),
+    altar: { y: y0 + n * 0.4, s: 1, X: 27.4 }, murci: y0 + n * 0.69,
+    charco: [0.15, 0.47, 0.76].map(function (f) { return { y: y0 + n * f + (r() - 0.5) * 20, X: (r() - 0.5) * 24, r: 7 + r() * 5 }; }) };
+};
+function qcvMonta() {
+  var C = L.qcv; if (!C) return;
+  var r = mulberry(L.D.seed + 571), R = QCV.cara.R, y, X, k, n;
+  var fuera = function (d) { var u = Math.abs(d.x - cxAt(d.y)); return !(d.y > C.y0 - 3 && d.y < C.y1 + 3 && u < R + 30) && !(d.y > C.y0 - 22 && d.y <= C.y0 - 3 && u < 46); };
+  L.deco.ground = L.deco.ground.filter(fuera); L.deco.top = L.deco.top.filter(fuera);
+  L.decal = L.decal.filter(function (d) { return d.y < C.y0 - 2 || d.y > C.y1 + 2; });
+  L.stat = L.stat.filter(function (s) { return s.t === 'flor' || s.y < C.y0 - 10 || s.y > C.y1 + 10; });
+  L.dyn = L.dyn.filter(function (e) { return e.ay < C.y0 - 120 || e.ay > C.y1 + 40; });
+  function pon(capa, s, y, X, o) { var d = { s: s, y: y, x: cxAt(y) + X, a: r() * TAU, sc: 1 }, q; if (o) for (q in o) d[q] = o[q]; L.deco[capa].push(d); return d; }
+  for (y = C.y0 + 10; y < C.y1 - 8; y += 16 + r() * 20) {                  // las estalactitas del techo
+    n = r() < 0.45 ? 2 : 1;
+    for (k = 0; k < n; k++) pon('ground', QCV.sEstal, y + r() * 6, (r() - 0.5) * 50, { v: 5 + r() * 12, r: 1.5 + r() * 1.5, k: Math.floor(r() * 3) });
+  }
+  for (y = C.y0 + 26; y < C.y1 - 26; y += 30 + r() * 36) {                 // y las de abajo, al pie de las paredes
+    var sd = r() < 0.5 ? -1 : 1;
+    if (sd === C.altar.s && Math.abs(y - C.altar.y) < 40) sd = -sd;
+    pon('ground', QCV.sEstalM, y, sd * (27.6 + r() * 2), { v: 6 + r() * 11, r: 2 + r() * 1.4, k: Math.floor(r() * 3) });
+  }
+  C.luz.forEach(function (Lz) { pon('ground', QCV.sRaiz, Lz.y + 5, Lz.X + 6, { v: 16 + r() * 14 }); });   // raíces que cuelgan por las grietas
+  pon('ground', QCV.sAltar, C.altar.y, C.altar.X, { a: 0 });               // el altar, con dos antorchas
+  pon('ground', QCV.sAntorcha, C.altar.y - 26, C.altar.s * 34, { a: 0, sd: C.altar.s });
+  pon('ground', QCV.sAntorcha, C.altar.y + 26, C.altar.s * 34, { a: 0, sd: C.altar.s });
+  if (BB.tedung) for (k = -1; k <= 1; k += 2) pon('ground', BB.tedung, C.y0 - 7, k * 41, { sc: 1.35, a: 0 });   // las dos sombrillas de la cueva sagrada
+  for (k = 0; k < 18; k++) { X = (r() < 0.5 ? -1 : 1) * (52 + r() * 280); pon('ground', rp94(SP.rock, r), C.y0 - 5 - r() * 16, X, { sc: 1.8 + r() * 2.4 }); }   // las peñas al pie del monte
+  for (k = 0; k < 12; k++) { X = (r() < 0.5 ? -1 : 1) * (40 + r() * 220); pon('ground', ESN.s.helecho, C.y0 - 4 - r() * 12, X, { sc: 1.2 + r() * 0.8 }); }
+  for (k = 0; k < 52; k++) {                                               // la selva de encima del monte (se planta a su altura)
+    X = (r() - 0.5) * 2 * (R - 30); y = k < 32 ? C.y0 + 8 + r() * 70 : C.y0 + 80 + r() * (C.y1 - C.y0 - 90);
+    var dz = qcvCaraH(X) * (0.9 + r() * 0.08) - 8; if (dz < 14) continue;
+    pon('top', ESN.s.selva, y, X, { sc: 0.95 + r() * 0.6, _dz: dz });
+  }
+  addDyn('qcvMurci', C.murci, { ay: C.murci - 560 });                       // los murciélagos
+  L.deco.ground.sort(byY); L.deco.top.sort(byY); L.stat.sort(byY); L.dyn.sort(function (a, b) { return a.ay - b.ay; });
+}
+var buildLevel227c = buildLevel;
+buildLevel = function (li) {
+  var r = buildLevel227c.apply(this, arguments);
+  if (L && L.D && L.D.quad && L.qcv) qcvMonta();
+  return r;
+};
+
+/* ---------- las franjas: una justo en la boca y otra en la salida ---------- */
+var buildBounds227c = buildBounds;
+buildBounds = function () {
+  QCV.caraHecha = false;
+  var C = qcvSi();
+  if (!C || CAM.y + CAM.far < C.y0 - 20 || CAM.y > C.y1 + 20) { buildBounds227c(); return; }
+  var y = CAM.y + (CAM.y > C.y0 + 1 && CAM.y < C.y1 - 14 ? 13 : 24), yFar = CAM.y + CAM.far, cortes = [C.y0, C.y1], c;   // (como el de 055, con los dos cortes; dentro, desde más cerca: con la pantalla apaisada se ven las paredes de al lado)
+  vpCalc();
+  nB = 0;
+  while (nB < NB) {
+    var cx = cxAt(y), z = zAt(y);
+    BY[nB] = y; BCX[nB] = cx; BHW[nB] = hwAt(y); BZ[nB] = z;
+    proj(cx - 50, y, z); var ax = PX, ay = PY;
+    proj(cx + 50, y, z); var bx = PX, by = PY;
+    BD[nB] = proj(cx, y, z); BX[nB] = PX; BSY[nB] = PY; BS[nB] = PS;
+    var k = Math.abs(bx - ax) > 1e-4 ? (by - ay) / (bx - ax) : 0;
+    BLX[nB] = -90; BLY[nB] = ay + (-90 - ax) * k; BRX[nB] = V.w + 90; BRY[nB] = ay + (V.w + 90 - ax) * k;
+    if (VPF.on) lineaFuga(nB, y, z);
+    nB++;
+    if (y >= yFar) break;
+    var ny = y + clamp((y - CAM.y) * 0.045, 9, 70);
+    for (c = 0; c < 2; c++) if (cortes[c] > y + 0.3 && cortes[c] < ny - 0.3) { ny = cortes[c]; break; }
+    y = ny;
+  }
+};
+/* cada franja de la cueva, su grupo: se pinta ella y luego lo que hay en ella */
+var groups227c = groups;
+groups = function () {
+  groups227c();
+  var C = qcvSi(); if (!C) return;
+  var b, hay = false;
+  for (b = 1; b < nB; b++) if (BY[b] > C.y0 - 5 && BY[b - 1] < C.y1 + 5) { hay = true; break; }
+  if (!hay) return;
+  var T = QCV.tg || (QCV.tg = new Int16Array(NB)), nid = 0, last = BGRP[0];
+  T[0] = 0;
+  for (b = 1; b < nB; b++) {
+    var og = BGRP[b];
+    if (og !== last || (BY[b] > C.y0 - 5 && BY[b - 1] < C.y1 + 5)) nid++;
+    T[b] = nid; last = og;
+  }
+  for (b = 0; b < nB; b++) BGRP[b] = T[b];
+  nG = nid + 1;
+  for (b = 0; b < nG; b++) GLOW[b] = Infinity;
+  for (b = 0; b < nB - 1; b++) { var q = BGRP[b + 1]; if (BY[b] < GLOW[q]) GLOW[q] = BY[b]; }
+  GLOW[0] = -Infinity;
+};
+var sliceGround227c = sliceGround;
+sliceGround = function (g, i, re) {
+  var C = qcvSi();
+  if (!C || re) { sliceGround227c(g, i, re); return; }
+  if (Math.abs(BY[i + 1] - C.y0) < 0.01 && C.y0 - CAM.y > 6) qcvCara(g);   // la boca, antes de la franja que tiene delante
+  sliceGround227c(g, i, re);
+  if (BY[i + 1] > C.y0 && BY[i] < C.y1) qcvTunel(g, i);
+};
+
+/* ---------- el túnel ---------- */
+var QCV_TON = null;
+function qcvTonos() {                                                     // los tonos de la roca: para cada trozo de la sección (abajo, más claro; el techo, más oscuro), cinco
+  if (QCV_TON) return QCV_TON;
+  var PAL = ['#6b6052', '#74675a', '#5f574d', '#7b6b58', '#675d51'], F = [0.92, 1, 1.04, 1, 0.94, 0.88, 0.82, 0.78];
+  QCV_TON = F.map(function (f) { return PAL.map(function (c) { return qcvHex(c, f); }); });
+  return QCV_TON;
+}
+function qcvTunel(g, i) {
+  var C = L.qcv, j = i + 1, ya = Math.max(BY[i], C.y0), yb = Math.min(BY[j], C.y1); if (yb - ya < 0.05) return;
+  var lejos = BD[i] > 420, B = QCV.bloque, y = ya, nq = QNIV, nf = QFOG;
+  QNIV = 7; QFOG = 0;
+  while (y < yb - 0.01) {
+    var y2 = lejos ? yb : Math.min(yb, (Math.floor(y / B + 1e-6) + 1) * B);
+    qcvTrozo(g, y, y2, lejos ? 2 : 1, Math.floor((y + 0.05) / B));
+    y = y2;
+  }
+  QNIV = nq; QFOG = nf;
+}
+function qcvTrozo(g, ya, yb, paso, blk) {
+  var Pf = QCV.PERF, n = Pf.length, ca = cxAt(ya), cb = cxAt(yb), za = zAt(ya), zb = zAt(yb), k, s, T = qcvTonos(), AX = QCV.ax, AY = QCV.ay, BX2 = QCV.bx, BY2 = QCV.by;
+  for (s = 0; s < 2; s++) {
+    var sg = s ? 1 : -1;
+    for (k = 0; k < n; k++) {
+      qcvPunto(k, sg, ya); proj(ca + sg * QCV.pX, ya, za + QCV.pH); AX[s * n + k] = PX; AY[s * n + k] = PY;
+      qcvPunto(k, sg, yb); proj(cb + sg * QCV.pX, yb, zb + QCV.pH); BX2[s * n + k] = PX; BY2[s * n + k] = PY;
+    }
+  }
+  var ym = (ya + yb) / 2, l0 = 1 - qcvLum(ym), fa = qcvFaro(ym);
+  g.beginPath();                                                           // primero, todo el trozo de un tono: así no asoma nada entre pieza y pieza
+  for (k = 0; k < n; k++) { if (k) g.lineTo(AX[k], AY[k]); else g.moveTo(AX[0], AY[0]); }
+  for (k = n - 2; k >= 0; k--) g.lineTo(AX[n + k], AY[n + k]);
+  for (k = 0; k < n; k++) g.lineTo(BX2[n + k], BY2[n + k]);
+  for (k = n - 2; k >= 0; k--) g.lineTo(BX2[k], BY2[k]);
+  g.closePath(); g.fillStyle = qcvM(T[4][1], 0.92 * l0 * (1 - fa * 0.5)); g.fill();
+  for (s = 0; s < 2; s++) {
+    for (k = n - 1 - paso; k >= 0; k -= paso) {                            // del techo a la pared de abajo
+      var k2 = Math.min(n - 1, k + paso), a = s * n + k, b = s * n + k2, h = hash(blk * 3.7 + s * 1.3 + k * 0.71), base = T[k][Math.floor(h * 4.999)];
+      if (k <= 1 && hash(blk * 5.3 + s * 2.9) < 0.3) base = '#4d5639';     // musgo al pie
+      else if (k >= 2 && k <= 3 && hash(blk * 7.1 + s * 4.3) < 0.18) base = '#5b6062';   // roca mojada
+      quad(g, AX[a], AY[a], AX[b], AY[b], BX2[b], BY2[b], BX2[a], BY2[a], qcvM(base, 0.92 * l0 * (1 - fa * QCV.faroW[k])));
+    }
+  }
+}
+/* el suelo de dentro: roca, la tierra pisada con sus rodadas, charcos y lo que alumbran las grietas */
+var qslTierra227c = qslTierra;
+qslTierra = function (g, i, hi, hj) {
+  qslTierra227c(g, i, hi, hj);
+  if (qcvSi()) qcvSuelo(g, i);
+};
+function qcvSuelo(g, i) {
+  var C = L.qcv, ya = Math.max(BY[i], C.y0), yb = Math.min(BY[i + 1], C.y1); if (yb - ya < 0.05) return;
+  var ym = (ya + yb) / 2, t = qcvOsc(ym, 1), hw = QCV.hw, W = QCV.W, n0 = QNIV, f0 = QFOG, k, q;
+  QNIV = 7; QFOG = 0;
+  qcvQ(g, ya, yb, -W - 1.5, W + 1.5, 0.05, qcvM('#4a3f33', t));
+  qcvQ(g, ya, yb, -hw, hw, 0.06, qcvM('#6a5541', t));
+  qcvQ(g, ya, yb, -0.62 * hw, -0.4 * hw, 0.07, 'rgba(28,20,12,.32)'); qcvQ(g, ya, yb, 0.38 * hw, 0.6 * hw, 0.07, 'rgba(28,20,12,.32)');
+  function mancha(M, col, rl) {                                            // una mancha en el suelo, en tiras
+    var r0 = M.r * 0.62, a = Math.max(ya, M.y - r0), b = Math.min(yb, M.y + r0), y;
+    for (y = a; y < b - 0.01; y = Math.min(b, y + 1.6)) {
+      var y2 = Math.min(b, y + 1.6), e = (y + y2) / 2 - M.y, w = M.r * rl * Math.sqrt(Math.max(0, 1 - (e / r0) * (e / r0)));
+      if (w > 0.3) qcvQ(g, y, y2, M.X - w, M.X + w, 0.08, col);
+    }
+  }
+  for (k = 0; k < C.charco.length; k++) { q = C.charco[k]; if (q.y + q.r > ya && q.y - q.r < yb) { mancha(q, qcvM('#33424a', t * 0.9), 1); mancha({ y: q.y - q.r * 0.15, X: q.X + q.r * 0.25, r: q.r * 0.45 }, qcvM('#7d93a0', t), 0.6); } }
+  for (k = 0; k < C.luz.length; k++) { q = C.luz[k]; if (q.y + 12 > ya && q.y - 12 < yb) { mancha({ y: q.y, X: q.X, r: 12 }, 'rgba(255,232,180,.26)', 1); mancha({ y: q.y, X: q.X, r: 7 }, 'rgba(255,240,205,.32)', 1); } }
+  QNIV = n0; QFOG = f0;
+}
+
+/* ---------- la boca de la cueva: el monte de roca con su hueco ---------- */
+function qcvCara(g) {
+  var C = L.qcv, y = C.y0, cx = cxAt(y), z = zAt(y), R = QCV.cara.R, Pf = QCV.PERF, k, X;
+  QCV.caraHecha = true;
+  var ctr = qcvVista(cx, y, z + 60); if (ctr[1] < 6) return;
+  var f = fogK(ctr[1]), sky = (SKY[L.D.tod] || SKY.manana)[2], lejos = ctr[1] > 40;
+  function m(c) { return relMezcla(c, sky, f); }
+  function V3(X, h) { return qcvVista(cx + X, y, z + h); }
+  function hueco(kx, kh, dh) { var H = [], q; for (q = 0; q < Pf.length; q++) H.push(V3(-Pf[q][0] * kx, Pf[q][1] * kh + (q ? dh : 0))); for (q = Pf.length - 2; q >= 0; q--) H.push(V3(Pf[q][0] * kx, Pf[q][1] * kh + (q ? dh : 0))); H.push(V3(Pf[0][0] * kx, -2)); H.push(V3(-Pf[0][0] * kx, -2)); return qcvRecorta(H, 4); }
+  var fuera = [];
+  for (X = -R; X <= R + 0.1; X += 24) fuera.push(V3(X, Math.max(0, qcvCaraH(X))));
+  fuera.push(V3(R, -2)); fuera.push(V3(-R, -2));
+  var o2 = qcvRecorta(fuera, 4), h2 = hueco(1, 1, 0), h3 = hueco(1.2, 1.1, 4);
+  if (o2.length < 3) return;
+  scr(g);
+  proj(cx - R * 0.6, y, z + 90); var gx0 = PX; proj(cx + R * 0.6, y, z + 90); var gx1 = PX;
+  var gr = g.createLinearGradient(gx0, 0, gx1 === gx0 ? gx0 + 1 : gx1, 0);
+  gr.addColorStop(0, m('#8b8171')); gr.addColorStop(0.5, m('#766c5e')); gr.addColorStop(1, m('#5f574b'));
+  g.beginPath(); qcvTraza(g, o2); if (h2.length > 2) qcvTraza(g, h2);
+  g.fillStyle = gr; g.fill('evenodd');
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  var lw = Math.max(0.6, 1.1 * CAM.F / ctr[1]);
+  if (lejos) {
+    var LOS = ['#857a69', '#6d6455', '#7d7262', '#655d50', '#8f8472', '#5c6a4a'];   // las lajas de roca, de otro tono (y alguna con musgo)
+    for (k = 0; k < 26; k++) {
+      var sx0 = (hash(k * 1.37) - 0.5) * R * 1.7, sh0 = 8 + hash(k * 2.71) * 150, sw = 26 + hash(k * 3.9) * 50, sh = 16 + hash(k * 4.7) * 30;
+      if (qcvCaraH(sx0) < sh0 + sh * 0.6 || qcvCaraH(sx0 + sw) < sh0 + sh * 0.4 || (Math.abs(sx0 + sw / 2) < 46 + sw / 2 && sh0 < 104)) continue;
+      var tl = hash(k * 6.1) * 6 - 3;
+      proj(cx + sx0, y - 0.3, z + sh0); var l0x = PX, l0y = PY; proj(cx + sx0 + sw, y - 0.3, z + sh0 + tl); var l1x = PX, l1y = PY;
+      proj(cx + sx0 + sw - 4, y - 0.3, z + sh0 + sh + tl); var l2x = PX, l2y = PY; proj(cx + sx0 + 3, y - 0.3, z + sh0 + sh);
+      g.beginPath(); g.moveTo(l0x, l0y); g.lineTo(l1x, l1y); g.lineTo(l2x, l2y); g.lineTo(PX, PY); g.closePath();
+      g.fillStyle = m(LOS[Math.floor(hash(k * 8.3) * LOS.length)]); g.fill(); g.strokeStyle = 'rgba(40,32,24,.3)'; g.lineWidth = lw * 0.8; g.stroke();
+    }
+    proj(cx, y, z); var by0 = PY; proj(cx, y, z + 16); var gb = g.createLinearGradient(0, by0, 0, PY); gb.addColorStop(0, 'rgba(30,24,18,.35)'); gb.addColorStop(1, 'rgba(30,24,18,0)');   // al pie, en sombra
+    g.beginPath(); qcvTraza(g, o2); if (h2.length > 2) qcvTraza(g, h2); g.fillStyle = gb; g.fill('evenodd');
+    var hs, run;                                                           // los estratos
+    for (hs = 22; hs < 170; hs += 26) {
+      g.beginPath(); run = false;
+      for (X = -R + 12; X <= R - 12; X += 22) {
+        var hh = hs + 4 * Math.sin(X * 0.05 + hs);
+        if (qcvCaraH(X) < hh + 8 || (Math.abs(X) < 48 && hh < 100)) { run = false; continue; }
+        proj(cx + X, y, z + hh); if (run) g.lineTo(PX, PY); else g.moveTo(PX, PY); run = true;
+      }
+      g.strokeStyle = 'rgba(40,32,24,.26)'; g.lineWidth = lw; g.stroke();
+    }
+    for (k = 0; k < 14; k++) {                                             // grietas
+      X = (hash(k * 3.1) - 0.5) * R * 1.5; var h0 = 20 + hash(k * 5.3) * 140; if (qcvCaraH(X) < h0 + 14 || (Math.abs(X) < 50 && h0 < 104)) continue;
+      proj(cx + X, y, z + h0); var gx = PX, gy = PY; proj(cx + X + 9, y, z + h0 - 6); g.beginPath(); g.moveTo(gx, gy); g.lineTo(PX, PY); proj(cx + X + 12, y, z + h0 - 13); g.lineTo(PX, PY);
+      g.strokeStyle = 'rgba(36,28,20,.36)'; g.lineWidth = lw * 0.8; g.stroke();
+    }
+  }
+  if (h3.length > 2 && h2.length > 2) {                                    // el canto de la boca, en sombra
+    g.beginPath(); qcvTraza(g, h3); qcvTraza(g, h2); g.fillStyle = m('#3f382f'); g.fill('evenodd');
+    g.beginPath(); qcvTraza(g, h2); g.strokeStyle = 'rgba(25,18,12,.7)'; g.lineWidth = lw * 1.2; g.stroke();
+  }
+  if (!lejos) return;
+  for (k = 3; k < Pf.length * 2 - 4; k++) {                                // estalactitas en el canto
+    var q = k < Pf.length ? Pf.length - 1 - k : k - Pf.length + 1, sx = k < Pf.length ? -1 : 1, ex = sx * Pf[q][0] * 1.02, eh = Pf[q][1] + 1, L1 = 4 + hash(k * 7.7) * 7;
+    if (eh < 40) continue;
+    proj(cx + ex - 1.8, y - 0.5, z + eh); var tx0 = PX, ty0 = PY; proj(cx + ex + 1.8, y - 0.5, z + eh); var tx1 = PX, ty1 = PY; proj(cx + ex + 0.2, y - 0.5, z + eh - L1);
+    g.beginPath(); g.moveTo(tx0, ty0); g.lineTo(tx1, ty1); g.lineTo(PX, PY); g.closePath(); g.fillStyle = m('#5a5246'); g.fill(); g.strokeStyle = 'rgba(25,18,12,.55)'; g.lineWidth = lw * 0.6; g.stroke();
+  }
+  var nc = 22, r2, ARC = function (X) { return qcvTecho(X) * 1.1 + 4.6; };   // la tela poleng: cuelga del canto, siguiendo el arco, con sus dos puntas y el cordón amarillo
+  for (k = 0; k < nc; k++) for (r2 = 0; r2 < 3; r2++) {
+    var xa = -24 + k * 48 / nc, xb = xa + 48 / nc, ha = ARC(xa) - r2 * 2.1, hb = ARC(xb) - r2 * 2.1;
+    proj(cx + xa, y - 0.6, z + ha); var p0x = PX, p0y = PY; proj(cx + xb, y - 0.6, z + hb); var p1x = PX, p1y = PY;
+    proj(cx + xb, y - 0.6, z + hb - 2.1); var p2x = PX, p2y = PY; proj(cx + xa, y - 0.6, z + ha - 2.1);
+    g.beginPath(); g.moveTo(p0x, p0y); g.lineTo(p1x, p1y); g.lineTo(p2x, p2y); g.lineTo(PX, PY); g.closePath(); g.fillStyle = (k + r2) % 2 ? m('#26262b') : m('#f2efe6'); g.fill();
+  }
+  for (k = -1; k <= 1; k += 2) {                                           // las dos puntas, colgando a los lados
+    var hx = k * 24, ht2 = ARC(hx) - 6.3;
+    proj(cx + hx - k * 0.2, y - 0.6, z + ht2); var e0x = PX, e0y = PY; proj(cx + hx - k * 3.4, y - 0.6, z + ht2); var e1x = PX, e1y = PY;
+    proj(cx + hx - k * 2.6, y - 0.6, z + ht2 - 13); var e2x = PX, e2y = PY; proj(cx + hx + k * 0.4, y - 0.6, z + ht2 - 11);
+    g.beginPath(); g.moveTo(e0x, e0y); g.lineTo(e1x, e1y); g.lineTo(e2x, e2y); g.lineTo(PX, PY); g.closePath(); g.fillStyle = m('#f2efe6'); g.fill(); g.strokeStyle = m('#26262b'); g.lineWidth = lw * 0.9; g.stroke();
+    g.beginPath(); g.arc(PX, PY, Math.max(1, 1.6 * CAM.F / ctr[1]), 0, TAU); g.fillStyle = m('#e2452f'); g.fill();
+  }
+  g.beginPath();
+  for (k = 0; k <= 16; k++) { var xc = -25 + k * 50 / 16; proj(cx + xc, y - 0.7, z + ARC(xc) + 0.4); if (k) g.lineTo(PX, PY); else g.moveTo(PX, PY); }
+  g.strokeStyle = m('#f2c230'); g.lineWidth = lw * 1.5; g.stroke();
+  for (k = 0; k < 12; k++) {                                               // lianas que cuelgan de arriba
+    X = -110 + k * 20 + (hash(k * 2.7) - 0.5) * 10; var top = qcvCaraH(X) - 4, len = 30 + hash(k * 4.1) * 70, end = top - len;
+    if (Math.abs(X) < 40) end = Math.max(end, 100); if (top - end < 8) continue;
+    proj(cx + X, y - 1, z + top); var lx = PX, ly = PY; proj(cx + X + 4, y - 1, z + (top + end) / 2); var mx = PX, my = PY; proj(cx + X - 2, y - 1, z + end);
+    g.beginPath(); g.moveTo(lx, ly); g.quadraticCurveTo(mx, my, PX, PY); g.strokeStyle = m('#2f5f2c'); g.lineWidth = lw * 1.3; g.stroke();
+    for (var hq = 1; hq < 4; hq++) { var tq = hq / 4; proj(cx + X + 4 * Math.sin(tq * 3), y - 1.2, z + lerp(top, end, tq)); g.beginPath(); g.ellipse(PX + (hq % 2 ? 2 : -2) * lw, PY, 2.6 * lw, 1.3 * lw, hq, 0, TAU); g.fillStyle = m('#3f8a34'); g.fill(); }
+  }
+  var VERDES = ['#3f7d2e', '#4f8f35', '#2f6e2a', '#5a9a3a'];             // el musgo y las matas por todo lo alto
+  for (X = -R + 20; X <= R - 20; X += 20) {
+    var hm = qcvCaraH(X); if (hm < 12) continue;
+    proj(cx + X, y - 1, z + hm - 3); var rm = (8 + hash(X * 0.31) * 6) * CAM.F / ctr[1];
+    g.beginPath(); g.arc(PX, PY, rm, 0, TAU); g.fillStyle = m(VERDES[Math.floor(hash(X * 0.7) * 4)]); g.fill(); g.strokeStyle = 'rgba(20,50,20,.45)'; g.lineWidth = lw * 0.7; g.stroke();
+  }
+}
+
+/* ---------- lo de dentro: estalactitas, raíces, el altar y las antorchas ---------- */
+ESN.fn.qcvEstal = function (g, d, zg) {
+  var X = d.x - cxAt(d.y), top = qcvTecho(X, d.y) + 1.5, len = d.v || 10, rr0 = d.r || 2.2;
+  var dd = proj(d.x, d.y, zg + top - len * 0.5); if (dd < 14 || PX < -80 || PX > V.w + 80) return;
+  scr(g);
+  var col = qcvM(['#7d7466', '#8a8072', '#71695c'][d.k || 0], qcvOsc(d.y, 0.4));
+  k3Abre(d.x, d.y, zg, d.a || 0, 0, 0, 1);
+  k3Masa([k3(0, 0, top), k3(0.3, 0.2, top - len * 0.45), k3(0, 0, top - len)], [rr0, rr0 * 0.5, 0.3], col, { borde: 0.6 });
+  k3Pinta(g);
+};
+ESN.fn.qcvEstalM = function (g, d, zg) {
+  var h = d.v || 10, rr0 = d.r || 2.4, dd = proj(d.x, d.y, zg + h * 0.5); if (dd < 14 || PX < -80 || PX > V.w + 80) return;
+  scr(g);
+  var col = qcvM(['#7a7163', '#857b6d', '#6d655a'][d.k || 0], qcvOsc(d.y, 0.8));
+  k3Abre(d.x, d.y, zg, d.a || 0, 0, 0, 1);
+  k3Masa([k3(0, 0, 0.5), k3(0.2, -0.3, h * 0.5), k3(0, 0, h)], [rr0, rr0 * 0.55, 0.35], col, { borde: 0.6 });
+  k3Pinta(g);
+};
+ESN.fn.qcvRaiz = function (g, d, zg) {
+  var X = d.x - cxAt(d.y), top = qcvTecho(X, d.y), len = d.v || 20, dd = proj(d.x, d.y, zg + top - len * 0.5); if (dd < 14 || PX < -80 || PX > V.w + 80) return;
+  scr(g);
+  var col = qcvM('#6a5038', qcvOsc(d.y, 0.3) * 0.8), t = G.t, k;
+  for (k = 0; k < 4; k++) {
+    var o = (k - 1.5) * 2.2, l = len * (0.6 + hash(k * 3.3 + d.y) * 0.4), sw = Math.sin(t * 1.3 + k * 1.7) * 1.4;
+    proj(d.x + o, d.y, zg + top); var x0 = PX, y0 = PY, s0 = PS; proj(d.x + o + 2 + sw * 0.5, d.y, zg + top - l * 0.5); var x1 = PX, y1 = PY; proj(d.x + o + sw, d.y, zg + top - l);
+    g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x1, y1, PX, PY); g.strokeStyle = col; g.lineWidth = Math.max(0.6, (0.9 - k * 0.12) * s0); g.lineCap = 'round'; g.stroke();
+  }
+};
+ESN.fn.qcvAltar = function (g, d, zg) {
+  var dd = proj(d.x, d.y, zg + 6); if (dd < 14 || PX < -80 || PX > V.w + 80) return;
+  scr(g);
+  var t = qcvOsc(d.y, 0.7) * 0.75, P2 = function (c) { return qcvM(c, t); }, f = 0.85 + Math.sin(G.t * 13) * 0.1 + Math.sin(G.t * 7.3) * 0.05;
+  k3Abre(d.x, d.y, zg, 0, 0, 0, 1);
+  k3Bloque([-3.4, 3.4, -2.6, 2.6, 0], [-3, 3, -2.3, 2.3, 3.4], P2('#8a8070'), { top: P2('#9a9080') });   // la base de piedra
+  k3Bloque([-1.6, 1.6, -1.4, 1.4, 3.4], [-1.5, 1.5, -1.3, 1.3, 9], P2('#7f7566'), { top: P2('#8f8576') });   // el pilar
+  k3Bloque([-3, 3, -2.4, 2.4, 9], [-3.2, 3.2, -2.6, 2.6, 10.4], P2('#958b7b'), { top: P2('#a39888') });   // la bandeja
+  k3Bloque([-1.65, 1.65, -1.45, 1.45, 5.4], [-1.65, 1.65, -1.45, 1.45, 7.4], P2('#26262b'), { top: false });   // su tela poleng
+  [['#e2452f', -1.6, -1], ['#f2c230', 0, 0.8], ['#ffffff', 1.6, -0.6], ['#4f8f35', -0.4, 1.4]].forEach(function (o) { k3Bola(k3(o[1], o[2], 11), 0.9, P2(o[0]), { borde: 0.4 }); });   // las ofrendas (canang)
+  var V0 = k3(1.8, -1.2, 10.4), V1 = k3(1.8, -1.2, 13);                    // la vela, con su llama
+  k3Tubo(V0, V1, 0.45, 0.45, '#f4ead2', { borde: 0.4 });
+  k3Fn(V1[3] - 0.5, function (c) { var p = k3(1.8, -1.2, 13.9), s = p[2]; c.fillStyle = '#ffd36a'; c.beginPath(); c.ellipse(p[0], p[1], 0.7 * s, 1.5 * s * f, 0, 0, TAU); c.fill(); c.fillStyle = '#fff6d8'; c.beginPath(); c.ellipse(p[0], p[1] + 0.4 * s, 0.35 * s, 0.7 * s, 0, 0, TAU); c.fill(); });
+  k3Pinta(g);
+};
+ESN.fn.qcvAntorcha = function (g, d, zg) {
+  var sd = d.sd || 1, dd = proj(d.x, d.y, zg + 34); if (dd < 14 || PX < -80 || PX > V.w + 80) return;
+  scr(g);
+  var t = qcvOsc(d.y, 0.6) * 0.6, f = 0.85 + Math.sin(G.t * 11 + d.y) * 0.1 + Math.sin(G.t * 17.3) * 0.06;
+  k3Abre(d.x, d.y, zg, 0, 0, 0, 1);
+  var A = k3(0, -sd * 0.5, 30), B = k3(0, -sd * 3.4, 35);                 // (v hacia la derecha: la antorcha sale de la pared hacia el camino)
+  k3Tubo(A, B, 0.55, 0.7, qcvM('#6b4a2a', t), { borde: 0.5 });
+  k3Bola(k3(0, -sd * 3.6, 35.6), 1, qcvM('#3a2a1c', t), { borde: 0.4 });
+  k3Fn(B[3] - 1, function (c) {
+    var p = k3(0, -sd * 3.7, 38.4), s = p[2];
+    c.fillStyle = '#ff9a2e'; c.beginPath(); c.ellipse(p[0], p[1], 1.6 * s, 3.2 * s * f, Math.sin(G.t * 5) * 0.12, 0, TAU); c.fill();
+    c.fillStyle = '#ffe28a'; c.beginPath(); c.ellipse(p[0], p[1] + 0.8 * s, 0.8 * s, 1.7 * s * f, 0, 0, TAU); c.fill();
+  });
+  k3Pinta(g);
+};
+
+/* ---------- los murciélagos ---------- */
+ET.qcvMurci = {
+  init: function (e) {
+    var r = mulberry(Math.floor(e.y) + 9), k, X; e.st = 'cuelga'; e.B = []; e.tm = 0; e.y0 = e.y;   // (e.t es el tipo: el reloj va en e.tm)
+    for (k = 0; k < QCV.murcis; k++) { X = (r() - 0.5) * 44; e.B.push({ X: X, x: cxAt(e.y) + X, y: e.y + r() * 50, z: zAt(e.y) + qcvTecho(X, e.y) - 3, ph: r() * TAU, v: 0.8 + r() * 0.5, sd: X < 0 ? -1 : 1 }); }
+  },
+  honk: function (e) {
+    if ((e.st === 'cuelga' || e.st === 'vuela') && e.y0 - P.y < 440) { e.st = 'huye'; SFX.whoosh(); pop('¡Se apartan!', P.x, P.y + 44, '#dff7ff', 0.9); }
+  },
+  upd: function (e, dt) {
+    e.tm += dt;
+    var k, b, n = e.B.length, sy = 0, fr = 1e9, sx = 0;
+    if (e.st === 'cuelga' && P.state === 'ride' && e.y0 - P.y < 300) { e.st = 'vuela'; SFX.whoosh(); }
+    for (k = 0; k < n; k++) {
+      b = e.B[k];
+      var ct = zAt(b.y) + qcvTecho(b.x - cxAt(b.y), b.y) - 4;
+      if (e.st === 'vuela') {
+        b.y -= 130 * b.v * dt;                                             // se te echan encima, por arriba y a los lados (que se vean por encima de vosotros)
+        b.x += (P.x + b.X * 0.85 + Math.sin(e.tm * 7 + b.ph) * 8 - b.x) * expo(3, dt);
+        b.z += (zAt(b.y) + 34 + (k % 4) * 5 + Math.sin(e.tm * 9 + b.ph) * 6 - b.z) * expo(3, dt);
+      } else if (e.st === 'pasa') {
+        b.y -= 170 * b.v * dt; b.z += (ct - 10 - b.z) * expo(1.5, dt); b.x += b.sd * 18 * dt;
+      } else if (e.st === 'huye') {
+        b.y += (40 - 90 * b.v) * dt; b.z += (ct - b.z) * expo(2.5, dt); b.x += (cxAt(b.y) + b.sd * 26 - b.x) * expo(1.8, dt);
+      }
+      sy += b.y; sx += b.x; if (b.y < fr) fr = b.y;
+    }
+    e.y = sy / n; e.x = sx / n;
+    if (e.st === 'vuela' && !e.golpe && P.state === 'ride' && fr < P.y + 12) {
+      e.golpe = true; e.st = 'pasa';
+      if (Math.abs(e.x - P.x) < 34) {
+        P.speed *= 0.72; P.wob = Math.max(P.wob || 0, 0.75); shake(0.32); SFX.whoosh();
+        pop('¡Aaah! ¡Murciélagos!', P.x, P.y + 44, '#dff7ff', 1.05);
+      }
+    }
+    if (P.y > e.y0 + 420) e.dead = true;
+  },
+  draw: function (g, e) {
+    scr(g);
+    var k, b, lw;
+    for (k = 0; k < e.B.length; k++) {
+      b = e.B[k];
+      var dd = proj(b.x, b.y, b.z); if (dd < 10 || PX < -40 || PX > V.w + 40) continue;
+      var s = PS * 1.25, x = PX, y = PY, t = qcvOsc(b.y, 0.8) * 0.85, cu = qcvM('#6d6178', t), bo = 'rgba(205,195,220,' + (0.55 * (1 - t)).toFixed(2) + ')';
+      lw = Math.max(0.5, 0.35 * s);
+      if (e.st === 'cuelga') {                                             // colgados, boca abajo, con las alas plegadas
+        g.beginPath(); g.ellipse(x, y + 2.4 * s, 1.3 * s, 2.6 * s, 0, 0, TAU); g.fillStyle = cu; g.fill(); g.strokeStyle = bo; g.lineWidth = lw; g.stroke();
+        continue;
+      }
+      var fl = Math.sin(e.tm * 26 * b.v + b.ph), wy = fl * 3.2 * s, ws = 6.8 * s;
+      g.beginPath();
+      g.moveTo(x - 0.8 * s, y); g.lineTo(x - ws * 0.55, y - wy * 0.7 - 0.6 * s); g.lineTo(x - ws, y - wy); g.lineTo(x - ws * 0.72, y - wy * 0.4 + 1 * s); g.lineTo(x - ws * 0.42, y + 0.4 * s - wy * 0.2); g.lineTo(x - ws * 0.22, y + 1.2 * s);
+      g.lineTo(x + ws * 0.22, y + 1.2 * s); g.lineTo(x + ws * 0.42, y + 0.4 * s - wy * 0.2); g.lineTo(x + ws * 0.72, y - wy * 0.4 + 1 * s); g.lineTo(x + ws, y - wy); g.lineTo(x + ws * 0.55, y - wy * 0.7 - 0.6 * s); g.lineTo(x + 0.8 * s, y);
+      g.closePath(); g.fillStyle = cu; g.fill(); g.strokeStyle = bo; g.lineWidth = lw; g.stroke();
+      g.beginPath(); g.ellipse(x, y + 0.2 * s, 1.1 * s, 1.7 * s, 0, 0, TAU); g.fillStyle = qcvM('#3b3342', t); g.fill();
+      g.beginPath(); g.moveTo(x - 0.9 * s, y - 1 * s); g.lineTo(x - 0.6 * s, y - 2.3 * s); g.lineTo(x - 0.1 * s, y - 1.2 * s); g.moveTo(x + 0.9 * s, y - 1 * s); g.lineTo(x + 0.6 * s, y - 2.3 * s); g.lineTo(x + 0.1 * s, y - 1.2 * s); g.fill();   // las orejas
+      if (s > 1.2) { g.fillStyle = '#ffd36a'; g.fillRect(x - 0.6 * s, y - 0.4 * s, 0.35 * s, 0.35 * s); g.fillRect(x + 0.25 * s, y - 0.4 * s, 0.35 * s, 0.35 * s); }   // los ojillos
+    }
+  }
+};
+
+/* ---------- el fondo de dentro: roca (menos por la salida) ---------- */
+var drawSky227c = drawSky;
+drawSky = function (g) {
+  var hy = drawSky227c(g), C = qcvSi();
+  if (!C || CAM.y < C.y0 + 2 || CAM.y > C.y1 - 2) return hy;
+  var Pf = QCV.PERF, k, H = [], cx = cxAt(C.y1), z = zAt(C.y1);
+  g.beginPath(); g.rect(0, 0, V.w, V.h);
+  if (C.y1 < CAM.y + CAM.far) {
+    for (k = 0; k < Pf.length; k++) H.push(qcvVista(cx - Pf[k][0], C.y1, z + Pf[k][1]));
+    for (k = Pf.length - 2; k >= 0; k--) H.push(qcvVista(cx + Pf[k][0], C.y1, z + Pf[k][1]));
+    H = qcvRecorta(H, 4); if (H.length > 2) qcvTraza(g, H);
+  }
+  g.fillStyle = '#15120f'; g.fill('evenodd');
+  return V.h + 1;                                                          // (sin el degradado del suelo de 065: lo de dentro es roca)
+};
+
+/* ---------- la luz: la penumbra, los faros, los rayos de las grietas, las antorchas y los pilotos ---------- */
+var drawOverlay227c = drawOverlay;
+drawOverlay = function (g) {
+  var C = qcvSi();
+  if (C) qcvLuces(g, C);
+  drawOverlay227c(g);
+};
+function qcvLuces(g, C) {
+  scr(g);
+  if (!QCV.caraHecha && C.y0 - CAM.y > 6 && C.y0 < BY[0] + 0.5) qcvCara(g);   // la boca, cuando ya está más cerca que la primera franja
+  var kIn = smooth(clamp((CAM.y - C.y0 + 30) / 70, 0, 1)) * (1 - smooth(clamp((CAM.y - C.y1 + 20) / 80, 0, 1))), k, q;
+  if (kIn > 0.01) {
+    proj(P.x, P.y + 40, zAt(P.y) + 6);
+    var cx = PX, cy = PY, R = Math.max(V.w, V.h) * 0.8, gr = g.createRadialGradient(cx, cy, R * 0.1, cx, cy, R);
+    gr.addColorStop(0, 'rgba(6,5,9,0)'); gr.addColorStop(0.45, 'rgba(6,5,9,' + (0.26 * kIn).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(6,5,9,' + (0.72 * kIn).toFixed(3) + ')');
+    g.fillStyle = gr; g.fillRect(0, 0, V.w, V.h);
+  }
+  g.save(); g.globalCompositeOperation = 'lighter';
+  if (P.y > C.y0 - 80 && P.y < C.y1 && P.state !== 'ko') {                  // los faros, en el suelo de delante
+    var th = P.th != null ? P.th : Math.atan(slopeAt(P.y)), fx = Math.sin(th), fy = Math.cos(th), ct = Math.max(0.3, fy);
+    var s0 = Math.max(14, (C.y0 - P.y) / ct), s1 = Math.min(240, (C.y1 - P.y) / ct);
+    if (s1 > s0 + 10) {
+      var w0 = 5 + (s0 - 14) * 0.16, w1 = 5 + (s1 - 14) * 0.16;
+      var pt = function (s, w) { var x = P.x + fx * s + fy * w, y = P.y + fy * s - fx * w; proj(x, y, zAt(y) + 0.4); return [PX, PY]; };
+      var A = pt(s0, -w0), B = pt(s0, w0), Cc = pt(s1, w1), D = pt(s1, -w1), N0 = pt(s0, 0), N1 = pt(s1, 0);
+      var gb = g.createLinearGradient(N0[0], N0[1], N1[0], N1[1]); gb.addColorStop(0, 'rgba(255,240,205,.24)'); gb.addColorStop(1, 'rgba(255,240,205,0)');
+      g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.lineTo(Cc[0], Cc[1]); g.lineTo(D[0], D[1]); g.closePath(); g.fillStyle = gb; g.fill();
+    }
+  }
+  for (k = 0; k < C.luz.length; k++) {                                     // los rayos de luz de las grietas, con su polvo
+    q = C.luz[k]; if (q.y < CAM.y + 30 || q.y > CAM.y + CAM.far) continue;
+    var c0 = cxAt(q.y), z0 = zAt(q.y), ht = qcvTecho(q.X, q.y) - 1, dd = proj(c0 + q.X, q.y, z0 + ht), al = 1 - smooth(clamp((dd - 520) / 600, 0, 1)); if (al <= 0.02) continue;
+    var tx = PX, ty = PY, ts = PS;
+    proj(c0 + q.X - 3.4, q.y, z0 + ht); var t0x = PX, t0y = PY; proj(c0 + q.X + 3.4, q.y, z0 + ht); var t1x = PX, t1y = PY;
+    proj(c0 + q.X + 11, q.y, z0 + 0.3); var b1x = PX, b1y = PY; proj(c0 + q.X - 11, q.y, z0 + 0.3); var b0x = PX, b0y = PY;
+    var gs = g.createLinearGradient(tx, ty, (b0x + b1x) / 2, (b0y + b1y) / 2);
+    gs.addColorStop(0, 'rgba(255,246,214,' + (0.36 * al).toFixed(3) + ')'); gs.addColorStop(1, 'rgba(255,246,214,' + (0.06 * al).toFixed(3) + ')');
+    g.beginPath(); g.moveTo(t0x, t0y); g.lineTo(t1x, t1y); g.lineTo(b1x, b1y); g.lineTo(b0x, b0y); g.closePath(); g.fillStyle = gs; g.fill();
+    var gc = g.createRadialGradient(tx, ty, 0, tx, ty, 8 * ts); gc.addColorStop(0, 'rgba(255,255,236,' + (0.75 * al).toFixed(3) + ')'); gc.addColorStop(1, 'rgba(255,255,236,0)');
+    g.fillStyle = gc; g.fillRect(tx - 8 * ts, ty - 8 * ts, 16 * ts, 16 * ts);
+    g.fillStyle = 'rgba(255,248,220,' + (0.55 * al).toFixed(3) + ')';
+    for (var m2 = 0; m2 < 8; m2++) {
+      var hh = ((G.t * (4 + m2 % 3) + m2 * 9.7) % ht), wx = Math.sin(G.t * 0.7 + m2 * 2.1) * (3 + 7 * (1 - hh / ht));
+      proj(c0 + q.X + wx, q.y + Math.cos(G.t * 0.5 + m2) * 3, z0 + hh); g.fillRect(PX - 0.5 * PS, PY - 0.5 * PS, Math.max(1, PS), Math.max(1, PS));
+    }
+  }
+  var fl = 0.85 + Math.sin(G.t * 11) * 0.1 + Math.sin(G.t * 17.3) * 0.05;   // las antorchas y la vela
+  for (k = -1; k <= 1; k++) {
+    var ya = C.altar.y + k * 26; if (ya < CAM.y + 30 || ya > CAM.y + CAM.far) continue;
+    var dq = proj(cxAt(ya) + C.altar.s * (k ? 30.4 : 25.6), ya, zAt(ya) + (k ? 38 : 13.5)), rq = (k ? 26 : 9) * PS * fl;
+    if (dq < 12) continue;
+    var gt = g.createRadialGradient(PX, PY, 0, PX, PY, rq); gt.addColorStop(0, 'rgba(255,170,80,' + (k ? 0.34 : 0.28) + ')'); gt.addColorStop(1, 'rgba(255,150,60,0)');
+    g.fillStyle = gt; g.fillRect(PX - rq, PY - rq, rq * 2, rq * 2);
+  }
+  if (typeof RIV !== 'undefined' && RIV.L) for (k = 0; k < RIV.L.length; k++) {   // los pilotos rojos de los rivales
+    var Rv = RIV.L[k]; if (Rv.y < C.y0 + 10 || Rv.y > C.y1 || Rv.y < CAM.y + 40 || Rv.fin != null) continue;
+    for (var sdq = -1; sdq <= 1; sdq += 2) {
+      var dr = proj(Rv.x + sdq * 5.5, Rv.y - 11, zAt(Rv.y) + 9.5); if (dr < 12) continue;
+      var rp = 5 * PS, gp = g.createRadialGradient(PX, PY, 0, PX, PY, rp); gp.addColorStop(0, 'rgba(255,70,50,.75)'); gp.addColorStop(1, 'rgba(255,40,30,0)');
+      g.fillStyle = gp; g.fillRect(PX - rp, PY - rp, rp * 2, rp * 2);
+    }
+  }
+  if (kIn > 0.01 && C.y1 < CAM.y + CAM.far) {                              // la salida, que deslumbra
+    var de = proj(cxAt(C.y1), C.y1, zAt(C.y1) + 36);
+    if (de > 20) { var re = Math.min(V.w, 64 * PS * 1.6), ge = g.createRadialGradient(PX, PY, 0, PX, PY, re); ge.addColorStop(0, 'rgba(255,252,236,' + (0.24 * kIn).toFixed(3) + ')'); ge.addColorStop(1, 'rgba(255,252,236,0)'); g.fillStyle = ge; g.fillRect(PX - re, PY - re, re * 2, re * 2); }
+  }
+  g.restore();
+}
+
+/* ---------- el espejo: detrás de ti también es la cueva ---------- */
+if (typeof espDibuja === 'function') {
+  var espDibuja227c = espDibuja;
+  espDibuja = function (g) {
+    espDibuja227c(g);
+    var C = qcvSi(); if (!C || !ESP.vivo || SAVE.espejo === 0) return;
+    var k = smooth(clamp((P.y - C.y0 - 30) / 150, 0, 1)) * (1 - smooth(clamp((P.y - C.y1 - 40) / 160, 0, 1))); if (k < 0.02) return;
+    var Q = espSitio(); g.save(); rrect(g, Q[0], Q[1], Q[2], Q[3], 7); g.clip(); g.fillStyle = 'rgba(14,12,11,' + (0.82 * k).toFixed(3) + ')'; g.fillRect(Q[0], Q[1], Q[2], Q[3]); g.restore();
+  };
+}
+
+/* ---------- la cámara baja para entrar ---------- */
+var updCam227c = updCam;
+updCam = function (dt) {
+  updCam227c(dt);
+  var C = qcvSi(), obj = 0;
+  if (C) obj = P.y < C.y0 ? smooth(clamp((P.y - (C.y0 - QCV.camA)) / QCV.camR, 0, 1)) : 1 - smooth(clamp((P.y - (C.y1 + QCV.camS)) / QCV.camR, 0, 1));
+  if (obj === 0 && QCV.k === 0) return;
+  QCV.k += (obj - QCV.k) * expo(3.5, dt); if (Math.abs(QCV.k - obj) < 0.002) QCV.k = obj;
+  var k = QCV.k, bh = 170 * CAMC.k, bb = 135 * CAMC.k, p = lerp(0.5236, QCV.cam.p, k);
+  CAM.h = lerp(bh, QCV.cam.h, k); CAM.back = lerp(bb, QCV.cam.back, k);
+  CAM.pitch = p; CAM.s = Math.sin(p); CAM.c = Math.cos(p);                 // (F se queda: con camF cambiaría el zum)
+  camPlace();
+};
+var startLevel227c = startLevel;
+startLevel = function (li) { QCV.k = 0; return startLevel227c.apply(this, arguments); };
+var showMenu227c = showMenu;
+showMenu = function () { if (QCV.k) { QCV.k = 0; camCarrera(); } return showMenu227c.apply(this, arguments); };
+
+/* ---------- dentro: los avisos, Wayan y las paredes ---------- */
+var update227c = update;
+update = function (dt) {
+  update227c(dt);
+  var C = qcvSi(); if (!C || !(typeof QSL !== 'undefined' && QSL.on) || G.state !== 'play' || P.state !== 'ride') return;
+  if (!C.aviso && P.y > C.y0 - 480 && P.y < C.y0) { C.aviso = true; avisar('¡La cueva sagrada! Dentro, despacio y con los faros', '🕯️'); }
+  if (!C.shh && P.y > C.y0 + 20) { C.shh = true; pop('Wayan: «¡Shhh! Es sagrada»', P.x, P.y + 46, '#fff3b0', 0.95); }
+  if (!C.avM && P.y > C.murci - 440 && P.y < C.murci) { C.avM = true; avisar('¡Murciélagos! Pita (TIN TIN) y se apartan', '🦇'); }
+  if (!C.suk && P.y > C.altar.y - 30) { C.suk = true; pop('Wayan: «Suksma» 🙏', P.x, P.y + 46, '#ffe6a8', 0.95); }
+  if (P.z > 0) return;
+  var u = P.x - cxAt(P.y), lim;
+  if (P.y > C.y0 - 90 && P.y < C.y0 + 4) {                                  // antes de la boca, el camino te lleva hacia dentro
+    lim = lerp(hwAt(P.y) + GUT - 3.5, QCV.lim, smooth(clamp((P.y - (C.y0 - 90)) / 86, 0, 1)));
+    if (Math.abs(u) > lim) P.x += (sgn(u) * lim - u) * expo(10, dt);
+  } else if (P.y >= C.y0 + 4 && P.y <= C.y1) {                              // dentro, la roca
+    lim = QCV.lim - (sgn(u) === C.altar.s && Math.abs(P.y - C.altar.y) < 22 ? 3 : 0);
+    if (Math.abs(u) > lim) {
+      P.x = cxAt(P.y) + sgn(u) * lim; P.speed = Math.max(0, P.speed - 150 * dt);
+      if (G.t - (C.roceT || -9) > 0.45) { C.roceT = G.t; shake(0.12); SFX.thud(); dust(P.x + sgn(u) * 12, P.y, 3, '62,54,46'); }
+      if (G.t - (C.roceP || -9) > 2.2) { C.roceP = G.t; pop(pickM(['¡La pared!', '¡Ay, la roca!']), P.x, P.y + 30, '#ffd1a8', 0.9); }
+    }
+  }
+};
+
+(function () {
+  var N = {
+    '¡La cueva sagrada! Dentro, despacio y con los faros': ['The sacred cave! Inside, slowly and with your headlights', 'Gua suci! Di dalam, pelan-pelan dan pakai lampu'],
+    'Wayan: «¡Shhh! Es sagrada»': ['Wayan: «Shhh! It\'s sacred»', 'Wayan: «Sssst! Ini suci»'],
+    '¡Murciélagos! Pita (TIN TIN) y se apartan': ['Bats! Honk (TIN TIN) and they move away', 'Kelelawar! Klakson (TIN TIN) dan mereka menyingkir'],
+    'Wayan: «Suksma» 🙏': ['Wayan: «Suksma» (thank you) 🙏', 'Wayan: «Suksma» 🙏'],
+    '¡Se apartan!': ['They move away!', 'Mereka menyingkir!'], '¡Aaah! ¡Murciélagos!': ['Aaah! Bats!', 'Aaah! Kelelawar!'],
+    '¡La pared!': ['The wall!', 'Dindingnya!'], '¡Ay, la roca!': ['Ouch, the rock!', 'Aduh, batunya!'],
+    '¡El paso de piedras! Ve por las piedras o te caes al río': ['The stepping stones! Stay on the stones or you\'ll fall in the river', 'Batu loncatan! Lewat batunya atau kamu jatuh ke sungai'],
+    '¡El acantilado! No te acerques al borde de la izquierda': ['The cliff! Keep away from the left edge', 'Tebing! Jangan dekat-dekat tepi kiri'],
+    '¡PLOF!': ['SPLASH!', 'BYUR!'], '¡Cuidado!': ['Careful!', 'Awas!'], '¡Uy, el borde!': ['Whoa, the edge!', 'Eh, tepinya!'], '¡Que te caes!': ['You\'ll fall!', 'Nanti jatuh!']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
