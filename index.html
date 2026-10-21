@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Completo V229</title>
+<title>Bali Rush Completo V230</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -830,7 +830,7 @@ var MODE = 'menu';
    BALI RUSH — arcade de moto por el caos de Bali
    núcleo: constantes, utilidades, guardado, partículas y rótulos
    ================================================================ */
-var VERSION = 'Completo V229', FECHA = '21-10-2026';
+var VERSION = 'Completo V230', FECHA = '21-10-2026';
 
 var TAU = Math.PI * 2, INK = '#2a1c10';
 var MAXV = 240;        // velocidad máxima (unidades/s)
@@ -111058,6 +111058,249 @@ drawOverlay = function (g) {
     '¡CATAPLÁN!': ['KA-BOOM!', 'GEDUBRAK!']
   };
   N['¡Empapados! +' + QCS.premio + ' ✿'] = ['Soaked! +' + QCS.premio + ' ✿', 'Basah kuyup! +' + QCS.premio + ' ✿'];
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza juegos/quad/652_quad_obstaculos.js*/
+/* ================================================================
+   V230 · EL QUAD: LO DE JUGAR (rocas, piedrecitas, troncos y piedras
+   que caen; los lados, menos amontonados)
+   Jose Javier, con la V228: «… atraviesas rocas que no tiene sentido,
+   pon piedrecitas y que bote si vas muy rápido, algún obstáculo más».
+   Preguntado: las rocas, «que te cueste un poco pasar, que vibre o
+   bote algo y te cueste controlar algo la moto»; lo apelotonado, «las
+   rocas y matas de los lados».
+   - LAS ROCAS de los lados ya no se atraviesan sin más: si las pisas,
+     botas, vibra todo, frenas un poco y la moto se te va (QOB.roca).
+   - LAS PIEDRECITAS: tramos de grava suelta en el camino; despacio,
+     solo traquetean; si vas muy rápido (más de QOB.grava.v), botas una
+     y otra vez y cuesta llevar la moto.
+   - LOS TRONCOS CAÍDOS: cruzan medio camino. Lanzado, saltas por
+     encima (¡HOP!); despacio, te frenan en seco (¡TOC!).
+   - LAS PIEDRAS QUE CAEN en el acantilado: al acercarte se suelta una
+     de lo alto de la pared, cae (su sombra avisa dónde), rueda por el
+     camino y se despeña. Si te da: ¡CATAPUM!, frenazo y baile.
+   - LOS LADOS: las rocas, helechos y matas junto al camino, sin
+     amontonarse (como mucho una cada QOB.hueco, por lado).
+   QOB.vivo = false: nada de esto (como la V229).
+   ================================================================ */
+var QOB = { vivo: true, hueco: 26, roca: { k: 6.4, v: 0.9, cd: 0.55 }, grava: { v: 0.72, n: 2 }, tronco: { n: 4, salto: 0.55 }, cae: [0.17, 0.43, 0.67], hz: 0, vz: 0 };
+function qobSi() { return QOB.vivo && G.mode === 'level' && L && L.D && L.D.quad; }
+function qobEsRoca(s) { return s && (s === SP.rock[0] || s === SP.rock[1] || s === SP.rock[2] || s.esc === 'roca'); }
+function qobEsMata(s) { return s && (qobEsRoca(s) || s === ESN.s.helecho || (s.ar === 'mata') || (SP.bush && SP.bush.indexOf(s) >= 0)); }
+
+/* ---------- montar ---------- */
+var buildLevel229o = buildLevel;
+buildLevel = function (li) {
+  var r = buildLevel229o.apply(this, arguments);
+  if (!QOB.vivo || !L || !L.D || !L.D.quad) return r;
+  qobLados(); qobRocas(); qobGrava(); qobTroncos(); qobCaen();
+  L.stat.sort(byY); L.deco.ground.sort(byY); L.dyn.sort(function (a, b) { return a.ay - b.ay; });
+  return r;
+};
+function qobEn(y, m) {                                                     // ¿en el vado o en la cueva (o cerca)?
+  m = m || 0;
+  if (L.qvd && y > L.qvd.y0 - 120 - m && y < L.qvd.y1 + 60 + m) return true;
+  if (L.qcv && y > L.qcv.y0 - 160 - m && y < L.qcv.y1 + 60 + m) return true;
+  return false;
+}
+function qobLados() {                                                      // las rocas y matas de junto al camino, sin amontonarse
+  var ult = { '-1': -1e9, '1': -1e9 }, n = 0;
+  L.deco.ground = L.deco.ground.filter(function (d) {
+    if (!qobEsMata(d.s) || d.x == null) return true;
+    var u = d.x - cxAt(d.y), e = hwAt(d.y) + GUT, s = u < 0 ? -1 : 1;
+    if (Math.abs(u) > e + 70 || (L.qcv && d.y > L.qcv.y0 - 30 && d.y < L.qcv.y0 + 2)) return true;   // (lo de lejos y las peñas de la boca de la cueva, como estaban)
+    if (d.y - ult[s] < QOB.hueco) { n++; return false; }
+    ult[s] = d.y; return true;
+  });
+  L.qobQuita = n;
+}
+function qobRocas() {                                                      // las rocas que se pueden pisar: las de junto al camino
+  L.qob = [];
+  L.deco.ground.forEach(function (d) {
+    if (!qobEsRoca(d.s) || d.x == null) return;
+    var u = Math.abs(d.x - cxAt(d.y)), r = QOB.roca.k * (d.sc || 1) * 0.86 * 0.62;
+    if (u - r < hwAt(d.y) + GUT + 2) L.qob.push({ x: d.x, y: d.y, r: r });
+  });
+}
+function qobGrava() {                                                      // tramos de piedrecitas en el camino
+  var rnd = mulberry(L.D.seed + 4451);
+  L.secs.forEach(function (S) {
+    if (S.s.th !== 'selva' || S.y0 < 400 || S.s.g.some(function (g) { return g[0] === 'meta' || g[0] === 'vado' || g[0] === 'cueva'; })) return;
+    for (var k = 0; k < QOB.grava.n; k++) {
+      var y = lerp(S.y0 + 120, S.y1 - 120, (k + 0.3 + rnd() * 0.4) / QOB.grava.n); if (qobEn(y)) continue;
+      var hw = hwAt(y), w = hw * (1.1 + rnd() * 0.7), x = cxAt(y) + (rnd() - 0.5) * (hw * 2 - w), l = 34 + rnd() * 30, P0 = [], q;
+      for (q = 0; q < 110; q++) P0.push([(rnd() - 0.5) * w * (0.4 + 0.6 * rnd()), (rnd() - 0.5) * l, 1 + rnd() * 1.7, Math.floor(rnd() * 4)]);
+      L.stat.push({ t: 'qgrava', x: x, y: y, u: x - cxAt(y), w: w, l: l, P: P0 });
+    }
+  });
+}
+function qobTroncos() {                                                    // troncos caídos que cruzan medio camino
+  var rnd = mulberry(L.D.seed + 7717), S2 = L.secs.filter(function (S) { return S.s.th === 'selva' && S.y0 > 600 && !S.s.g.some(function (g) { return g[0] === 'meta' || g[0] === 'vado' || g[0] === 'cueva'; }); }), n = 0, k;
+  function estrecho(y) { return (L.qsnAng || []).some(function (A) { return y > A.y0 - 170 && y < A.y1 + 170; }); }
+  for (k = 0; k < S2.length && n < QOB.tronco.n; k++) {
+    var S = S2[k];
+    for (var tt = 0, puso = 0; tt < 8 && puso < 2 && n < QOB.tronco.n; tt++) {
+      var y = lerp(S.y0 + 130, S.y1 - 130, rnd()); if (qobEn(y, 60) || estrecho(y) || Math.abs(slopeAt(y + 40) - slopeAt(y - 40)) > 0.4 || L.stat.some(function (o) { return o.t === 'qtronco' && Math.abs(o.y - y) < 260; })) continue;   // (en las horquillas, no)
+      var hw = hwAt(y), lado = rnd() < 0.5 ? -1 : 1, largo = hw * (1.05 + rnd() * 0.15);
+      L.stat.push({ t: 'qtronco', y: y, x: cxAt(y) + lado * (hw + 6 - largo / 2), u0: lado < 0 ? -hw - 8 : hw + 8 - largo, u1: lado < 0 ? -hw - 8 + largo : hw + 8, lado: lado, a: (rnd() - 0.5) * 0.25, v: Math.floor(rnd() * 3) });
+      n++; puso++;
+    }
+  }
+}
+function qobCaen() {                                                       // las piedras que caen de la pared del acantilado
+  var S = null; L.secs.forEach(function (s) { if (s.s.th === 'cornisa') S = s; }); if (!S) return;
+  var rnd = mulberry(L.D.seed + 9113);
+  QOB.cae.forEach(function (f) { var y = S.y0 + (S.y1 - S.y0) * f; addDyn('qobCae', y, { ay: y - 700, tu: (rnd() - 0.4) * 1.1 }); });
+}
+
+/* ---------- las piedrecitas ---------- */
+ST.qgrava = {
+  flat: function (g, s) {
+    var d0 = proj(s.x, s.y, zAt(s.y)); if (d0 < 12 || d0 > 900) return;
+    scr(g);
+    var cx = cxAt(s.y), i, n = d0 > 500 ? 40 : s.P.length, CO = ['#c9bba0', '#9a8d7a', '#b3a690', '#e0d4ba'];
+    var nq = QNIV; QNIV = 6;                                              // el tramo de grava, más claro que la tierra
+    for (i = 0; i < 6; i++) { var y0 = s.y - s.l / 2 + s.l * i / 6, y1 = y0 + s.l / 6, f = Math.sin(Math.PI * (i + 0.5) / 6), hwg = s.w / 2 * (0.55 + 0.45 * f); qcvQ(g, y0, y1, s.u - hwg, s.u + hwg, 0.1, 'rgba(176,160,132,' + (0.35 * f + 0.1).toFixed(2) + ')'); }
+    QNIV = nq;
+    for (i = 0; i < n; i++) {
+      var p = s.P[i], y = s.y + p[1], x = cxAt(y) + s.u + p[0], dd = proj(x, y, zAt(y) + 0.15); if (dd < 10) continue;
+      var r = p[2] * PS; if (r < 0.35) continue;
+      g.fillStyle = CO[p[3]]; g.beginPath(); g.ellipse(PX, PY, r, r * 0.6, 0, 0, TAU); g.fill();
+      if (r > 1.2) { g.fillStyle = 'rgba(40,30,20,.35)'; g.beginPath(); g.ellipse(PX + r * 0.2, PY + r * 0.35, r * 0.9, r * 0.35, 0, 0, TAU); g.fill(); }
+    }
+    void cx;
+  },
+  hit: function (s) {
+    if (P.state !== 'ride' || P.air) return;
+    if (Math.abs(P.y - s.y) > s.l / 2 || Math.abs(P.x - (cxAt(P.y) + s.u)) > s.w / 2 + 4) return;
+    if (!L.qobAvG) { L.qobAvG = true; avisar('¡Piedrecitas! Si vas muy rápido, botas', '🪨'); }
+    var rap = P.speed > QOB.grava.v * MAXV;
+    if (QOB.hz <= 0 && rap) { QOB.vz = 46 + (P.speed - QOB.grava.v * MAXV) * 0.5; QOB.hz = 0.01; P.wob = Math.max(P.wob || 0, 0.32); P.speed *= 0.985; SFX.thud(); if (Math.random() < 0.3) dust(P.x, P.y - 4, 2, '190,175,150'); if (!s.dijo) { s.dijo = true; pop(pickM(['¡Bote!', '¡Ay, ay, ay!', '¡Brrr!']), P.x, P.y + 30, '#ffffff', 0.9); } }
+    else if (!rap && Math.random() < 0.08) shake(0.03);
+  }
+};
+/* ---------- los troncos ---------- */
+ST.qtronco = {
+  flat: function (g, s) {                                                  // la sombra
+    var cx = cxAt(s.y), dd = proj(cx + (s.u0 + s.u1) / 2, s.y - 2, zAt(s.y) + 0.1); if (dd < 12) return;
+    scr(g);
+    g.fillStyle = 'rgba(30,24,14,.28)'; g.beginPath(); g.ellipse(PX, PY, (s.u1 - s.u0) * 0.52 * PS, 3.2 * PS, 0, 0, TAU); g.fill();
+  },
+  draw: function (g, s) {
+    var cx = cxAt(s.y), z = zAt(s.y), dd = proj(cx + (s.u0 + s.u1) / 2, s.y, z + 3); if (dd < 12 || PX < -300 || PX > V.w + 300) return;
+    scr(g);
+    var L2 = (s.u1 - s.u0) / 2, mx = cx + (s.u0 + s.u1) / 2, CO = ['#7a5534', '#6b4a2c', '#836040'][s.v], i;
+    k3Abre(mx, s.y, z, Math.PI / 2 + s.a, 0, 0, 1);                        // (u: a lo largo del tronco)
+    k3Tubo(k3(-L2, 0, 4), k3(L2, 0, 3.4), 4.1, 3.5, CO, { borde: 0.9 });
+    var pc = k3(s.lado > 0 ? L2 + 0.2 : -L2 - 0.2, 0, s.lado > 0 ? 3.4 : 4);   // el corte, con sus anillos (hacia el camino)
+    k3Fn(pc[3] - 0.5, function (c) { var r = (s.lado > 0 ? 3.5 : 4.1) * pc[2]; c.fillStyle = '#c99a62'; c.beginPath(); c.ellipse(pc[0], pc[1], r * 0.45, r, 0, 0, TAU); c.fill(); c.strokeStyle = 'rgba(90,60,30,.6)'; c.lineWidth = Math.max(0.5, 0.25 * pc[2]); c.beginPath(); c.ellipse(pc[0], pc[1], r * 0.25, r * 0.55, 0, 0, TAU); c.stroke(); });
+    for (i = 0; i < 3; i++) { var uu = -L2 * 0.6 + i * L2 * 0.55; k3Tubo(k3(uu, 0, 6.5), k3(uu + 3.5, (i % 2 ? 1 : -1) * 3, 13), 1.1, 0.5, CO, { borde: 0.6 }); k3Masa([k3(uu + 3.5, (i % 2 ? 1 : -1) * 3, 13.5)], 2.6, '#4f8f35', { borde: 0.5 }); }   // ramas rotas, con sus hojas
+    for (i = 0; i < 4; i++) k3Masa([k3(-L2 * 0.8 + i * L2 * 0.5, 0.6, 7.2)], 2, i % 2 ? '#4f8f35' : '#5f7d3a', { borde: 0.5, pr: -0.3 });   // musgo
+    k3Pinta(g);
+  },
+  hit: function (s) {
+    if (P.state !== 'ride' || P.air || P.z > 2 || s.cool) return;
+    var u = P.x - cxAt(P.y);
+    if (Math.abs(P.y - s.y) > 5 || u < s.u0 - 7 || u > s.u1 + 7) return;
+    s.cool = true;
+    if (P.speed > QOB.tronco.salto * MAXV) { P.air = true; P.vz = 105 + P.speed * 0.18; P.za = zAt(P.y) + 0.01; P.z = 0.01; QOB.hz = 0; pop('¡HOP!', P.x + 8, P.y + 24, '#ffe066', 1.1); SFX.jump(); if (typeof PSALTO !== 'undefined') { PSALTO.t0 = G.t; PSALTO.pio = false; } }
+    else { jolt(0.4, '¡TOC!'); P.wob = Math.max(P.wob || 0, 0.8); shake(0.35); }
+  }
+};
+/* ---------- las piedras que caen ---------- */
+ET.qobCae = {
+  init: function (e) { e.st = 'espera'; e.tm = 0; e.r = 7; e.rot = 0; },
+  upd: function (e, dt) {
+    var cx = cxAt(e.y), hw = hwAt(e.y);
+    if (e.st === 'espera') {
+      if (P.state === 'ride' && e.y - P.y < 250 && e.y - P.y > 90) { e.st = 'cae'; e.tm = 0; e.x0 = cx + hw + 8; e.z0 = QSN.pared * relAmp(secAt(e.y), e.y) - 2; e.xl = cx + clamp(e.tu, -0.7, 0.7) * hw; SFX.thud(); if (!L.qobAvC) { L.qobAvC = true; avisar('¡Desprendimiento! Ojo con las piedras que caen', '🪨'); } }
+      return;
+    }
+    e.tm += dt;
+    if (e.st === 'cae') {
+      var k = Math.min(1, e.tm / 0.85); e.x = lerp(e.x0, e.xl, k); e.z = e.z0 * (1 - k * k); e.rot += dt * 6;
+      if (k >= 1) { e.st = 'rueda'; e.vx = -(70 + Math.random() * 40); e.z = 0; e.bt = 0; shake(e.y - P.y < 200 ? 0.25 : 0.1); SFX.thud(); dust(e.x, e.y, 10, '150,140,120'); }
+    } else if (e.st === 'rueda') {
+      e.bt += dt; e.x += e.vx * dt; e.z = Math.abs(Math.sin(e.bt * 7)) * 5 * Math.max(0, 1 - e.bt * 0.6); e.rot -= e.vx * dt / e.r;
+      if (e.x < cx - hw - 6) { e.st = 'despena'; e.vz = 0; }
+    } else if (e.st === 'despena') {
+      e.x += e.vx * 0.6 * dt; e.vz -= 520 * dt; e.z += e.vz * dt; e.rot -= e.vx * dt / e.r;
+      if (e.z < QSN.fondo + 20) e.dead = true;
+    }
+    if ((e.st === 'rueda' || (e.st === 'cae' && e.tm > 0.7)) && !e.golpe && P.state === 'ride' && P.z < 6 && Math.abs(P.y - e.y) < 9 + e.r && Math.abs(P.x - e.x) < 9 + e.r) {
+      e.golpe = true; jolt(0.4, '¡CATAPUM!'); P.wob = Math.max(P.wob || 0, 1); shake(0.5); SFX.bonk && SFX.bonk();
+    }
+    if (typeof RIV !== 'undefined' && RIV.L && e.st === 'rueda') RIV.L.forEach(function (R) { if (!R.cae && !R['qob' + e.y] && Math.abs(R.y - e.y) < 12 && Math.abs(R.x - e.x) < 14) { R['qob' + e.y] = true; R.v *= 0.5; R.bote = 0.3; } });
+    if (P.y > e.y + 400) e.dead = true;
+  },
+  flat: function (g, e) {                                                  // la sombra: avisa de dónde va a caer
+    if (e.st === 'espera' || e.st === 'despena') return;
+    var k = e.st === 'cae' ? Math.min(1, e.tm / 0.85) : 1, x = e.st === 'cae' ? e.xl : e.x, dd = proj(x, e.y, zAt(e.y) + 0.12); if (dd < 12) return;
+    scr(g);
+    g.fillStyle = 'rgba(20,15,10,' + (0.15 + 0.3 * k).toFixed(2) + ')'; g.beginPath(); g.ellipse(PX, PY, e.r * (0.6 + 0.6 * k) * PS * 1.3, e.r * (0.6 + 0.6 * k) * PS * 0.6, 0, 0, TAU); g.fill();
+  },
+  draw: function (g, e) {
+    if (e.st === 'espera') return;
+    var dd = proj(e.x, e.y, zAt(e.y) + e.z + e.r); if (dd < 12 || PX < -60 || PX > V.w + 60) return;
+    scr(g);
+    k3Abre(e.x, e.y, zAt(e.y) + e.z, 0, 0, e.rot, 1);
+    k3Masa([k3(-1.6, -1.2, e.r * 0.9), k3(1.8, 0.9, e.r * 1.1), k3(0.2, 1.6, e.r * 0.6), k3(-0.6, -0.4, e.r * 1.5)], [e.r * 0.75, e.r * 0.8, e.r * 0.6, e.r * 0.55], '#7d7465', { borde: 0.8, luz: 'rgba(255,255,255,.25)' });
+    k3Masa([k3(0.4, 0.2, e.r * 1.9)], e.r * 0.35, '#5f7d3a', { borde: 0.5, pr: -0.5 });
+    k3Pinta(g);
+  }
+};
+
+/* ---------- pisar rocas y el bote de las piedrecitas ---------- */
+var update229o = update;
+update = function (dt) {
+  update229o(dt);
+  if (!qobSi() || !(typeof QSL !== 'undefined' && QSL.on) || G.state !== 'play') return;
+  if (QOB.hz > 0 || QOB.vz > 0) {                                          // el bote (solo se ve: el quad sube un poco y vuelve)
+    if (P.air || P.state !== 'ride') { QOB.hz = QOB.vz = 0; }
+    else { QOB.vz -= 640 * dt; QOB.hz += QOB.vz * dt; if (QOB.hz <= 0) { QOB.hz = 0; QOB.vz = 0; P.bounce = Math.max(P.bounce || 0, 0.12); } P.z = Math.max(0, QOB.hz); }
+  }
+  if (P.state !== 'ride' || P.air || !L.qob) return;
+  var A = L.qob, i, R, now = G.t;
+  for (i = 0; i < A.length; i++) {
+    R = A[i]; if (R.y < P.y - 30) continue; if (R.y > P.y + 30) break;
+    var dx = P.x - R.x, dy = P.y - R.y, rr0 = R.r + 7;
+    if (dx * dx + dy * dy > rr0 * rr0) continue;
+    P.speed = Math.max(0, P.speed - 260 * dt * QOB.roca.v); P.wob = Math.max(P.wob || 0, 0.5);
+    if (now - (QOB.rT || -9) > QOB.roca.cd) {
+      QOB.rT = now; QOB.vz = 60 + P.speed * 0.15; QOB.hz = 0.01; shake(0.14); SFX.thud(); dust(P.x, P.y, 4, '150,140,120');
+      P.vx += (dx < 0 ? -1 : 1) * 30;                                      // te echa un poco hacia fuera de la roca
+      if (now - (QOB.rP || -9) > 2.5) { QOB.rP = now; pop(pickM(['¡Pum!', '¡Roca!', '¡Ay, la piedra!']), P.x, P.y + 30, '#ffffff', 0.9); }
+    }
+  }
+};
+var updPlayer229o = updPlayer;
+updPlayer = function (dt) { var r = updPlayer229o.apply(this, arguments); if (QOB.hz > 0 && !P.air && P.state === 'ride') P.z = QOB.hz; return r; };
+var startLevel229o = startLevel;
+startLevel = function (li) { QOB.hz = QOB.vz = 0; return startLevel229o.apply(this, arguments); };
+/* los rivales: los troncos y la grava también les cuestan */
+var rivChoques229o = rivChoques;
+rivChoques = function (dt) {
+  rivChoques229o(dt);
+  if (!qobSi()) return;
+  var A = RIV.L, i, j, R, s;
+  for (i = 0; i < A.length; i++) {
+    R = A[i]; if (R.cae || R.fin != null) continue;
+    for (j = lowerBound(L.stat, R.y - 40); j < L.stat.length && L.stat[j].y < R.y + 40; j++) {
+      s = L.stat[j]; var u = R.x - cxAt(R.y);
+      if (s.t === 'qtronco' && Math.abs(R.y - s.y) < 5 && u > s.u0 - 6 && u < s.u1 + 6 && R.bacheT <= 0) { R.bacheT = 0.8; R.bote = 0.3; R.v *= 0.75; }
+      else if (s.t === 'qgrava' && Math.abs(R.y - s.y) < s.l / 2 && Math.abs(u - s.u) < s.w / 2 && R.v > QOB.grava.v * MAXV && R.bacheT <= 0) { R.bacheT = 0.25; R.bote = 0.12; R.v *= 0.97; }
+    }
+  }
+};
+
+(function () {
+  var N = {
+    '¡Piedrecitas! Si vas muy rápido, botas': ['Loose gravel! Go too fast and you bounce', 'Kerikil! Kalau terlalu cepat, kamu terpental'],
+    '¡Bote!': ['Bump!', 'Dug!'], '¡Ay, ay, ay!': ['Ow, ow, ow!', 'Aduh, aduh!'], '¡Brrr!': ['Brrr!', 'Brrr!'],
+    '¡TOC!': ['THUNK!', 'TOK!'], '¡HOP!': ['HOP!', 'HOP!'],
+    '¡Desprendimiento! Ojo con las piedras que caen': ['Rockfall! Watch out for falling rocks', 'Longsor! Awas batu jatuh'],
+    '¡CATAPUM!': ['KABOOM!', 'GEDEBUK!'], '¡Pum!': ['Bump!', 'Buk!'], '¡Roca!': ['Rock!', 'Batu!'], '¡Ay, la piedra!': ['Ouch, the rock!', 'Aduh, batunya!']
+  };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
 /*#pieza nucleo/495_ganchos_arranque.js*/
