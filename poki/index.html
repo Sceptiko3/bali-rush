@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v16 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v17 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -112087,7 +112087,7 @@ finishLevel = function () {
   } else { SAVE.st[li] = st0; SAVE.u = u0; }
   G.pkPostal = false;
   if (pos === 1) { SAVE.pkW = SAVE.pkW || {}; G.pkPostal = !SAVE.pkW[li]; SAVE.pkW[li] = 1; }
-  G.pkAbre = []; for (id in POK.req) if (!ab0[id] && pokAbre(id)) G.pkAbre.push(id);
+  G.pkAbre = []; for (id in POK.req) if (!ab0[id] && pokAbre(id) && POK_ACT[id]) G.pkAbre.push(id);   // (Poki v17: solo lo que tiene botón; «primo» se abre con el reparto y no lo tiene: antes rompía la tarjeta de ganar y te quedabas en la carretera)
   G.rivPasa = est > 0; G.pkDoble = false;
   writeSave();
 };
@@ -115156,6 +115156,54 @@ mulPinta = function () {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza nucleo/672_poki_autoescuela.js*/
+/* ================================================================
+   POKI V17 · VUELVE LA AUTOESCUELA DE WAYAN (EL «CARNET» DE LAS CARRERAS)
+   Jose Javier (22-10-2026): «¿y el carnet de las carreras?». En la v2
+   se quitó (630: «la autoescuela no sale nunca, se aprende corriendo»),
+   con la misma prisa por empezar al momento que la intro de la v13. Él
+   la pidió en la V150 («un tutorial de conducción y de hacer pruebas
+   previo…») y la amplió en la V153: vuelve como en el juego completo.
+   - La primera vez que vas a la carrera 1 (después del vídeo de la
+     historia, o desde la portada), directo al circuito de prácticas con
+     su tarjeta: las nueve pruebas del precalentamiento (V207), «¡A
+     calentar!» o «Ya sé conducir ▶» (a la carrera 1). Al final, la nota
+     y «A la primera carrera». (La tarjeta de antes de esa, la «oferta»,
+     sobra: decía lo mismo, y salía con iconos «undefined» porque las
+     pruebas de la V207 aún no estaban puestas.)
+   - Se puede repetir siempre: en Ajustes, «🎓 Autoescuela de Wayan»
+     (en Poki no está el mapa, donde iba su fila).
+   - El carnet de la ciudad (antes del reparto y del mototaxi) no se
+     había quitado: sigue igual.
+   PAE.vivo = false: como la v16 (sin autoescuela).
+   ================================================================ */
+var PAE = { vivo: true };
+function paeVa() { if (typeof acaPon === 'function') acaPon(); G.enMenu = false; hideScr(); aesArranca(false); }   // (con sus nueve pruebas puestas)
+function paeOn() { return POK.vivo && PAE.vivo && typeof AES !== 'undefined' && AES.vivo; }
+/* la primera vez que vas a la carrera 1: la autoescuela (antes de que 630 la dé por hecha) */
+var menuActPAE = menuAct;
+menuAct = function (a) {
+  if (paeOn() && !SAVE.escuela && (a === 'nivel:' + ORDEN[0] || a === 'hist:' + ORDEN[0])) {
+    if (!SAVE.hist) { SAVE.hist = 1; writeSave(); }
+    paeVa(); return true;
+  }
+  if (paeOn() && a === 'pae:ver') { SFX.pick(2); paeVa(); return true; }
+  return menuActPAE(a);
+};
+/* después del vídeo de la historia (668): también pasa por ella */
+var pokPrimeraCarreraPAE = pokPrimeraCarreraPKI;
+pokPrimeraCarreraPKI = function () {
+  if (paeOn() && !SAVE.escuela) { paeVa(); return; }
+  return pokPrimeraCarreraPAE.apply(this, arguments);
+};
+/* en Ajustes, para repetirla */
+var fasAjustesPAE = fasAjustes;
+fasAjustes = function () {
+  fasAjustesPAE();
+  if (!paeOn()) return;
+  var m = document.querySelector('#scr .card.fs-ajs .mcs'); if (!m) return;
+  m.insertAdjacentHTML('beforeend', cosaFila('pae:ver', SAVE.escuela === 1 ? '🎓' : '🛵', TT('Autoescuela de Wayan'), TT('Aprende a llevar la moto: conos, curvas, recoger cosas y personas, y una carrerita'), ''));
+};
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
