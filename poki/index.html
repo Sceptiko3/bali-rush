@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v12 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v13 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -114600,6 +114600,308 @@ mulLimpia = function (j, s) {
   for (var k in N) if (!D[k]) D[k] = N[k];
   var css = '.pkj-aviso{color:#1c7c74!important;font-weight:800}.pkj-fila{flex-wrap:wrap}.pkj-fila button{flex:1 1 auto}.pkj-fila button.lock{opacity:.85}.pkj-fila small{font-weight:900;color:#a0522d}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+})();
+/*#pieza nucleo/664_poki_intro2.js*/
+/* ================================================================
+   POKI V13 · LA INTRO, CON SENTIDO: LA PRIMERA OFRENDA
+   Jose Javier (22-10-2026): «el inicio, lo que me apareció por primera
+   vez […] me pareció algo absurdo». Lo era: un acertijo de puntos
+   cardinales con letreros, personajes pequeñitos ante un triángulo
+   morado, y un mono que roba un anillo y «¡a por él!»… para luego
+   correr llevando ofrendas, que no tiene nada que ver.
+   Ahora la intro cuenta lo que vas a hacer en el juego, con las manos
+   y en unos 20 segundos:
+   1. HAZ EL CANANG. Wayan, ante la puerta del templo: «¡Hoy hay fiesta
+      en el templo!». Tocas el canang y cae cada flor en su sitio (sin
+      fallos posibles): blanco al este (Iswara), rojo al sur (Brahma),
+      amarillo al oeste (Mahadewa), azul al norte (Wisnu). Se enciende
+      el incienso: «¡Suksma!». La cultura, con un dato por toque.
+   2. A LA MOTO. Llegas en tu moto (la de verdad, en 3D, la que eliges
+      en el taller). Arrastras el canang hasta la parrilla (o tocas la
+      moto) y se queda puesto, como en las carreras; Pitik salta a la
+      cesta.
+   3. ¡AL TEMPLO! «Llévala al templo antes que nadie» → «🛵 ¡Vamos!» →
+      la moto arranca → la carrera 1.
+   Se puede volver a ver en Ajustes («🎬 Ver la intro»); entonces
+   «¡Vamos!» vuelve a Ajustes. «Saltar ⏭» arriba, siempre.
+   Sustituye a pkiAbre (632) y usa su capa, sus botones y pkiCierra.
+   PKK.vivo = false: la intro de la v2 (la de las flores y el mono).
+   ================================================================ */
+var PKK = { vivo: true };
+function pkkOn() { return POK.vivo && PKK.vivo; }
+var PKK_FL = [                                                         // en el orden en que se ponen (empezando por donde sale el sol); j: el montón de icnCanang (0 norte, 1 este, 2 sur, 3 oeste)
+  { j: 1, fr: 'Blanco, al este', dir: 'ESTE', dios: 'Iswara', c: '#f5f1e4' },
+  { j: 2, fr: 'Rojo, al sur', dir: 'SUR', dios: 'Brahma', c: '#e8434f' },
+  { j: 3, fr: 'Amarillo, al oeste', dir: 'OESTE', dios: 'Mahadewa', c: '#ffc52e' },
+  { j: 0, fr: 'Azul, al norte', dir: 'NORTE', dios: 'Wisnu', c: '#3f86e0' }
+];
+var pkiAbrePKK = pkiAbre;
+pkiAbre = function (sigue, op) {
+  if (!pkkOn() || !PKI.vivo) return pkiAbrePKK(sigue);
+  op = op || {};
+  var el = document.createElement('div'); el.id = 'pki'; el.className = 'pki pkk';
+  el.innerHTML = '<canvas id="pkicv"></canvas>' +
+    '<div class="pki-bur"><i>🧑🏽</i><p id="pkiTxt"></p></div>' +
+    '<button class="pki-salta" id="pkiSalta">' + TT(op.repite ? 'Cerrar' : 'Saltar') + ' ⏭</button>' +
+    '<button class="pki-va hide" id="pkiVa">🛵 ' + TT('¡Vamos!') + '</button>';
+  $('app').appendChild(el);
+  var P = PKI;
+  P.on = true; P.el = el; P.cv = $('pkicv'); P.g = P.cv.getContext('2d'); P.sigue = sigue; P.repite = !!op.repite;
+  P.n = 0; P.t = 0; P.tf = 0; P.fase = 'flores'; P.pop = null; P.arr = null; P.last = 0; P.lugar = null; P.puesta = [false, false, false, false];
+  P.mx = 1; P.salto = -1; P.va = false; P.rack = null; P.zas = false;
+  pkiTexto(TT('¡Hoy hay fiesta en el templo!'), TT('Toca el canang para ponerle las flores.'));
+  $('pkiSalta').addEventListener('click', function (e) { e.stopPropagation(); pkiCierra(); });
+  $('pkiVa').addEventListener('click', function (e) { e.stopPropagation(); pkkVamos(); });
+  P.cv.addEventListener('pointerdown', pkkDown);
+  P.cv.addEventListener('pointermove', pkkMove);
+  P.cv.addEventListener('pointerup', pkkUp);
+  P.cv.addEventListener('pointercancel', function () { P.arr = null; });
+  FREEZE = true; hideScr(); $('pad').classList.add('hide');
+  P.raf = requestAnimationFrame(pkkFrame);
+};
+/* ---------- dónde va cada cosa ---------- */
+function pkkLugar(W, H) {
+  var ap = W > H * 1.1, L = { ap: ap, W: W, H: H };
+  L.suelo = ap ? H * 0.62 : H * 0.6;                                    // donde empieza el patio
+  L.s = ap ? Math.min(H / 120, W / 230) : Math.min(W / 92, H / 185);    // el canang grande (1)
+  L.cx = ap ? W * 0.54 : W / 2; L.cy = ap ? H * 0.62 : H * 0.64;
+  L.kp = (ap ? H * 0.42 : H * 0.29) / 54;                               // Wayan (cWayan mide ~54)
+  L.wx = ap ? W * 0.15 : W * 0.15; L.wy = ap ? H * 0.93 : H * 0.88;
+  L.ks = ap ? H / 260 : W / 170;                                        // el canang pequeño (2), en el dibujo de la ofrenda (40 × 90)
+  L.lx = ap ? W * 0.3 : W * 0.33; L.ly = ap ? H * 0.86 : H * 0.9;        // la losa, delante de Wayan
+  L.moto = ap ? [W * 0.5, H * 0.3, W * 0.44, H * 0.66] : [W * 0.3, H * 0.47, W * 0.72, H * 0.42];   // la caja de la moto
+  return L;
+}
+/* ---------- tocar ---------- */
+function pkkXY(e) { var r = PKI.cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+function pkkEnMoto(x, y) { var L = PKI.lugar, M = L && L.moto; return M && x > M[0] && x < M[0] + M[2] && y > M[1] && y < M[1] + M[3]; }
+function pkkDown(e) {
+  var P = PKI, q = pkkXY(e); e.preventDefault();
+  if (P.fase === 'flores') { if (P.n < 4 && !(P.pop && P.pop.t < 0.18)) pkkFlor(); return; }
+  if (P.fase !== 'moto' || P.mx > 0.02) return;
+  try { P.cv.setPointerCapture(e.pointerId); } catch (x) {}
+  var L = P.lugar, d = Math.hypot(q[0] - L.lx, q[1] - (L.ly - 20 * L.ks));
+  if (d < 46 * L.ks) P.arr = { x: q[0], y: q[1], x0: q[0], y0: q[1], mov: false };
+  else if (pkkEnMoto(q[0], q[1])) pkkPon();                              // tocar la moto también vale
+}
+function pkkMove(e) { var A = PKI.arr; if (!A) return; var q = pkkXY(e); A.x = q[0]; A.y = q[1]; if (Math.hypot(A.x - A.x0, A.y - A.y0) > 8) A.mov = true; }
+function pkkUp() {
+  var P = PKI, A = P.arr; P.arr = null; if (!A || P.fase !== 'moto') return;
+  if (!A.mov) { pkkPon(); return; }                                      // un toque en el canang: a la moto
+  var R = P.rack; if ((R && Math.hypot(A.x - R[0], A.y - R[1]) < 70) || pkkEnMoto(A.x, A.y)) pkkPon(); else SFX.eh && SFX.eh();
+}
+function pkkFlor() {
+  var P = PKI, F = PKK_FL[P.n];
+  P.puesta[F.j] = true; P.n++; P.pop = { j: F.j, t: 0, f: F };
+  SFX.pick(3 + P.n);
+  pkiTexto(TT(F.fr) + ': ' + F.dios, P.n < 4 ? TT('Cada color mira a un dios. ¡Otra!') : '');
+  if (P.n === 4) { P.fase = 'humo'; P.tf = 0; setTimeout(function () { if (PKI.on && PKI.fase === 'humo') { SFX.gong && SFX.gong(); pkiTexto(TT('¡Suksma! El canang está listo.'), TT('Se enciende el incienso y… ¡a la moto!')); } }, 650); }
+}
+function pkkPon() {
+  var P = PKI; if (P.fase !== 'moto') return;
+  P.fase = 'lista'; P.tf = 0; P.arr = null; P.salto = 0; SFX.heal && SFX.heal();
+  pkiTexto(TT('¡Llévala al templo antes que nadie!'), TT('Esquiva, no te caigas y recoge frangipanis por el camino.'));
+  setTimeout(function () { if (PKI.on) { SFX.pio && SFX.pio(); var b = $('pkiVa'); if (b) b.classList.remove('hide'); } }, 700);
+}
+function pkkVamos() {
+  var P = PKI; if (P.va) return; P.va = true; P.tf = 0; P.fase = 'sale';
+  var b = $('pkiVa'); if (b) b.classList.add('hide');
+  SFX.horn && SFX.horn(); SFX.whoosh && SFX.whoosh();
+  setTimeout(function () { if (PKI.on) pkiCierra(); }, 750);
+}
+/* ---------- pintar ---------- */
+function pkkFrame(ts) {
+  var P = PKI; if (!P.on) return;
+  if (!P.el || !P.el.isConnected) { P.on = false; FREEZE = false; return; }
+  P.raf = requestAnimationFrame(pkkFrame);
+  var dt = P.last ? Math.min(0.05, (ts - P.last) / 1000) : 0; P.last = ts; P.t += dt; P.tf += dt;
+  var r = P.el.getBoundingClientRect(), W = Math.max(2, r.width), H = Math.max(2, r.height), dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (P.cv.width !== Math.round(W * dpr) || P.cv.height !== Math.round(H * dpr)) { P.cv.width = Math.round(W * dpr); P.cv.height = Math.round(H * dpr); }
+  P.dpr = dpr;
+  var g = P.g, L = P.lugar = pkkLugar(W, H), t = P.t;
+  if (P.fase === 'humo' && P.tf > 1.9) { P.fase = 'moto'; P.tf = 0; P.mx = 1; SFX.whoosh && SFX.whoosh(); pkiTexto(TT('¡Ponla en la moto!'), TT('Arrástrala hasta la parrilla, detrás del asiento.')); }
+  if (P.fase === 'moto' || P.fase === 'lista') P.mx = Math.max(0, P.mx - dt / 0.9);
+  if (P.salto >= 0) { P.salto += dt / 0.7; if (P.salto >= 1) P.salto = -2; }
+  if (P.pop) P.pop.t += dt;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.lineJoin = 'round'; g.lineCap = 'round';
+  pkkFondo(g, W, H, L, t);
+  var grande = P.fase === 'flores' || P.fase === 'humo';
+  // Wayan
+  var hab = (P.t % 3.2) < 1.4;
+  g.save(); g.translate(L.wx, L.wy); g.scale(L.kp, L.kp);
+  cWayan(g, 0, 0, 1, { sinCanang: true, ojos: (t % 3.3) < 0.12 ? 0 : 1, boca: hab, habla: hab ? t * 8 : null, saluda: P.fase === 'sale' ? t * 9 : null });
+  g.restore();
+  if (grande) {
+    pkkLosa(g, L.cx, L.cy + 7 * L.s, 60 * L.s, 0.13);
+    var luz = [false, false, false, false]; if (P.pop && P.pop.t < 1) luz[P.pop.j] = true; if (P.fase === 'humo') luz = [true, true, true, true];
+    var R = icnCanang(g, L.cx, L.cy, L.s, { pitch: 0.62, detalle: 2, oculta: P.puesta.map(function (p) { return !p; }), luz: luz, lt: t, dupa: P.fase === 'humo' ? 16 : false });
+    if (P.fase === 'flores' && P.n < 4) pkkMano(g, L.cx + 18 * L.s, L.cy + 6 * L.s, t, L.s);   // la mano que dice «toca»
+    if (P.pop && R && R.flor && P.pop.t < 1.3) pkkEtiqueta(g, R.flor[P.pop.j], P.pop, L, R.flor);
+  } else {
+    pkkMoto(g, L, W, H, t, dpr);
+    var enMano = P.arr && P.arr.mov;
+    if (P.fase === 'moto') {
+      pkkLosa(g, L.lx, L.ly + 2 * L.ks, 34 * L.ks);
+      if (!enMano) pkkOfrenda(g, L.lx, L.ly, L.ks, 0);
+      if (P.mx <= 0.02 && P.rack) pkkDiana(g, P.rack, t, L);
+      if (enMano) pkkOfrenda(g, P.arr.x, P.arr.y + 18 * L.ks, L.ks * 1.05, Math.sin(t * 6) * 0.05);
+      else if (P.mx <= 0.02) pkkMano(g, L.lx + 12 * L.ks, L.ly - 6 * L.ks, t, L.ks * 1.6);
+    } else pkkLosa(g, L.lx, L.ly + 2 * L.ks, 34 * L.ks);
+  }
+}
+function pkkFondo(g, W, H, L, t) {                                       // amanecer en Bali: el cielo, el Agung, los arrozales, las palmeras y la puerta del templo
+  var y0 = L.suelo, gr = g.createLinearGradient(0, 0, 0, y0);
+  gr.addColorStop(0, '#ffb98a'); gr.addColorStop(0.45, '#ffd9a6'); gr.addColorStop(1, '#fff0d2');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  var sx = W * 0.74, sy = y0 * 0.42, sr = Math.min(W, H) * 0.075;          // el sol, con su halo
+  var gs = g.createRadialGradient(sx, sy, sr * 0.6, sx, sy, sr * 3.2); gs.addColorStop(0, 'rgba(255,248,220,.9)'); gs.addColorStop(1, 'rgba(255,248,220,0)');
+  g.fillStyle = gs; g.fillRect(sx - sr * 3.2, sy - sr * 3.2, sr * 6.4, sr * 6.4);
+  g.fillStyle = '#fff6dc'; g.beginPath(); g.arc(sx, sy, sr, 0, TAU); g.fill();
+  // el monte Agung: falda ancha y curva, la cima algo roma
+  var mb = y0 * 0.86, mx = W * 0.36, mw = Math.max(W, H * 0.6) * 0.62, mh = y0 * 0.5;
+  var gm = g.createLinearGradient(0, mb - mh, 0, mb); gm.addColorStop(0, '#9a8fb8'); gm.addColorStop(1, '#c7b4c4');
+  g.beginPath(); g.moveTo(mx - mw, mb); g.bezierCurveTo(mx - mw * 0.45, mb - mh * 0.25, mx - mw * 0.16, mb - mh * 0.92, mx - mw * 0.05, mb - mh); g.lineTo(mx + mw * 0.05, mb - mh * 0.99);
+  g.bezierCurveTo(mx + mw * 0.18, mb - mh * 0.9, mx + mw * 0.5, mb - mh * 0.22, mx + mw, mb); g.closePath(); g.fillStyle = gm; g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; g.beginPath(); g.moveTo(mx - mw * 0.1, mb - mh * 0.94); g.quadraticCurveTo(mx - mw * 0.2, mb - mh * 0.6, mx - mw * 0.32, mb - mh * 0.42); g.stroke();
+  // nubes
+  g.fillStyle = 'rgba(255,255,255,.55)';
+  [[0.12, 0.2, 1], [0.9, 0.28, 0.8], [0.52, 0.12, 0.7]].forEach(function (n) { var x = ((n[0] * W + t * 6 * n[2]) % (W + 160)) - 80, y = n[1] * y0, k = Math.min(W, H) * 0.05 * n[2]; g.beginPath(); g.arc(x, y, k, 0, TAU); g.arc(x + k * 1.1, y - k * 0.4, k * 1.2, 0, TAU); g.arc(x + k * 2.3, y, k * 0.9, 0, TAU); g.fill(); });
+  // las terrazas de arroz, en bandas curvas
+  var cols = ['#a9cf6a', '#94c25a', '#7fb44c', '#6da443'];
+  for (var i = 0; i < 4; i++) {
+    var ya = y0 * (0.74 + i * 0.07), am = y0 * 0.03;
+    g.beginPath(); g.moveTo(0, ya + am); for (var x = 0; x <= W; x += W / 12) g.lineTo(x, ya + Math.sin(x / W * 5 + i * 1.7) * am); g.lineTo(W, y0); g.lineTo(0, y0); g.closePath();
+    g.fillStyle = cols[i]; g.fill(); g.strokeStyle = 'rgba(255,255,230,.45)'; g.lineWidth = 1.4; g.stroke();
+  }
+  // palmeras a los lados
+  pkkPalmera(g, W * 0.06, y0 + 4, y0 * 0.55, -0.1, t); pkkPalmera(g, W * 0.95, y0 + 4, y0 * 0.62, 0.12, t + 1);
+  // la puerta partida del templo (candi bentar), detrás del patio
+  var cw = Math.min(W, H) * 0.15, gh = Math.min(W, H) * 0.36, hueco = cw * 0.5, ty = y0;
+  g.fillStyle = '#c0704f'; g.fillRect(0, ty - gh * 0.24, W, gh * 0.24); g.fillStyle = '#8f8070'; g.fillRect(0, ty - gh * 0.24 - 5, W, 6);
+  g.strokeStyle = 'rgba(58,36,22,.45)'; g.lineWidth = 1;
+  for (var fy = 0; fy < 3; fy++) { var yy = ty - gh * 0.24 + fy * gh * 0.08; g.beginPath(); g.moveTo(0, yy); g.lineTo(W, yy); g.stroke(); }
+  [-1, 1].forEach(function (k) {
+    var xin = W / 2 + k * hueco / 2;
+    for (var e = 0; e < 7; e++) {
+      var a0 = ty - gh * e / 7, a1 = ty - gh * (e + 1) / 7, w0 = cw * (1 - e * 0.11), w1 = cw * (1 - (e + 1) * 0.11);
+      g.beginPath(); g.moveTo(xin, a0); g.lineTo(xin + k * w0, a0); g.lineTo(xin + k * (w0 - 3), a0 - (a0 - a1) * 0.25); g.lineTo(xin + k * w1, a1); g.lineTo(xin, a1); g.closePath();
+      g.fillStyle = e % 2 ? '#b8664a' : '#cf8460'; g.fill(); g.strokeStyle = '#3a2416'; g.lineWidth = 1.6; g.stroke();
+      if (e % 2 === 0) { g.fillStyle = '#e9dcc0'; g.fillRect(xin + k * w0 * 0.15 - (k < 0 ? w0 * 0.55 : 0), a0 - (a0 - a1) * 0.62, w0 * 0.55, 2.2); }
+    }
+    g.fillStyle = '#e8d9b8'; g.beginPath(); g.arc(xin + k * cw * 0.12, ty - gh - 3, 4, 0, TAU); g.fill(); g.strokeStyle = '#3a2416'; g.lineWidth = 1.4; g.stroke();
+  });
+  // el patio de piedra
+  var gp = g.createLinearGradient(0, y0, 0, H); gp.addColorStop(0, '#d9c7a2'); gp.addColorStop(1, '#bfa77c');
+  g.fillStyle = gp; g.fillRect(0, y0, W, H - y0);
+  g.strokeStyle = 'rgba(90,64,36,.18)'; g.lineWidth = 1;
+  for (var fi = 1; fi < 7; fi++) { var py = y0 + (H - y0) * Math.pow(fi / 7, 1.3); g.beginPath(); g.moveTo(0, py); g.lineTo(W, py); g.stroke(); }
+  // los penjor de la fiesta, a los lados de la puerta
+  [W / 2 - hueco / 2 - cw * 1.25, W / 2 + hueco / 2 + cw * 1.25].forEach(function (x, k) { pkkPenjor(g, x, y0 + 2, gh * 1.45, k ? 1 : -1, t); });
+}
+function pkkPalmera(g, x, y, h, inc, t) {
+  g.strokeStyle = '#7a5530'; g.lineWidth = Math.max(4, h * 0.05); g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + inc * h * 0.6, y - h * 0.5, x + inc * h, y - h); g.stroke();
+  var cx = x + inc * h, cy = y - h, sw = Math.sin(t * 1.3) * 0.05;
+  for (var i = 0; i < 7; i++) {
+    var a = -Math.PI / 2 + (i - 3) * 0.52 + sw, l = h * 0.42;
+    g.beginPath(); g.moveTo(cx, cy); g.quadraticCurveTo(cx + Math.cos(a) * l * 0.6, cy + Math.sin(a) * l * 0.6 - l * 0.12, cx + Math.cos(a) * l, cy + Math.sin(a) * l + l * 0.35);
+    g.strokeStyle = i % 2 ? '#3f7f2e' : '#4f9a36'; g.lineWidth = Math.max(3, h * 0.045); g.stroke();
+  }
+}
+function pkkPenjor(g, x, y, h, k, t) {                                  // el bambú curvado de las fiestas, con su adorno colgando
+  var sw = Math.sin(t * 1.6 + k) * h * 0.015, tx = x + k * h * 0.28 + sw, ty = y - h;
+  g.strokeStyle = '#3a2416'; g.lineWidth = 5; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x - k * 4, y - h * 0.75, tx, ty); g.stroke();
+  g.strokeStyle = '#e6d27a'; g.lineWidth = 3; g.stroke();
+  g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx - 4, ty + h * 0.2); g.lineTo(tx, ty + h * 0.24); g.lineTo(tx + 4, ty + h * 0.2); g.closePath(); g.fillStyle = '#eef2b0'; g.fill(); g.strokeStyle = '#9aa84a'; g.lineWidth = 1; g.stroke();
+  for (var i = 1; i < 5; i++) { var q = i / 5, bx = (1 - q) * (1 - q) * x + 2 * (1 - q) * q * (x - k * 4) + q * q * tx, by = (1 - q) * (1 - q) * y + 2 * (1 - q) * q * (y - h * 0.75) + q * q * ty; g.fillStyle = '#eef2b0'; g.beginPath(); g.moveTo(bx, by); g.lineTo(bx - 4, by + 9); g.lineTo(bx + 4, by + 9); g.closePath(); g.fill(); }
+}
+function pkkLosa(g, x, y, w, kh) {                                       // la losa de piedra donde se deja la ofrenda
+  var h = w * (kh || 0.3), d = w * 0.1;
+  g.fillStyle = 'rgba(42,26,12,.18)'; g.beginPath(); g.ellipse(x, y + h + d, w * 0.6, h * 0.35, 0, 0, TAU); g.fill();
+  g.beginPath(); g.moveTo(x - w * 0.42, y); g.lineTo(x + w * 0.42, y); g.lineTo(x + w / 2, y + h); g.lineTo(x - w / 2, y + h); g.closePath();
+  g.fillStyle = '#cbbfa6'; g.fill(); g.strokeStyle = '#3a2a1a'; g.lineWidth = 2; g.stroke();
+  g.beginPath(); g.rect(x - w / 2, y + h, w, d); g.fillStyle = '#a7987c'; g.fill(); g.stroke();
+}
+function pkkOfrenda(g, x, y, k, rot) {                                   // el canang ya hecho, con el dibujo de la moto (660), y su humo
+  var sp = ofrendaSpr('canang');
+  g.save(); g.translate(x, y); g.rotate(rot || 0); g.scale(k, k);
+  g.drawImage(sp.c, -sp.w / 2, -(sp.h / 2 + 16), sp.w, sp.h);
+  g.restore();
+}
+function pkkMano(g, x, y, t, s) {                                        // el dedo que toca, latiendo
+  var b = Math.abs(Math.sin(t * 4)) * 6;
+  g.save(); g.font = Math.round(Math.max(28, 9 * s)) + 'px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.globalAlpha = 0.25 + 0.25 * Math.abs(Math.sin(t * 4)); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x - 6, y - 16 - b, 12 + b * 0.6, 0, TAU); g.fill();
+  g.globalAlpha = 1; g.fillText('👆', x, y + b); g.restore();
+}
+function pkkEtiqueta(g, f, pop, L, F) {                                  // «ESTE · Iswara», que sale de la flor hacia fuera del canang
+  var k = Math.min(1, pop.t / 0.18), up = pop.t * 14, a = pop.t > 1 ? 1 - (pop.t - 1) / 0.3 : 1;
+  var mx = (F[0][0] + F[1][0] + F[2][0] + F[3][0]) / 4, my = (F[0][1] + F[1][1] + F[2][1] + F[3][1]) / 4, ux = f[0] - mx, uy = f[1] - my, ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+  var txt = TT(pop.f.dir) + ' · ' + pop.f.dios, fs = Math.round(Math.max(13, 3.6 * L.s));
+  g.save(); g.globalAlpha = Math.max(0, a); g.font = '900 ' + fs + 'px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  var w = g.measureText(txt).width + 22, x = clamp(f[0] + ux * 16 * L.s, w / 2 + 6, L.W - w / 2 - 6), y = f[1] + uy * 11 * L.s - up;
+  g.translate(x, y); g.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
+  rrect(g, -w / 2, -fs * 0.85, w, fs * 1.7, fs * 0.85, '#2a1a0c');
+  g.beginPath(); g.arc(-w / 2 + fs * 0.85, 0, fs * 0.42, 0, TAU); g.fillStyle = pop.f.c; g.fill(); g.strokeStyle = '#fff4dc'; g.lineWidth = 1.5; g.stroke();
+  g.fillStyle = '#ffd23f'; g.fillText(txt, fs * 0.45, 1); g.restore();
+}
+function pkkDiana(g, R, t, L) {                                          // dónde dejarla: un círculo que late sobre la parrilla
+  var r = 22 + Math.sin(t * 6) * 3;
+  g.save(); g.setLineDash([6, 5]); g.lineDashOffset = -t * 24; g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 3;
+  g.beginPath(); g.ellipse(R[0], R[1], r, r * 0.6, 0, 0, TAU); g.stroke(); g.restore();
+}
+function pkkMoto(g, L, W, H, t, dpr) {                                   // tu moto, la del taller, en 3D: entra por la derecha, para, y se va por la izquierda
+  var P = PKI, M = L.moto, e = P.mx * P.mx * (3 - 2 * P.mx), sal = P.fase === 'sale' ? Math.min(1, P.tf / 0.7) : 0;
+  var dx = e * (W - M[0]) - sal * sal * (M[0] + M[2] * 1.1), ang = Math.PI / 2 + 0.5, look = lookGet();
+  var o = { t: t, v: P.fase === 'sale' || e > 0 ? 0.8 : 0.15, rot: -t * (e > 0 || sal > 0 ? 12 : 0), mira: 1, look: look, gas: sal > 0 };
+  if (P.fase === 'moto') o.cesta = 'vacia';
+  else if (P.salto >= 0) o.salto = P.salto;
+  if (P.fase === 'lista' || P.fase === 'sale') o.ofrenda = ofrendaSpr('canang');
+  var VE0 = VESTIR, w0 = V.w, h0 = V.h;
+  try {
+    bancoCam(M[2], M[3], 25, 21, dpr, function () {
+      CAM.W2 = M[0] + M[2] / 2 + dx; CAM.H2 = M[1] + M[3] * 0.86; V.w = W; V.h = H;
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.fillStyle = 'rgba(42,26,12,.2)'; g.beginPath(); g.ellipse(CAM.W2, CAM.H2 + 4, M[2] * 0.36, M[3] * 0.06, 0, 0, TAU); g.fill();
+      motoGuiri3D(g, 0, 0, 0, ang, o);
+      var MP = fmPerfil(look); k3Abre(0, 0, 0, ang, 0, 0, MG3.k);          // dónde queda la parrilla, para la diana
+      var p = k3(-9.6 + MP.ofr[0], 0, 32.4 + MP.ofr[1]); P.rack = [p[0], p[1] - 6];
+    });
+  } catch (er) { P.rack = [M[0] + M[2] * 0.45, M[1] + M[3] * 0.4]; }
+  VESTIR = VE0; V.w = w0; V.h = h0; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+/* ---------- volver a verla, desde Ajustes ---------- */
+function pkkRepite() {
+  pkiAbre(function () { G.state = 'ready'; G.card = false; menuFondo(); showMenu(); if (typeof fasAjustes === 'function') fasAjustes(); }, { repite: true });
+}
+var fasAjustesPKK = fasAjustes;
+fasAjustes = function () {
+  fasAjustesPKK();
+  if (!pkkOn() || !PKI.vivo) return;
+  var m = document.querySelector('#scr .card.fs-ajs .mcs'); if (!m) return;
+  m.insertAdjacentHTML('beforeend', cosaFila('pkk:intro', '🎬', TT('Ver la intro'), TT('Wayan, el canang y tu primera ofrenda.'), ''));
+};
+var menuActPKK = menuAct;
+menuAct = function (a) {
+  if (a === 'pkk:intro' && pkkOn()) { SFX.pick(2); pkkRepite(); return true; }
+  return menuActPKK(a);
+};
+(function () {
+  var css = '.pkk .pki-bur{top:calc(env(safe-area-inset-top,0px) + 52px)}.pkk .pki-va{background:#e2452f;font-size:22px}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  var N = {
+    '¡Hoy hay fiesta en el templo!': ['There\'s a festival at the temple today!', 'Hari ini ada odalan di pura!'],
+    'Toca el canang para ponerle las flores.': ['Tap the canang to add the flowers.', 'Sentuh canang untuk menaruh bunga.'],
+    'Blanco, al este': ['White, to the east', 'Putih, ke timur'], 'Rojo, al sur': ['Red, to the south', 'Merah, ke selatan'],
+    'Amarillo, al oeste': ['Yellow, to the west', 'Kuning, ke barat'], 'Azul, al norte': ['Blue, to the north', 'Biru, ke utara'],
+    'Cada color mira a un dios. ¡Otra!': ['Each colour faces a god. Another one!', 'Tiap warna menghadap satu dewa. Lagi!'],
+    'Se enciende el incienso y… ¡a la moto!': ['Light the incense and… onto the scooter!', 'Nyalakan dupa dan… ke motor!'],
+    '¡Ponla en la moto!': ['Put it on the scooter!', 'Taruh di motor!'], 'Arrástrala hasta la parrilla, detrás del asiento.': ['Drag it onto the rack, behind the seat.', 'Seret ke rak, di belakang jok.'],
+    '¡Llévala al templo antes que nadie!': ['Take it to the temple before anyone else!', 'Bawa ke pura lebih dulu dari yang lain!'],
+    'Esquiva, no te caigas y recoge frangipanis por el camino.': ['Dodge, don\'t fall off, and grab frangipanis on the way.', 'Menghindar, jangan jatuh, dan ambil kamboja di jalan.'],
+    '¡Vamos!': ['Let\'s go!', 'Ayo!'], 'Cerrar': ['Close', 'Tutup'], 'Ver la intro': ['Watch the intro', 'Lihat intro'],
+    'Wayan, el canang y tu primera ofrenda.': ['Wayan, the canang and your first offering.', 'Wayan, canang, dan sesajen pertamamu.']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
 })();
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
