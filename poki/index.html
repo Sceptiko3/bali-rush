@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v14 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v15 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -114928,6 +114928,58 @@ cineDibuja = function (t) {
   if (pkeOn() && CINE.sale && !CINE.on) return;                          // (el vídeo ya se está cerrando: nada de pintar la intro por debajo)
   return cineDibujaPKE.apply(this, arguments);
 };
+/*#pieza nucleo/668_poki_historia.js*/
+/* ================================================================
+   POKI V15 · AL EMPEZAR, LA HISTORIA (EL VÍDEO DE ENTRADA DE SIEMPRE)
+   Jose Javier (22-10-2026), al ver la intro de la v13: «esto es una
+   cutrez, no tiene sentido; igual te obsesionas demasiado con lo de
+   empezar al momento; la historia es que va detrás del mono… por lo
+   menos no lo hagas tan sumamente cutre» y «es que querer hacerlo tan
+   sumamente directo… este lo que tiene es que es un poco tipo arcade,
+   con su historieta; tendrá su público».
+   Así que la primera vez, tras «Toca para empezar», va el VÍDEO DE
+   ENTRADA del juego completo (PELIS.intro49, el trabajado en las V132
+   y siguientes): el título, Wayan y el canang en el templo de su casa,
+   y en Uluwatu el guiri, el mono gris que le roba la mochila (y el
+   anillo), el resbalón, «¿quién soy?», Wayan con Pitik y la moto. Al
+   acabar (o con «Saltar», arriba, siempre), la carrera 1.
+   Fuera la intro de la v13 (PKK) y la de la v2 (PKI) en el arranque.
+   En Ajustes, «🎬 Ver la historia» la vuelve a poner (y al acabar
+   vuelve al menú).
+   PKP.vivo = false: como la v14 (la intro de la v13).
+   ================================================================ */
+var PKP = { vivo: true };
+function pkpOn() { return POK.vivo && PKP.vivo; }
+if (pkpOn()) PKK.vivo = false;                                           // (fuera también su fila de Ajustes; la de aquí la sustituye)
+var cineEmpezarPKP = cineEmpezar;
+cineEmpezar = function () {
+  if (pkpOn() && CINE.on && !CINE.play && CINE.peliId === 'intro' && CINE.sigue === 'menu' && !SAVE.hist) {
+    CINE.sigue = function () { pokPrimeraCarreraPKI(); };                // al acabar o al saltar: la carrera 1, sin la intro del canang
+    return cineEmpezarPK();                                              // (el de antes de Poki: el vídeo, entero)
+  }
+  return cineEmpezarPKP.apply(this, arguments);
+};
+/* ---------- volver a verla, desde Ajustes ---------- */
+function pkpVer() { showCine(function () { G.state = 'ready'; G.card = false; menuFondo(); showMenu(); if (typeof fasAjustes === 'function') fasAjustes(); }); }
+var fasAjustesPKP = fasAjustes;
+fasAjustes = function () {
+  fasAjustesPKP();
+  if (!pkpOn()) return;
+  var m = document.querySelector('#scr .card.fs-ajs .mcs'); if (!m) return;
+  m.insertAdjacentHTML('beforeend', cosaFila('pkp:historia', '🎬', TT('Ver la historia'), TT('El mono, la mochila y cómo acabaste en la moto de Wayan.'), ''));
+};
+var menuActPKP = menuAct;
+menuAct = function (a) {
+  if (a === 'pkp:historia' && pkpOn()) { SFX.pick(2); pkpVer(); return true; }
+  return menuActPKP(a);
+};
+(function () {
+  var N = {
+    'Ver la historia': ['Watch the story', 'Lihat ceritanya'],
+    'El mono, la mochila y cómo acabaste en la moto de Wayan.': ['The monkey, the backpack and how you ended up on Wayan\'s scooter.', 'Monyet, ransel, dan bagaimana kamu naik motor Wayan.']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
