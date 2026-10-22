@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v15 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v16 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -114977,6 +114977,182 @@ menuAct = function (a) {
   var N = {
     'Ver la historia': ['Watch the story', 'Lihat ceritanya'],
     'El mono, la mochila y cómo acabaste en la moto de Wayan.': ['The monkey, the backpack and how you ended up on Wayan\'s scooter.', 'Monyet, ransel, dan bagaimana kamu naik motor Wayan.']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza nucleo/670_poki_peerjs.js*/
+/* ================================================================
+   POKI V16 · ONLINE PROVISIONAL QUE NO ES DE POKI (SOLO EN SU WEB)
+   Jose Javier (22-10-2026): «el multijugador no pusiste lo que te dije
+   ¿no? Provisional, lo que no es de Poki». En su web (/poki/), «Online
+   de prueba» iba por la red de Poki (netlib, 650), sin poder probarla
+   desde aquí. Ahora, FUERA DE POKI, el online va por PeerJS: un
+   servicio público y gratuito que solo presenta a los móviles (sin
+   cuentas); luego van de móvil a móvil (WebRTC), y si la red no deja,
+   por su repetidor (TURN). Dentro de Poki sigue netlib (Poki no deja
+   llamar a otros servidores) y el paquete para Poki quita esta pieza
+   entera (herr/poki_paquete.py).
+   - Crear sala: un código de 4 letras (como el online de la V220) y
+     «📤 Invitar», que copia el enlace (…/poki/#sala=ABCD); quien lo
+     abre entra solo. O se escriben las 4 letras en ENTRAR.
+   - Por dentro, cada moto es una conexión de RED (como la wifi y como
+     netlib), así que las carreras y lo demás no cambian. Hasta 6.
+   - La librería (peerjs.min.js, MIT) va junto al juego en su web; si
+     no está, de jsDelivr. Se carga solo al crear o entrar en una sala.
+   PJS.vivo = false: como la v15 (netlib también fuera de Poki).
+   ================================================================ */
+var PJS = { vivo: true, lib: ['peerjs.min.js', 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'], srv: null, pre: 'balirush-poki-',
+  peer: null, sala: '', porConn: {}, host: null, cola: [], espera: 0 };
+function pjsOn() { return POK.vivo && PJS.vivo && typeof pkwEnPoki === 'function' && !pkwEnPoki(); }
+function pjsUsa() { return pjsOn() && !RON.url; }                        // (si algún día está el servidor propio, online.json, va por él)
+/* ---------- la librería, solo cuando hace falta ---------- */
+function pjsCarga(cb, i) {
+  i = i || 0;
+  if (typeof window.Peer === 'function') { cb(true); return; }
+  if (i >= PJS.lib.length) { cb(false); return; }
+  var s = document.createElement('script'); s.src = PJS.lib[i]; s.async = true;
+  s.onload = function () { if (typeof window.Peer === 'function') cb(true); else pjsCarga(cb, i + 1); };
+  s.onerror = function () { s.remove(); pjsCarga(cb, i + 1); };
+  document.head.appendChild(s);
+}
+function pjsOpciones() { var o = { debug: 0 }; if (PJS.srv) for (var k in PJS.srv) o[k] = PJS.srv[k]; return o; }
+function pjsCodigo() { var L = RON.letras, c = ''; for (var i = 0; i < 4; i++) c += L.charAt(Math.floor(Math.random() * L.length)); return c; }
+/* ---------- abrir, cerrar, fallar ---------- */
+function pjsCierra() {
+  var p = PJS.peer; PJS.peer = null; PJS.porConn = {}; PJS.host = null; PJS.cola = []; clearTimeout(PJS.espera);
+  if (p) try { p.destroy(); } catch (e) {}
+}
+function pjsFallo(txt) { pjsCierra(); RON.on = false; RED.soy = 0; RED.host = false; MUL.vista = 'ini'; MUL.nota = TT(txt); mulPinta(); }
+function pjsAbre(rol, sala) {
+  pjsCierra(); redSale();
+  RON.on = true; RON.fue = true; RON.nota = ''; RON.sala = rol === 'une' ? String(sala).toUpperCase() : '';
+  MUL.vista = 'ronesp'; MUL.nota = ''; mulPinta();
+  var yo = {}; PJS.yo = yo;
+  pjsCarga(function (ok) {
+    if (PJS.yo !== yo || !RON.on) return;
+    if (!ok) { pjsFallo('No se puede conectar ahora mismo: prueba otra vez en un rato.'); return; }
+    if (rol === 'crea') pjsCrea(0); else pjsUne(RON.sala);
+  });
+}
+/* ---------- la moto 1: crea la sala ---------- */
+function pjsCrea(intento) {
+  var code = pjsCodigo(), peer;
+  try { peer = new window.Peer(PJS.pre + code.toLowerCase(), pjsOpciones()); } catch (e) { pjsFallo('No se ha podido crear la sala.'); return; }
+  PJS.peer = peer;
+  peer.on('open', function () {
+    if (PJS.peer !== peer) return;
+    PJS.sala = code; RON.sala = code;
+    RED.soy = 1; RED.host = true; RED.perdido = false; MUL.cortado = false; MUL.nota = ''; MUL.qr = '';
+    MUL.jug = { 1: mulYo() }; MUL.est = {}; MUL.elige = mulEligeDefecto(); MUL.vista = 'sala';
+    SFX.pick(3); mulPinta(); redAvisa();
+  });
+  peer.on('connection', function (conn) {
+    if (PJS.peer !== peer || !RED.host) return;
+    conn.on('open', function () {
+      if (PJS.peer !== peer) return;
+      var n = redLibre(); if (!n) { try { conn.close(); } catch (e) {} return; }
+      PJS.porConn[conn.peer] = n;
+      try { conn.send('!soy ' + n); } catch (e) {}
+      if (MUL.on) PJS.cola.push(conn); else pjsEngancha(n, conn);       // quien entra en plena carrera, a la sala cuando acabe
+    });
+    conn.on('data', function (d) { pjsDato(conn, d); });
+    conn.on('close', function () {
+      if (PJS.peer !== peer) return;
+      var n = PJS.porConn[conn.peer]; delete PJS.porConn[conn.peer]; PJS.cola = PJS.cola.filter(function (x) { return x !== conn; });
+      if (n && RED.conex[n] && RED.conex[n].conn === conn) { redQuita(n); redAvisa(); }
+    });
+  });
+  peer.on('disconnected', function () { if (PJS.peer === peer) try { peer.reconnect(); } catch (e) {} });   // (se cae el presentador: las motos ya unidas siguen)
+  peer.on('error', function (e) {
+    if (PJS.peer !== peer) return;
+    if (e && e.type === 'unavailable-id' && intento < 5) { PJS.peer = null; try { peer.destroy(); } catch (x) {} pjsCrea(intento + 1); return; }   // ese código ya lo tiene otra sala: otro
+    if (e && (e.type === 'peer-unavailable' || e.type === 'webrtc')) return;   // (uno que no llega a entrar: no pasa nada)
+    if (!RED.soy) pjsFallo('No se puede conectar ahora mismo: prueba otra vez en un rato.');
+  });
+}
+/* ---------- los demás: entran con el código ---------- */
+function pjsUne(code) {
+  var peer;
+  try { peer = new window.Peer(pjsOpciones()); } catch (e) { pjsFallo('No se puede conectar ahora mismo: prueba otra vez en un rato.'); return; }
+  PJS.peer = peer;
+  peer.on('open', function () {
+    if (PJS.peer !== peer) return;
+    var conn = peer.connect(PJS.pre + String(code).toLowerCase(), { reliable: true, serialization: 'raw' });
+    PJS.host = conn;
+    conn.on('data', function (d) { pjsDato(conn, d); });
+    conn.on('close', function () {
+      if (PJS.peer !== peer || PJS.host !== conn) return;
+      if (RED.conex[1]) { redQuita(1); redAvisa(); }
+      else if (MUL.vista === 'ronesp') pjsFallo('No hay ninguna sala con ese código. Revísalo.');
+    });
+    PJS.espera = setTimeout(function () { if (PJS.peer === peer && !RED.soy) pjsFallo('No conecta. Prueba otra vez (o que creen otra sala).'); }, 15000);
+  });
+  peer.on('disconnected', function () { if (PJS.peer === peer) try { peer.reconnect(); } catch (e) {} });
+  peer.on('error', function (e) {
+    if (PJS.peer !== peer) return;
+    if (e && e.type === 'peer-unavailable') { if (!RED.soy) pjsFallo('No hay ninguna sala con ese código. Revísalo.'); return; }
+    if (!RED.soy) pjsFallo('No se puede conectar ahora mismo: prueba otra vez en un rato.');
+  });
+}
+/* ---------- los mensajes ---------- */
+function pjsTexto(d) { try { return typeof d === 'string' ? d : new TextDecoder().decode(d instanceof ArrayBuffer ? new Uint8Array(d) : d); } catch (e) { return null; } }
+function pjsDato(conn, d) {
+  var t = pjsTexto(d); if (t == null) return;
+  if (t.charAt(0) === '!') {
+    var p = t.slice(1).split(' ');
+    if (p[0] === 'soy' && !RED.host && conn === PJS.host) {              // la moto 1 te dice qué plaza tienes
+      var n = +p[1]; if (!(n >= 2 && n <= RED.max)) return;
+      clearTimeout(PJS.espera);
+      RED.soy = n; RED.host = false; RED.perdido = false; MUL.cortado = false; MUL.nota = ''; MUL.qr = '';
+      MUL.jug = {}; MUL.est = {}; pjsEngancha(1, conn);
+      MUL.vista = 'sala'; SFX.pick(3); mulPinta(); redAvisa();
+    }
+    return;
+  }
+  if (RED.host) { var m = PJS.porConn[conn.peer]; if (m && RED.conex[m]) redRecibe(m, t); }
+  else if (conn === PJS.host && RED.conex[1]) redRecibe(1, t);
+}
+function pjsEngancha(n, conn) {                                          // una «conexión» de RED que va por PeerJS (los dos canales, por el mismo)
+  var k = RED.conex[n] = { pc: { connectionState: 'connected', close: function () { try { conn.close(); } catch (e) {} } }, c: null, g: null, vivo: false, rtt: [], pings: {}, online: true, conn: conn };
+  var manda = function (t) { conn.send(t); };
+  k.c = { readyState: 'open', send: manda }; k.g = { readyState: 'open', send: manda };
+  redCanal(n, k, k.c); redCanal(n, k, k.g);                             // → vivo, y «red:hola», como en la wifi
+  if (RED.host) redCanalManda(k, 'c', { t: 'ron:dime' });               // que diga quién es (lo contesta 616)
+  redAvisa();
+}
+setInterval(function () {
+  if (!PJS.peer || !RED.host || MUL.on || !PJS.cola.length) return;
+  var c = PJS.cola; PJS.cola = [];
+  c.forEach(function (conn) { var n = PJS.porConn[conn.peer]; if (n && !RED.conex[n] && conn.open) pjsEngancha(n, conn); });
+}, 500);
+/* ---------- debajo del multijugador: en lugar de netlib (fuera de Poki) ---------- */
+var ronListoPJS = ronListo;
+ronListo = function () { return pjsUsa() ? redPuede() : ronListoPJS(); };
+var ronAbrePJS = ronAbre;
+ronAbre = function (rol, sala) { if (!pjsUsa()) return ronAbrePJS(rol, sala); pjsAbre(rol, sala); };
+var ronCierraPJS = ronCierra;
+ronCierra = function () { pjsCierra(); return ronCierraPJS(); };
+var ronEnlacePJS = ronEnlace;
+ronEnlace = function () { return pjsUsa() ? redDireccion() + '#sala=' + RON.sala : ronEnlacePJS(); };
+var ronEntraPJS = ronEntra;
+ronEntra = function () { return pjsUsa() ? ronEntraPKW() : ronEntraPJS(); };   // (las 4 letras, como el online de la V220)
+var ronCompartePJS = ronComparte;
+ronComparte = function () { return pjsUsa() ? ronComparteP() : ronCompartePJS(); };
+var mulPintaPJS = mulPinta;
+mulPinta = function () {
+  mulPintaPJS();
+  if (!pjsUsa() || MUL.on) return;
+  var c = document.querySelector('#scr .card.mu'); if (!c) return;
+  var inp = c.querySelector('.ron-cod'); if (inp) { inp.maxLength = 4; inp.setAttribute('autocapitalize', 'characters'); }
+  var nt = c.querySelector('.ron-nota'); if (nt && MUL.vista === 'ini') nt.textContent = TT('Crea una sala y comparte el enlace, o escribe las 4 letras que te pasen. Hasta 6; los huecos los corre la máquina.');
+  var esp = c.querySelector('.mu-esp'); if (esp && MUL.vista === 'ronesp') esp.textContent = '👥 ' + TT('Conectando…');
+};
+(function () {
+  var N = {
+    'No se puede conectar ahora mismo: prueba otra vez en un rato.': ['Can\'t connect right now: try again in a while.', 'Tidak bisa terhubung sekarang: coba lagi nanti.'],
+    'No conecta. Prueba otra vez (o que creen otra sala).': ['Not connecting. Try again (or ask them to create another room).', 'Tidak terhubung. Coba lagi (atau minta buat ruang lain).'],
+    'Crea una sala y comparte el enlace, o escribe las 4 letras que te pasen. Hasta 6; los huecos los corre la máquina.': ['Create a room and share the link, or type the 4 letters you were given. Up to 6; empty spots are raced by the computer.', 'Buat ruang dan bagikan tautannya, atau ketik 4 huruf yang kamu terima. Sampai 6; tempat kosong diisi komputer.'],
+    'Conectando…': ['Connecting…', 'Menghubungkan…']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
