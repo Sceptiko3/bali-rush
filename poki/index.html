@@ -49776,8 +49776,9 @@ function motoGuiriFiel(g, x, y, z, ang, o) {
     fp.pu = R(-4.4 - vel * 1.2 * kf, d * (5.6 + 1.2 * kf), 22.9); PC.push(fp);
   }
   function flores(c, s, solo) {                                            // las flores: las del tronco, repartidas alrededor del cuerpo (solo las que miran a la cámara), y las de las mangas y los faldones
-    if (VE || o.poncho) return;
-    var F = FM.flores, G = [[], [], []], j, i, k, f, w, u, a, b, T0 = FM_TORSO, q, r, pet = lod > 0, e;
+    var ES = typeof fmEstampado === 'function' ? fmEstampado(LK, o) : null;   // (Poki v12: el estampado de la camisa, del taller)
+    if (VE || o.poncho || (ES && ES.no)) return;
+    var F = FM.flores, G = [[], [], []], j, i, k, f, w, u, a, b, T0 = FM_TORSO, q, r, pet = lod > 0, e, fo = ES && ES.forma, ek = ES && ES.k || 1;
     if (!solo) {
       for (j = 0; j < F.length; j++) {
         f = F[j]; w = 23 + f[1] * 14.6; i = 0; while (i < T0.length - 2 && T0[i + 1][0] < w) i++;
@@ -49796,13 +49797,15 @@ function motoGuiriFiel(g, x, y, z, ang, o) {
       if (!G[k].length) continue;
       c.beginPath();
       for (j = 0; j < G[k].length; j++) {
-        q = G[k][j]; r = q[2];
-        if (!pet) { c.moveTo(q[0] + r * 0.8, q[1]); c.arc(q[0], q[1], r * 0.8, 0, TAU); continue; }
+        q = G[k][j]; r = q[2] * ek;
+        if (!pet || fo === 'punto') { var rp = fo === 'punto' ? r * 0.46 : r * 0.8; c.moveTo(q[0] + rp, q[1]); c.arc(q[0], q[1], rp, 0, TAU); continue; }
+        if (fo === 'hoja') { c.moveTo(q[0] + Math.cos(q[3]) * r * 1.1, q[1] + Math.sin(q[3]) * r * 1.1); c.ellipse(q[0], q[1], r * 1.1, r * 0.42, q[3], 0, TAU); continue; }
         for (i = 0; i < 5; i++) { a = q[3] + i * 1.2566; u = q[0] + Math.cos(a) * r * 0.55; w = q[1] + Math.sin(a) * r * 0.55; c.moveTo(u + r * 0.42, w); c.arc(u, w, r * 0.42, 0, TAU); }
       }
-      c.fillStyle = FM_FLOR[k]; c.fill();
+      c.fillStyle = ES && ES.pal ? ES.pal[k] : FM_FLOR[k]; c.fill();
     }
-    if (lod) { c.beginPath(); for (k = 0; k < 3; k++) for (j = 0; j < G[k].length; j++) { q = G[k][j]; c.moveTo(q[0] + q[2] * 0.3, q[1]); c.arc(q[0], q[1], q[2] * 0.3, 0, TAU); } c.fillStyle = '#ffd23f'; c.fill(); }
+    if (fo === 'hoja' && lod) { c.beginPath(); for (k = 0; k < 3; k++) for (j = 0; j < G[k].length; j++) { q = G[k][j]; r = q[2] * ek; c.moveTo(q[0] - Math.cos(q[3]) * r, q[1] - Math.sin(q[3]) * r); c.lineTo(q[0] + Math.cos(q[3]) * r, q[1] + Math.sin(q[3]) * r); } c.strokeStyle = 'rgba(20,60,25,.55)'; c.lineWidth = Math.max(0.4, 0.1 * s); c.stroke(); }
+    if (lod && !fo) { c.beginPath(); for (k = 0; k < 3; k++) for (j = 0; j < G[k].length; j++) { q = G[k][j]; c.moveTo(q[0] + q[2] * 0.3, q[1]); c.arc(q[0], q[1], q[2] * 0.3, 0, TAU); } c.fillStyle = '#ffd23f'; c.fill(); }
   }
   function Fr(v, w) { var u = w <= 32.6 ? lerp(-0.4, 6.4, (w - 24.6) / 8) : lerp(6.4, 4.1, (w - 32.6) / 5.6); return R(u + 0.1, v, w); }   // un punto del pecho y la barriga
   var pecho = front && !VE, cuello = R(3.6, 0, 38.3);
@@ -111720,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v11 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v12 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -114173,6 +114176,431 @@ showReady = function () {
 };
 var pauseGamePKY = pauseGame;
 pauseGame = function () { var r = pauseGamePKY.apply(this, arguments); pkyPendiente(); return r; };
+/*#pieza nucleo/660_poki_ofrendas.js*/
+/* ================================================================
+   POKI V12 · (1) LAS OFRENDAS QUE LLEVAS EN LA MOTO, DE VERDAD
+   Jose Javier (22-10-2026): «las ofrendas que lleva en la moto son
+   cutres». Eran bolitas de colores sobre una barra verde. Ahora cada
+   una es la ofrenda de su fiesta, dibujada con volumen (luz arriba a
+   la izquierda), vista desde detrás y un poco desde arriba, como se ve
+   en la carrera, y más estrecha para que no tape a Wayan:
+   - canang sari: la bandejita de hoja de palma tejida (ceper) con su
+     borde recortado, el pandan picado en medio, las flores de los
+     cuatro colores en sus cuatro lados, el abanico de janur y la
+     varilla de incienso humeando.
+   - bubur: tres cuencos de hoja de plátano (tekor) con papilla de arroz
+     y azúcar de palma.
+   - penjor: el bambú curvo con sus nudos, los adornos de janur, el
+     lamak que cuelga y el sampian de la punta.
+   - tumpeng: el cono de arroz amarillo sobre hoja de plátano, con
+     huevo, guindilla, judías y tempe alrededor.
+   - fruta (banten buah): el dulang de madera con plátanos, naranjas,
+     mangostanes, salak y el sampian encima.
+   - kuning: arroz amarillo en hoja de plátano con tortilla, pepino y
+     huevo.
+   - gebogan: la torre de frutas y pasteles (jaje) en su dulang de pie
+     alto, coronada por un canang.
+   - segehan: el cuadrito de hoja de plátano con los montoncitos de
+     arroz de colores, la cebolla, la sal y el incienso.
+   Sustituye a ofrendaSpr (155) y deja su forma: mk(40, 90) con la
+   bandeja a la altura 16.
+   PKD.vivo = false: las de antes.
+   ================================================================ */
+var PKD = { vivo: true, spr: {} };
+function pkdOn() { return POK.vivo && PKD.vivo; }
+var PKD_T = '#2a1a0c';
+function pkdSombra(c, f) { var r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16); return 'rgb(' + Math.round(r * f) + ',' + Math.round(g * f) + ',' + Math.round(b * f) + ')'; }
+function pkdBola(g, x, y, r, col, tinta) {                              // una fruta redonda con su brillo
+  var gr = g.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
+  gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.18, col); gr.addColorStop(1, pkdSombra(col, 0.62));
+  g.beginPath(); g.arc(x, y, r, 0, TAU); g.fillStyle = gr; g.fill();
+  if (tinta !== false) { g.strokeStyle = 'rgba(42,26,12,.75)'; g.lineWidth = Math.max(0.35, r * 0.16); g.stroke(); }
+}
+function pkdFlor(g, x, y, r, col, centro) {                             // una florecita de cinco pétalos (frangipani, cempaka, marigold…)
+  g.save(); g.translate(x, y);
+  for (var i = 0; i < 5; i++) { g.rotate(TAU / 5); g.beginPath(); g.ellipse(0, -r * 0.55, r * 0.42, r * 0.62, 0, 0, TAU); g.fillStyle = col; g.fill(); g.strokeStyle = pkdSombra(col, 0.7); g.lineWidth = r * 0.12; g.stroke(); }
+  g.beginPath(); g.arc(0, 0, r * 0.28, 0, TAU); g.fillStyle = centro || '#f2b322'; g.fill();
+  g.restore();
+}
+function pkdPetalos(g, x, y, col, n, rr) {                               // un montón de pétalos picados
+  for (var i = 0; i < n; i++) {
+    var a = i * 2.399, d = Math.sqrt(i / n) * rr, px = x + Math.cos(a) * d * 1.3, py = y + Math.sin(a) * d * 0.6 - (1 - d / rr) * rr * 0.5;
+    g.beginPath(); g.ellipse(px, py, rr * 0.28, rr * 0.18, a, 0, TAU); g.fillStyle = i % 3 ? col : pkdSombra(col, 0.82); g.fill();
+  }
+}
+function pkdBandeja(g, w, y0, top, front, alto) {                       // una bandeja vista desde detrás y arriba: la cara de arriba y el canto
+  var hw = w / 2, d = w * 0.36, h = alto || 3;
+  g.beginPath(); g.moveTo(-hw, y0 - h); g.lineTo(hw, y0 - h); g.lineTo(hw - 2, y0 - h - d); g.lineTo(-hw + 2, y0 - h - d); g.closePath();
+  g.fillStyle = top; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.55; g.stroke();
+  g.beginPath(); g.moveTo(-hw, y0 - h); g.lineTo(hw, y0 - h); g.lineTo(hw - 0.6, y0); g.lineTo(-hw + 0.6, y0); g.closePath();
+  g.fillStyle = front; g.fill(); g.stroke();
+  return { hw: hw, d: d, h: h, arriba: y0 - h, fondo: y0 - h - d };
+}
+function pkdTejido(g, B, y0, col) {                                     // el tejido de la hoja de palma, y el borde recortado en picos
+  g.save(); g.beginPath(); g.moveTo(-B.hw, y0 - B.h); g.lineTo(B.hw, y0 - B.h); g.lineTo(B.hw - 0.6, y0); g.lineTo(-B.hw + 0.6, y0); g.closePath(); g.clip();
+  g.strokeStyle = col; g.lineWidth = 0.35;
+  for (var x = -B.hw - 4; x < B.hw + 4; x += 1.6) { g.beginPath(); g.moveTo(x, y0 - B.h); g.lineTo(x + 2.2, y0); g.stroke(); g.beginPath(); g.moveTo(x + 2.2, y0 - B.h); g.lineTo(x, y0); g.stroke(); }
+  g.restore();
+  g.beginPath(); for (var i = 0; i <= 10; i++) { var px = -B.hw + i * (B.hw * 2 / 10); g.lineTo(px, y0 - B.h - (i % 2 ? 1.6 : 0)); }
+  g.strokeStyle = '#c8e27a'; g.lineWidth = 0.6; g.stroke();
+}
+function pkdIncienso(g, x, y, alto) {
+  g.strokeStyle = '#7a5a3a'; g.lineWidth = 0.55; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 1.2, y - alto); g.stroke();
+  g.beginPath(); g.arc(x + 1.2, y - alto, 0.55, 0, TAU); g.fillStyle = '#ff6a2a'; g.fill();
+  g.strokeStyle = 'rgba(235,235,240,.7)'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(x + 1.2, y - alto - 0.6);
+  g.bezierCurveTo(x - 1.5, y - alto - 4, x + 4, y - alto - 7, x + 0.5, y - alto - 11); g.stroke();
+}
+function pkdSampian(g, x, y, s) {                                       // el abanico de janur (hoja joven de cocotero)
+  g.save(); g.translate(x, y); g.scale(s, s);
+  for (var i = -3; i <= 3; i++) { g.save(); g.rotate(i * 0.22); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(1.6, -5, 0, -9.5); g.quadraticCurveTo(-1.6, -5, 0, 0); g.fillStyle = i % 2 ? '#eef2b0' : '#dfe78e'; g.fill(); g.strokeStyle = '#9aa84a'; g.lineWidth = 0.3; g.stroke(); g.restore(); }
+  g.restore();
+}
+function pkdHoja(g, x, y, w, h) {                                       // un trozo de hoja de plátano (base de los platos)
+  g.beginPath(); g.ellipse(x, y, w / 2, h / 2, 0, 0, TAU);
+  var gr = g.createLinearGradient(x, y - h / 2, x, y + h / 2); gr.addColorStop(0, '#6fb83a'); gr.addColorStop(1, '#3f7f22');
+  g.fillStyle = gr; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.5; g.stroke();
+  g.strokeStyle = 'rgba(210,240,160,.6)'; g.lineWidth = 0.35; g.beginPath(); g.moveTo(x - w / 2 + 1, y); g.lineTo(x + w / 2 - 1, y); g.stroke();
+  for (var i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(x + i * w / 9, y); g.lineTo(x + i * w / 9 + w / 14, y - h / 2 + 0.6); g.stroke(); }
+}
+function pkdDulang(g, y0, w, pie) {                                     // la bandeja de madera con su pie
+  var hw = w / 2;
+  g.beginPath(); g.moveTo(-hw * 0.45, y0); g.lineTo(hw * 0.45, y0); g.lineTo(hw * 0.25, y0 - pie); g.lineTo(-hw * 0.25, y0 - pie); g.closePath();
+  var gr = g.createLinearGradient(-hw, 0, hw, 0); gr.addColorStop(0, '#7a4a22'); gr.addColorStop(0.45, '#b97a3c'); gr.addColorStop(1, '#5e3616');
+  g.fillStyle = gr; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.55; g.stroke();
+  g.beginPath(); g.ellipse(0, y0 - pie - 0.8, hw, 2, 0, 0, TAU); g.fillStyle = gr; g.fill(); g.stroke();
+  g.strokeStyle = '#e0b46a'; g.lineWidth = 0.4; g.beginPath(); g.ellipse(0, y0 - pie - 1.2, hw - 1, 1.2, 0, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+  return y0 - pie - 1.6;
+}
+function pkdPlatano(g, x, y, a, s) {
+  g.save(); g.translate(x, y); g.rotate(a); g.scale(s, s);
+  g.beginPath(); g.moveTo(-4, 0); g.quadraticCurveTo(0, 3.4, 4.2, -0.4); g.quadraticCurveTo(0, 1.6, -4, -1.4); g.closePath();
+  g.fillStyle = '#f5cf2e'; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.4; g.stroke();
+  g.strokeStyle = '#c9961a'; g.beginPath(); g.moveTo(-3.6, -0.6); g.quadraticCurveTo(0, 1.9, 3.6, -0.2); g.stroke();
+  g.beginPath(); g.arc(-4, -0.7, 0.5, 0, TAU); g.fillStyle = '#5a3a1a'; g.fill();
+  g.restore();
+}
+function pkdMangostan(g, x, y, r) { pkdBola(g, x, y, r, '#5b2448'); g.beginPath(); for (var i = 0; i < 4; i++) { var a = -Math.PI / 2 + (i - 1.5) * 0.5; g.ellipse(x + Math.cos(a) * r * 0.45, y - r * 0.82 + Math.sin(a) * 0.3, r * 0.32, r * 0.18, a, 0, TAU); } g.fillStyle = '#4f8a2a'; g.fill(); }
+function pkdSalak(g, x, y, r) { pkdBola(g, x, y, r, '#7a4a2a'); g.fillStyle = 'rgba(30,15,5,.45)'; for (var i = 0; i < 7; i++) { var a = i * 2.4; g.beginPath(); g.arc(x + Math.cos(a) * r * 0.5, y + Math.sin(a) * r * 0.5, r * 0.13, 0, TAU); g.fill(); } }
+function pkdJaje(g, x, y, w, h, col) {                                  // un pastelito de arroz de colores
+  g.beginPath(); g.rect(x - w / 2, y - h, w, h); g.fillStyle = col; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.35; g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x - w / 2 + 0.3, y - h + 0.3, w - 0.6, h * 0.3);
+}
+function pkdDibuja(g, k) {
+  var y0 = 16, B, i;
+  if (k === 'canang' || k === 'segehan') {
+    if (k === 'canang') {
+      B = pkdBandeja(g, 20, y0, '#a9d25a', '#7fae3a', 3.4); pkdTejido(g, B, y0, 'rgba(70,110,30,.55)');
+      var cy = B.arriba - B.d * 0.5;
+      pkdSampian(g, 0, B.fondo + 1, 1.05);                                                   // el abanico, detrás
+      for (i = 0; i < 26; i++) { var a = i * 2.4, d = Math.sqrt(i / 26) * 4.2; g.strokeStyle = i % 2 ? '#3f8a2a' : '#69b23a'; g.lineWidth = 0.45; g.beginPath(); g.moveTo(Math.cos(a) * d, cy + Math.sin(a) * d * 0.45); g.lineTo(Math.cos(a) * d + Math.cos(a + 1) * 1.6, cy + Math.sin(a) * d * 0.45 - 1.1); g.stroke(); }   // el pandan picado
+      [['#ffffff', -6, -0.4, '#f2b322'], ['#e8343a', 6, -0.4, '#ffd23f'], ['#ffc21a', -5.2, 2.4, '#e07a10'], ['#7a52c8', 5.2, 2.4, '#ffd23f']].forEach(function (f) {   // las flores de los cuatro lados
+        pkdPetalos(g, f[1], cy + f[2], f[0], 9, 2.6); pkdFlor(g, f[1], cy + f[2] - 1.6, 1.9, f[0], f[3]);
+      });
+      pkdFlor(g, 0, cy - 1.8, 2.2, '#fff8e6', '#ffd23f');                                    // un frangipani en medio
+      pkdIncienso(g, 7.5, B.arriba - 0.5, 9);
+    } else {
+      pkdHoja(g, 0, y0 - 2.4, 22, 7.5);
+      [['#ffffff', -6.5], ['#e8343a', -2.2], ['#ffc21a', 2.2], ['#2b2b2e', 6.5]].forEach(function (r, j) {   // los montoncitos de arroz de colores
+        g.beginPath(); g.ellipse(r[1], y0 - 3.4, 2.1, 1.4, 0, 0, TAU); g.fillStyle = r[0]; g.fill(); g.strokeStyle = 'rgba(42,26,12,.6)'; g.lineWidth = 0.3; g.stroke();
+        for (var p = 0; p < 5; p++) { g.beginPath(); g.arc(r[1] - 1.2 + p * 0.6, y0 - 3.8 - (p % 2) * 0.5, 0.25, 0, TAU); g.fillStyle = j === 3 ? '#555' : 'rgba(255,255,255,.7)'; g.fill(); }
+      });
+      pkdBola(g, -2, y0 - 6, 1.3, '#d9a3c8'); pkdBola(g, 2.2, y0 - 6, 1.1, '#f0e6c8');      // la cebolla y el ajo
+      pkdIncienso(g, 8, y0 - 3, 8);
+    }
+  } else if (k === 'bubur') {
+    B = pkdBandeja(g, 22, y0, '#c9a05a', '#9a7034', 2.4);
+    [[-6.5, 0.6], [0, -1.6], [6.5, 0.6]].forEach(function (p) {                             // tres tekor de hoja de plátano
+      var x = p[0], y = B.arriba + p[1] - 1.5;
+      g.beginPath(); g.moveTo(x - 3.6, y - 3); g.lineTo(x + 3.6, y - 3); g.lineTo(x + 2.4, y + 1.2); g.lineTo(x - 2.4, y + 1.2); g.closePath();
+      g.fillStyle = '#4f9a2e'; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.45; g.stroke();
+      g.strokeStyle = 'rgba(200,240,150,.6)'; g.lineWidth = 0.3; g.beginPath(); g.moveTo(x - 3, y - 2); g.lineTo(x + 3, y - 2); g.stroke();
+      g.beginPath(); g.ellipse(x, y - 3.4, 3.3, 1.5, 0, 0, TAU); g.fillStyle = '#fbf6ea'; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.4; g.stroke();
+      g.beginPath(); g.ellipse(x + 0.6, y - 3.7, 1.6, 0.6, 0.3, 0, TAU); g.fillStyle = '#8a4a1e'; g.fill();          // el azúcar de palma
+      pkdFlor(g, x - 1.4, y - 4.2, 0.9, '#ff6b8a');
+    });
+  } else if (k === 'penjor') {
+    g.lineCap = 'round';
+    g.strokeStyle = PKD_T; g.lineWidth = 3.6; g.beginPath(); g.moveTo(-4, y0); g.quadraticCurveTo(-6, -30, 12, -40); g.stroke();
+    var grb = g.createLinearGradient(-8, 0, 0, 0); grb.addColorStop(0, '#b8a050'); grb.addColorStop(0.5, '#e6d27a'); grb.addColorStop(1, '#a88a3a');
+    g.strokeStyle = grb; g.lineWidth = 2.5; g.stroke();
+    for (i = 1; i < 8; i++) { var t = i / 8, bx = (1 - t) * (1 - t) * -4 + 2 * (1 - t) * t * -6 + t * t * 12, by = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * -30 + t * t * -40; g.strokeStyle = '#7a6a2a'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(bx - 1.3, by + 0.4); g.lineTo(bx + 1.3, by - 0.4); g.stroke();
+      if (i % 2 === 0 && i < 7) { g.beginPath(); g.moveTo(bx, by); g.lineTo(bx - 2.5, by + 4.5); g.lineTo(bx + 2.5, by + 4.5); g.closePath(); g.fillStyle = '#eef2b0'; g.fill(); g.strokeStyle = '#9aa84a'; g.lineWidth = 0.3; g.stroke(); } }   // nudos y adornos de janur
+    g.beginPath(); g.moveTo(11, -38); g.lineTo(15, -38); g.lineTo(14.5, -18); g.lineTo(13, -15); g.lineTo(11.5, -18); g.closePath();   // el lamak que cuelga
+    g.fillStyle = '#eef2b0'; g.fill(); g.strokeStyle = '#9aa84a'; g.lineWidth = 0.35; g.stroke();
+    for (i = 0; i < 5; i++) { g.beginPath(); g.moveTo(11.5, -35 + i * 4); g.lineTo(13, -33 + i * 4); g.lineTo(14.5, -35 + i * 4); g.strokeStyle = i % 2 ? '#e8343a' : '#4f9a2e'; g.lineWidth = 0.5; g.stroke(); }
+    pkdSampian(g, 12.5, -39.5, 0.9); pkdFlor(g, 12.5, -41, 1.1, '#e8343a');
+    B = pkdBandeja(g, 12, y0, '#c9a05a', '#9a7034', 2.4); pkdFlor(g, -2, B.arriba - 1, 1.2, '#ffffff'); pkdFlor(g, 2, B.arriba - 1, 1.2, '#ffc21a');   // el sanggah de abajo
+  } else if (k === 'tumpeng') {
+    pkdHoja(g, 0, y0 - 2.4, 24, 8);
+    var gc = g.createLinearGradient(-7, 0, 7, 0); gc.addColorStop(0, '#f7d23a'); gc.addColorStop(0.6, '#f1b81a'); gc.addColorStop(1, '#c98a0e');
+    g.beginPath(); g.moveTo(-7, y0 - 3); g.quadraticCurveTo(-3, y0 - 14, 0, y0 - 19); g.quadraticCurveTo(3, y0 - 14, 7, y0 - 3); g.closePath(); g.fillStyle = gc; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.55; g.stroke();
+    g.fillStyle = 'rgba(255,250,220,.7)'; for (i = 0; i < 18; i++) { g.beginPath(); g.arc(-4 + (i * 1.7) % 8, y0 - 5 - (i * 3.1) % 11, 0.32, 0, TAU); g.fill(); }   // los granos
+    g.save(); g.translate(0, y0 - 19); g.rotate(0.3); g.beginPath(); g.ellipse(0, -1.8, 0.8, 2.4, 0, 0, TAU); g.fillStyle = '#e02424'; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.35; g.stroke(); g.restore();   // la guindilla de arriba
+    g.beginPath(); g.ellipse(-9, y0 - 3.6, 2, 1.4, 0, 0, TAU); g.fillStyle = '#ffffff'; g.fill(); g.stroke(); g.beginPath(); g.arc(-9, y0 - 3.7, 0.8, 0, TAU); g.fillStyle = '#ffb81a'; g.fill();   // el huevo
+    for (i = 0; i < 4; i++) { g.strokeStyle = '#3f8a2a'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(7.5 + i * 0.6, y0 - 2.4); g.lineTo(9.6 + i * 0.5, y0 - 5); g.stroke(); }   // las judías
+    pkdJaje(g, 8, y0 - 2.2, 3, 1.6, '#b07a3a'); pkdJaje(g, -6.5, y0 - 1.6, 2.6, 1.4, '#b07a3a');                          // el tempe
+  } else if (k === 'fruta') {
+    var top = pkdDulang(g, y0, 18, 3);
+    pkdPlatano(g, -3, top - 1.5, -0.25, 1.05); pkdPlatano(g, 3, top - 1.5, 0.25, 1.05);
+    pkdBola(g, -5.5, top - 3.4, 2.4, '#f08a1c'); pkdBola(g, 5.5, top - 3.4, 2.4, '#f08a1c'); pkdMangostan(g, 0, top - 3.6, 2.4);
+    pkdSalak(g, -2.6, top - 6.6, 2.1); pkdBola(g, 2.6, top - 6.6, 2.1, '#d8312a'); pkdBola(g, 0, top - 9.4, 2, '#f5cf2e');
+    pkdSampian(g, 0, top - 10.6, 0.8); pkdFlor(g, 0, top - 11.6, 1.2, '#ff6b8a');
+  } else if (k === 'kuning') {
+    pkdHoja(g, 0, y0 - 2.4, 23, 8);
+    g.beginPath(); g.ellipse(0, y0 - 4.6, 7.4, 3.8, 0, Math.PI, TAU); g.lineTo(7.4, y0 - 3.4); g.lineTo(-7.4, y0 - 3.4); g.closePath();
+    var gk = g.createLinearGradient(0, y0 - 9, 0, y0 - 3); gk.addColorStop(0, '#ffe066'); gk.addColorStop(1, '#e8a812'); g.fillStyle = gk; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.5; g.stroke();
+    g.fillStyle = 'rgba(255,250,220,.7)'; for (i = 0; i < 14; i++) { g.beginPath(); g.arc(-5 + (i * 2.3) % 10, y0 - 4.5 - (i * 1.7) % 3.5, 0.3, 0, TAU); g.fill(); }
+    for (i = 0; i < 5; i++) { g.strokeStyle = '#f7d860'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(-3 + i * 1.4, y0 - 7.6); g.lineTo(-2 + i * 1.4, y0 - 5.6); g.stroke(); }   // la tortilla en tiras
+    [-9, -7.2].forEach(function (x) { g.beginPath(); g.ellipse(x, y0 - 3.3, 1.3, 0.8, 0, 0, TAU); g.fillStyle = '#b8e08a'; g.fill(); g.strokeStyle = '#3f8a2a'; g.lineWidth = 0.3; g.stroke(); });   // el pepino
+    g.beginPath(); g.ellipse(8.6, y0 - 3.6, 1.9, 1.3, 0, 0, TAU); g.fillStyle = '#ffffff'; g.fill(); g.strokeStyle = PKD_T; g.lineWidth = 0.4; g.stroke(); g.beginPath(); g.arc(8.6, y0 - 3.7, 0.75, 0, TAU); g.fillStyle = '#ffb81a'; g.fill();
+    g.save(); g.translate(0, y0 - 8.4); g.rotate(-0.4); g.beginPath(); g.ellipse(0, -1.4, 0.6, 1.9, 0, 0, TAU); g.fillStyle = '#e02424'; g.fill(); g.restore();
+  } else if (k === 'gebogan') {
+    var tb = pkdDulang(g, y0, 15, 4), cols = ['#f08a1c', '#d8312a', '#f5cf2e', '#5b2448', '#7a4a2a', '#4f9a2e'], jj = ['#ff8fb1', '#ffffff', '#6fc04a', '#ffe066'];
+    for (var r = 0; r < 8; r++) {                                                          // filas de frutas y de jaje, cada vez más estrechas
+      var w = 6.6 - r * 0.55, yy = tb - 2 - r * 3.2;
+      if (r % 3 === 2) { for (var q = -1; q <= 1; q++) pkdJaje(g, q * w * 0.62, yy + 1.4, w * 0.56, 2.6, jj[(r + q + 4) % jj.length]); continue; }
+      for (q = -1; q <= 1; q++) { var col = cols[(r * 2 + q + 6) % cols.length]; if (col === '#5b2448') pkdMangostan(g, q * w * 0.6, yy, 1.9 - r * 0.07); else if (col === '#7a4a2a') pkdSalak(g, q * w * 0.6, yy, 1.9 - r * 0.07); else pkdBola(g, q * w * 0.6, yy, 1.9 - r * 0.07, col); }
+    }
+    pkdSampian(g, 0, tb - 26.5, 0.85); pkdFlor(g, -1.2, tb - 27, 1, '#ffffff'); pkdFlor(g, 1.2, tb - 27, 1, '#e8343a');
+  } else return false;
+  return true;
+}
+var ofrendaSprPKD = ofrendaSpr;
+ofrendaSpr = function (k) {
+  if (!pkdOn()) return ofrendaSprPKD(k);
+  if (PKD.spr[k]) return PKD.spr[k];
+  var old = SR; SR = 5;
+  var s = mk(40, 90, function (g) { if (!pkdDibuja(g, k)) pkdDibuja(g, 'canang'); });
+  SR = old;
+  return (PKD.spr[k] = s);
+};
+/*#pieza nucleo/662_poki_motos_arte.js*/
+/* ================================================================
+   POKI V12 · (2) LAS MOTOS, UN PELÍN MÁS CURRADAS, Y MÁS ROPA
+   Jose Javier (22-10-2026): «dijiste que ibas a poner algo más de ropa
+   y las motos un pelín más curradas».
+   LA MOTO (todas, sin elegir nada):
+   - la pintura con laca: un filo de luz por arriba a la izquierda (de
+     donde viene la luz) y un brillo alargado, como la chapa pintada;
+   - el faro encendido: un halo cálido alrededor cuando se le ve.
+   PEGATINAS (pestaña Moto, se compran con flores): rayas de carreras a
+   lo largo de toda la moto, un frangipani grande en el costado o una
+   ola de surf.
+   EL PILOTO (pestaña Piloto):
+   - cuatro colores más de camisa (blanca, rosa, lima y arena);
+   - el estampado: flores (la de siempre), hibiscos grandes, hojas de
+     palmera, lunares o lisa;
+   - tres cosas más para la cabeza: la gorra al revés (con la visera
+     hacia la cámara: es lo que se ve en carrera), el sombrero panamá y
+     la corona de flores, como en las fiestas.
+   Todo se ve también en los demás móviles del multijugador.
+   PKJ.vivo = false: como antes (y sin las cosas nuevas en el taller).
+   ================================================================ */
+var PKJ = { vivo: true, col: null, cab: null, uno: false, lk: null, items: null, peg: 0, aviso: false };
+function pkjOn() { return POK.vivo && PKJ.vivo; }
+var PKJ_EST = [['🌺', 'Flores', 0], ['🌸', 'Hibiscos', 40], ['🌴', 'Hojas', 40], ['⚪', 'Lunares', 40], ['👕', 'Lisa', 20]];
+var PKJ_PEG = [['✖', 'Sin pegatinas', 0], ['🏁', 'Rayas', 60], ['🌼', 'Frangipani', 60], ['🌊', 'Ola', 60]];
+var PKJ_CAB0 = CABEZAS.length, PKJ_CAM0 = COL_CAMISA.length;
+if (pkjOn()) {
+  CABEZAS.push({ nom: 'Gorra al revés', coste: 80 }, { nom: 'Sombrero panamá', coste: 120 }, { nom: 'Corona de flores', coste: 140 });
+  COL_CAMISA.push('#f4f1e8', '#ff7eb3', '#9bd14a', '#d9b98a');
+}
+/* ---------- el estampado de la camisa (574 lo pregunta) ---------- */
+function fmEstampado(LK) {
+  if (!pkjOn()) return null;
+  var e = LK && LK.est | 0;
+  if (e === 1) return { pal: ['#e8343a', '#fff6e6', '#ff6b8a'], k: 1.3 };
+  if (e === 2) return { pal: ['#2f8f4e', '#7bd36a', '#1f6b3a'], forma: 'hoja', k: 1.15 };
+  if (e === 3) return { pal: ['#ffffff', '#ffffff', '#fff2c8'], forma: 'punto' };
+  if (e === 4) return { no: true };
+  return null;
+}
+/* ---------- mientras se pinta una moto: sabemos su color, su cabeza y sus pegatinas ---------- */
+var motoGuiriFielPKJ = motoGuiriFiel;
+motoGuiriFiel = function (g, x, y, z, ang, o) {
+  if (!pkjOn()) return motoGuiriFielPKJ.apply(this, arguments);
+  o = o || {};
+  var LK = o.look || lookGet(), VE = o.vestir !== undefined ? o.vestir : VESTIR, cm = COL_MOTO[LK.moto] || '#e2452f';
+  var ant = [PKJ.col, PKJ.cab, PKJ.uno, PKJ.lk, PKJ.items, PKJ.peg];
+  PKJ.col = [cm, darken(cm, 0.82)]; PKJ.lk = LK; PKJ.cab = !VE && (LK.cabeza | 0) >= PKJ_CAB0 ? LK.cabeza | 0 : null; PKJ.uno = !o.sinGuiri; PKJ.items = []; PKJ.peg = LK.peg | 0;
+  try { return motoGuiriFielPKJ.call(this, g, x, y, z, ang, o); }
+  finally { PKJ.col = ant[0]; PKJ.cab = ant[1]; PKJ.uno = ant[2]; PKJ.lk = ant[3]; PKJ.items = ant[4]; PKJ.peg = ant[5]; }
+};
+function pkjDir(a, b) { var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.sqrt(dx * dx + dy * dy) || 1; return [dx / l, dy / l, l]; }
+/* ---------- la chapa: cada bulto pintado del color de la moto lleva su laca (y sus pegatinas) ---------- */
+var k3MasaPKJ = k3Masa;
+k3Masa = function (pts, rs, col, o) {
+  if (!PKJ.col || !pkjOn() || (col !== PKJ.col[0] && col !== PKJ.col[1])) return k3MasaPKJ(pts, rs, col, o);
+  var n0 = K3.q.length; k3MasaPKJ(pts, rs, col, o);
+  var I = K3.q[n0]; if (!I || I.t !== 4 || !I.bx) return;
+  if (Math.min(I.bx[2] - I.bx[0], I.bx[3] - I.bx[1]) < 5 && !PKJ.peg) return;   // (de lejos, ni se ve: no cuesta nada)
+  var o2 = {}, k, d0 = I.o.deco; for (k in I.o) o2[k] = I.o[k];
+  I.pkF = pkjDir(k3(-10, 0, 14), k3(10, 0, 14)); I.pkU = pkjDir(k3(0, 0, 13), k3(0, 0, 15)); I.pkPeg = PKJ.peg; I.pkCol = col;
+  o2.deco = function (c, s) { if (d0) d0(c, s); pkjLaca(c, s, I); };
+  I.o = o2; PKJ.items.push(I);
+};
+var k3PintaPKJ = k3Pinta;
+k3Pinta = function (g) {                                                 // (antes de pintar: cuál es el panel más grande, el de la pegatina)
+  if (PKJ.items && PKJ.items.length) { var mx = null, ma = 0; PKJ.items.forEach(function (I) { var a = (I.bx[2] - I.bx[0]) * (I.bx[3] - I.bx[1]); I.pkMax = false; if (a > ma) { ma = a; mx = I; } }); if (mx) mx.pkMax = true; }
+  return k3PintaPKJ(g);
+};
+function pkjCamino(c, H, ox, oy) {
+  var n = H.length, j; c.moveTo((H[n - 1][0] + H[0][0]) / 2 + ox, (H[n - 1][1] + H[0][1]) / 2 + oy);
+  for (j = 0; j < n; j++) { var p = H[j], q = H[(j + 1) % n]; c.quadraticCurveTo(p[0] + ox, p[1] + oy, (p[0] + q[0]) / 2 + ox, (p[1] + q[1]) / 2 + oy); }
+  c.closePath();
+}
+function pkjLaca(c, s, I) {
+  var bx = I.bx, w = bx[2] - bx[0], h = bx[3] - bx[1], m = Math.min(w, h); if (m < 5 || !I.H) return;
+  var cx = (bx[0] + bx[2]) / 2, cy = (bx[1] + bx[3]) / 2, F = I.pkF, U = I.pkU, oscura = I.pkCol === '#1b1b1f', clara = I.pkCol === '#f4f4f2' || I.pkCol === '#f1c40f';
+  /* las pegatinas, por debajo del brillo */
+  var tinta = clara ? '#1b1b1f' : '#fbfbf7', j;
+  if (I.pkPeg === 1) {                                                   // rayas de carreras, a lo largo
+    var nx = -F[1], ny = F[0], L = Math.max(w, h), sep = Math.max(1.2, 0.85 * s), an = Math.max(0.9, 0.7 * s);
+    c.lineCap = 'butt'; c.strokeStyle = tinta; c.lineWidth = an;
+    for (j = -1; j <= 1; j += 2) { c.beginPath(); c.moveTo(cx + nx * sep * j - F[0] * L, cy + ny * sep * j - F[1] * L); c.lineTo(cx + nx * sep * j + F[0] * L, cy + ny * sep * j + F[1] * L); c.stroke(); }
+    c.lineCap = 'round';
+  } else if (I.pkPeg === 2 && I.pkMax && m > 8) {                        // un frangipani grande
+    var r = Math.min(m * 0.3, 4.2 * s), a0 = Math.atan2(F[1], F[0]);
+    for (j = 0; j < 5; j++) { var a = a0 + j * TAU / 5, px = cx + Math.cos(a) * r * 0.5, py = cy + Math.sin(a) * r * 0.5; c.beginPath(); c.ellipse(px, py, r * 0.55, r * 0.34, a, 0, TAU); c.fillStyle = '#fffaf0'; c.fill(); c.strokeStyle = 'rgba(42,26,12,.55)'; c.lineWidth = Math.max(0.4, r * 0.06); c.stroke(); }
+    c.beginPath(); c.arc(cx, cy, r * 0.26, 0, TAU); c.fillStyle = '#ffc21a'; c.fill();
+  } else if (I.pkPeg === 3 && I.pkMax && m > 8) {                        // una ola de surf
+    var L2 = Math.max(w, h) * 0.6, A = Math.min(m * 0.12, 1.6 * s), nx2 = -F[1], ny2 = F[0];
+    c.beginPath();
+    for (j = 0; j <= 24; j++) { var t = j / 24 * 2 - 1, ph = Math.sin(t * Math.PI * 2.5) * A; c.lineTo(cx + F[0] * t * L2 + nx2 * ph, cy + F[1] * t * L2 + ny2 * ph); }
+    c.strokeStyle = '#4fc3e8'; c.lineWidth = Math.max(1.2, 1.1 * s); c.stroke(); c.strokeStyle = tinta; c.lineWidth = Math.max(0.5, 0.35 * s); c.stroke();
+  }
+  /* la laca: el filo de luz de arriba a la izquierda y un brillo alargado */
+  var d = clamp(0.5 * s, 0.6, m * 0.12);
+  c.beginPath(); c.rect(bx[0] - 4, bx[1] - 4, w + 8, h + 8); pkjCamino(c, I.H, d, d * 1.1);
+  c.fillStyle = oscura ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.34)'; c.fill('evenodd');
+  if (m > 7) {
+    var ang = Math.atan2(F[1], F[0]); if (Math.abs(Math.cos(ang)) < 0.35) ang = -0.5;   // (de espaldas, el brillo va algo inclinado)
+    c.beginPath(); c.ellipse(bx[0] + w * 0.32, bx[1] + h * 0.26, Math.max(1.2, w * 0.16), Math.max(0.6, Math.min(h * 0.06, 1.1 * s)), ang * 0.3 - 0.25, 0, TAU);
+    c.fillStyle = 'rgba(255,255,255,.5)'; c.fill();
+    c.beginPath(); c.arc(bx[0] + w * 0.5, bx[1] + h * 0.24, Math.max(0.5, Math.min(m * 0.05, 0.7 * s)), 0, TAU); c.fillStyle = 'rgba(255,255,255,.6)'; c.fill();
+  }
+  if (U) {}                                                              // (U queda para quien lo quiera)
+}
+/* ---------- el faro encendido: su halo ---------- */
+function pkjHalo(p, r) { k3Fn(p[3] - 0.05, function (c) { var gr = c.createRadialGradient(p[0], p[1], r * 0.4, p[0], p[1], r * 3.2); gr.addColorStop(0, 'rgba(255,246,205,.55)'); gr.addColorStop(1, 'rgba(255,246,205,0)'); c.fillStyle = gr; c.beginPath(); c.arc(p[0], p[1], r * 3.2, 0, TAU); c.fill(); }); }
+var k3BolaPKJ = k3Bola;
+k3Bola = function (p, r, col, o) {
+  k3BolaPKJ(p, r, col, o);
+  if (PKJ.col && col === '#fff6c8' && o && (o.pr || 0) < 0 && pkjOn()) pkjHalo([p[0], p[1], p[2], p[3] + (o.pr || 0)], r * p[2]);
+};
+var k3PoliPKJ = k3Poli;
+k3Poli = function (pts, col, o) {
+  var r = k3PoliPKJ(pts, col, o);
+  if (PKJ.col && col === '#fff6c8' && pkjOn() && pts.length) {
+    var x = 0, y = 0, d = 0, x0 = 1e9, x1 = -1e9; pts.forEach(function (q) { x += q[0]; y += q[1]; d += q[3]; x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); });
+    var n = pts.length; pkjHalo([x / n, y / n, 1, d / n + ((o && o.pr) || 0)], Math.max(1, (x1 - x0) * 0.5));
+  }
+  return r;
+};
+/* ---------- las cabezas nuevas ---------- */
+var cabeza3DPKJ = cabeza3D;
+cabeza3D = function (Hd, R, Q, o) {
+  if (PKJ.cab == null || !PKJ.uno || !pkjOn() || !Q || !Q.hombre) return cabeza3DPKJ.apply(this, arguments);
+  PKJ.uno = false;
+  var cab = PKJ.cab - PKJ_CAB0, LK = PKJ.lk || {}, cin = COL_CINTA[LK.cinta || 0] || '#e74c3c', Q2 = {}, k; for (k in Q) Q2[k] = Q[k];
+  if (cab === 0) Q2.gorra = { col: cin, atras: true };                     // (la gorra ya la sabe pintar la cabeza de tebeo, 571)
+  else if (cab === 2) Q2.cinta = '#4f9a2e';
+  var r = cabeza3DPKJ.call(this, Hd, R, Q2, o);
+  pkjSombrero(cab, Hd, R, cin);
+  return r;
+};
+function pkjSombrero(cab, Hd, R, cin) {
+  var KK = K3.k, hc = Hd(0, 0, 0), j, a;
+  if (cab === 1) {                                                // el sombrero panamá: ala, copa y cinta negra
+    var ala = []; for (j = 0; j < 18; j++) { a = j / 18 * TAU; ala.push(Hd(Math.cos(a) * R * 1.62 + R * 0.08, Math.sin(a) * R * 1.5, R * 0.36)); }
+    k3PoliPKJ(ala, '#efe3c2', { pr: -R * 0.2, borde: 1 });
+    var p0 = Hd(0, 0, R * 0.5), p1 = Hd(0, 0, R * 0.98), cerca = Hd(-R * 0.9, 0, R * 0.62)[3] < Hd(R * 0.9, 0, R * 0.62)[3] ? -1 : 1;
+    var bl = Hd(0, -R * 0.9, R * 0.62), bm = Hd(cerca * R * 0.9, 0, R * 0.62), br = Hd(0, R * 0.9, R * 0.62);
+    k3MasaPKJ([p0, p1, Hd(0, -R * 0.35, R * 0.98), Hd(0, R * 0.35, R * 0.98)], [R * 0.86, R * 0.66, R * 0.6, R * 0.6], '#f3e8c8', { pr: -R * 0.6, deco: function (c, s) {
+      c.beginPath(); c.moveTo(bl[0], bl[1]); c.quadraticCurveTo(2 * bm[0] - (bl[0] + br[0]) / 2, 2 * bm[1] - (bl[1] + br[1]) / 2, br[0], br[1]);
+      c.strokeStyle = '#2b2530'; c.lineWidth = Math.max(1, R * 0.26 * hc[2]); c.lineCap = 'butt'; c.stroke(); c.lineCap = 'round';
+    } });
+  } else if (cab === 2) {                                                // la corona de flores, sobre una cinta verde
+    var fl = [], cols = ['#ffffff', '#ff6b8a', '#ffc21a', '#e8343a', '#fff6e6', '#7a52c8'];
+    for (j = 0; j < 14; j++) { a = j / 14 * TAU; fl.push([Hd(Math.cos(a) * R * 1.04, Math.sin(a) * R * 1.04, R * 0.42), cols[j % cols.length], a]); }
+    k3Fn(hc[3] - R * KK * 1.05, function (c) {
+      fl.forEach(function (f) {
+        var p = f[0]; if (p[3] > hc[3] + R * KK * 0.15) return;
+        var r = R * 0.3 * p[2]; c.save(); c.translate(p[0], p[1]); c.rotate(f[2]);
+        for (var i = 0; i < 5; i++) { c.rotate(TAU / 5); c.beginPath(); c.ellipse(0, -r * 0.55, r * 0.4, r * 0.6, 0, 0, TAU); c.fillStyle = f[1]; c.fill(); c.strokeStyle = 'rgba(42,26,12,.7)'; c.lineWidth = Math.max(0.4, r * 0.1); c.stroke(); }
+        c.beginPath(); c.arc(0, 0, r * 0.26, 0, TAU); c.fillStyle = '#ffd23f'; c.fill(); c.restore();
+      });
+    });
+  }
+}
+/* las de dos dimensiones (de pie, en la tirolina): lo que más se parece */
+var cabezaRearPKJ = cabezaRear;
+cabezaRear = function (g, x, y) {
+  var L = lookGet(), c = L.cabeza | 0;
+  if (!pkjOn() || c < PKJ_CAB0) return cabezaRearPKJ(g, x, y);
+  L.cabeza = [1, 4, 0][c - PKJ_CAB0] || 0; try { return cabezaRearPKJ(g, x, y); } finally { L.cabeza = c; }
+};
+/* ---------- en el taller ---------- */
+function pkjFila(tit, lista, clave, sel) {
+  var fl = bolsillo(), h = '<div class="tn"><b>' + TT(tit) + '</b></div><div class="tln-pk pkj-fila">';
+  lista.forEach(function (q, i) {
+    var mio = !q[2] || tiene(clave + ':' + i), s = sel === i;
+    h += '<button class="' + (s ? 'sel' : '') + (mio ? '' : ' lock') + '" data-act="pkj:' + clave + ':' + i + '" aria-pressed="' + s + '"' + (!mio && fl < q[2] ? ' disabled' : '') + '>' + q[0] + ' ' + TT(q[1]) + (mio || s ? '' : ' <small>❀' + q[2] + '</small>') + '</button>';
+  });
+  return h + '</div>';
+}
+var tlnRestoPKJ = tlnResto;
+tlnResto = function (L, dor, fl) {
+  var h = tlnRestoPKJ.apply(this, arguments);
+  if (!pkjOn()) return h;
+  var i, j;
+  if (TLN.pes === 'moto') {                                              // las pegatinas, detrás de los colores de la moto
+    i = h.lastIndexOf('data-act="col:'); j = i < 0 ? -1 : h.indexOf('</div>', i);
+    if (j >= 0) h = h.slice(0, j + 6) + pkjFila('Pegatinas', PKJ_PEG, 'peg', L.peg | 0) + h.slice(j + 6);
+  } else if (TLN.pes === 'piloto') {                                     // el estampado, detrás de los colores de la camisa
+    if (PKJ.aviso) { PKJ.aviso = false; h = h.replace('<p class="tln-nota">', '<p class="tln-nota pkj-aviso">' + TT('👕 Para que se vea lo que eliges, en las carreras llevas tu ropa.') + '</p><p class="tln-nota">'); }
+    i = h.lastIndexOf('data-act="cam:'); j = i < 0 ? -1 : h.indexOf('</div>', i);
+    if (j >= 0) h = h.slice(0, j + 6) + pkjFila('Estampado', PKJ_EST, 'est', L.est | 0) + h.slice(j + 6);
+  }
+  return h;
+};
+var tallerActPKJ = tallerAct;
+tallerAct = function (a) {
+  if (!pkjOn() || a.indexOf('pkj:') !== 0) return tallerActPKJ(a);
+  var p = a.split(':'), clave = p[1], v = +p[2] | 0, lista = clave === 'peg' ? PKJ_PEG : clave === 'est' ? PKJ_EST : null, L = lookGet();
+  if (!lista || v < 0 || v >= lista.length) return false;
+  var key = clave + ':' + v, pr = lista[v][2];
+  if (pr && !tiene(key)) { if (bolsillo() < pr) { SFX.eh(); return true; } SAVE.blancas -= pr; SAVE.own.push(key); SFX.heal(); } else SFX.pick(clave === 'peg' ? 6 : 3);
+  L[clave] = v; if (clave === 'est') pkjMiRopa(); TLN.suelta = 0; writeSave(); rebuildGuiri(); showTaller(); return true;
+};
+/* lo que eliges para el piloto, te lo pones también en las carreras de ofrendas (si no, con la ropa de ceremonia no se vería; arriba se puede volver a ella) */
+function pkjMiRopa() { if (SAVE.ceremonia !== false) { SAVE.ceremonia = false; TLN.cer = 0; PKJ.aviso = true; } }
+var tallerActPKJ2 = tallerAct;
+tallerAct = function (a) {
+  var r = tallerActPKJ2(a);
+  if (r && pkjOn() && /^(cam|cab|cin):/.test(a) && SAVE.ceremonia !== false) { pkjMiRopa(); writeSave(); rebuildGuiri(); showTaller(); }
+  return r;
+};
+/* ---------- y en los demás móviles ---------- */
+var mulYoPKJ = mulYo;
+mulYo = function () { var r = mulYoPKJ(), lk = lookGet(); if (pkjOn()) { r.look.est = lk.est | 0; r.look.peg = lk.peg | 0; } return r; };
+var mulLimpiaPKJ = mulLimpia;
+mulLimpia = function (j, s) {
+  var r = mulLimpiaPKJ(j, s), lk = j && typeof j === 'object' && j.look && typeof j.look === 'object' ? j.look : {};
+  r.look.est = mulEnt(lk.est, 0, PKJ_EST.length - 1); r.look.peg = mulEnt(lk.peg, 0, PKJ_PEG.length - 1);
+  return r;
+};
+(function () {
+  var N = {
+    'Pegatinas': ['Stickers', 'Stiker'], 'Sin pegatinas': ['No stickers', 'Tanpa stiker'], 'Rayas': ['Stripes', 'Garis'], 'Estampado': ['Print', 'Motif'],
+    'Flores': ['Flowers', 'Bunga'], 'Hibiscos': ['Hibiscus', 'Kembang sepatu'], 'Hojas': ['Leaves', 'Daun'], 'Lunares': ['Polka dots', 'Polkadot'], 'Lisa': ['Plain', 'Polos'],
+    'Gorra al revés': ['Backwards cap', 'Topi terbalik'], 'Sombrero panamá': ['Panama hat', 'Topi panama'], 'Corona de flores': ['Flower crown', 'Mahkota bunga'],
+    '👕 Para que se vea lo que eliges, en las carreras llevas tu ropa.': ['👕 So you can see what you pick, you now race in your own clothes.', '👕 Supaya pilihanmu terlihat, kamu balapan dengan bajumu sendiri.']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+  var css = '.pkj-aviso{color:#1c7c74!important;font-weight:800}.pkj-fila{flex-wrap:wrap}.pkj-fila button{flex:1 1 auto}.pkj-fila button.lock{opacity:.85}.pkj-fila small{font-weight:900;color:#a0522d}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+})();
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
