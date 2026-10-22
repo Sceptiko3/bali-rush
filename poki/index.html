@@ -111720,7 +111720,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v10 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v11 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -114090,6 +114090,89 @@ startLevel = function (li) { pkbAsegura(); return startLevelPKB(li); };
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza nucleo/658_poki_fluido.js*/
+/* ================================================================
+   POKI V11 · QUE VAYA FLUIDO EN UN MÓVIL NORMAL
+   Jose Javier (22-10-2026): «va a trompicones, igual es porque mi móvil
+   cae al 4G o tengo poca cobertura; mi móvil es un Redmi 13 Pro, algo
+   antiguo». La cobertura no influye (el juego va entero en el móvil).
+   Medido (pruebas/poki_fluidez.js y poki_perfil.js, con su pantalla):
+   lo que cuesta cada fotograma es dibujar (las motos en 3D —la tuya y
+   hasta tres rivales— y lo de los lados) y, en el móvil, rellenar
+   píxeles. Y lo que se nota como TROMPICONES aunque vaya a 40–50
+   imágenes por segundo: el juego avanzaba a pasos fijos de 1/60 s,
+   así que unas imágenes avanzaban un paso y otras dos (1, 1, 2, 1, 1,
+   2…): la moto daba saltitos.
+   - PASO SUAVE: cada imagen avanza justo el tiempo que ha pasado
+     (partido en trozos iguales de 1/60 s como mucho). A 60 es igual
+     que antes; a 45, cada imagen avanza lo mismo: sin saltitos.
+   - EN EL MÓVIL, DE SALIDA, LIGERO: como mucho 1,25 millones de
+     píxeles en el lienzo (en tu Redmi, 1,7: se nota poco y pinta un
+     tercio menos), un escalón menos de detalle, y como mucho dos rivales
+     y tres motos del tráfico en 3D a la vez (los demás, en cartón). Si
+     va sobrado, la calidad automática sube sola.
+   - SIN CAMBIOS DE RESOLUCIÓN EN PLENA CARRERA (que se notaban como un
+     tirón): la calidad automática los deja para la siguiente, salvo
+     que vaya muy lento (menos de 30).
+   - LOS CARTONES DE LOS RIVALES, HECHOS ANTES DE SALIR (cada uno daba
+     un tirón de 6–12 ms la primera vez que se le veía de lejos).
+   PKY.vivo = false: como Poki v10.
+   ================================================================ */
+var PKY = { vivo: true, suave: true, pend: null, movil: false };
+function pkyOn() { return POK.vivo && PKY.vivo; }
+/* ---------- el paso suave ---------- */
+var framePKY = frame;
+frame = function (ts) {
+  if (!pkyOn() || !PKY.suave) return framePKY(ts);
+  requestAnimationFrame(frame);
+  if (FREEZE) { LAST_T = ts; return; }
+  var rdt = Math.min(0.1, Math.max(0, (ts - LAST_T) / 1000)); LAST_T = ts;
+  if (G.state === 'play') fluMide(rdt);
+  rdt = pasoFino(rdt);
+  if (G.slow > 0) { G.slow -= rdt; if (G.slow <= 0) G.ts = 1; }
+  if (G.state !== 'pause') {
+    var t = rdt * G.ts + ACC_T, n = Math.min(6, Math.ceil(t / STEP - 0.02)), h;
+    if (n < 1) { ACC_T = t; }                                          // (menos de un paso: se guarda para la siguiente)
+    else { h = t / n; ACC_T = 0; for (var i = 0; i < n; i++) update(h); }
+  }
+  cegueraFrame();
+  render();
+  auFrame();
+};
+/* ---------- en el móvil: ligero de salida ---------- */
+function pkyMovil() {
+  PKY.movil = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  if (!pkyOn() || !PKY.movil) return;
+  FLU.px = Math.min(FLU.px, 1250000);
+  if (typeof DET !== 'undefined' && DET.fijo == null && DET.n < 1) DET.n = 1;
+  if (typeof RIV !== 'undefined') { RIV.max3 = Math.min(RIV.max3, 2); RIV.cerca = Math.min(RIV.cerca, 320); }
+  if (typeof TR3 !== 'undefined') TR3.max = Math.min(TR3.max, 3);
+}
+var uiInitPKY = uiInit;
+uiInit = function () { uiInitPKY.apply(this, arguments); pkyMovil(); };   // (después de la calidad de Ajustes, 646)
+var pkuAplicaPKY = pkuAplica;
+pkuAplica = function () { pkuAplicaPKY.apply(this, arguments); if (pkuCal() === 'auto') pkyMovil(); };
+/* ---------- sin cambios de resolución en plena carrera ---------- */
+var fluCambiaPKY = fluCambia;
+fluCambia = function (k) {
+  if (pkyOn() && G.state === 'play' && G.mode === 'level' && !(FLU.ult > 1 / 30)) { PKY.pend = k; return false; }                    // (un escalón, el último que pidió)
+  return fluCambiaPKY(k);
+};
+function pkyPendiente() { if (PKY.pend != null) { var k = PKY.pend; PKY.pend = null; fluCambiaPKY(k); } }
+/* ---------- los cartones de los rivales, antes de salir ---------- */
+var showReadyPKY = showReady;
+showReady = function () {
+  pkyPendiente();
+  var r = showReadyPKY.apply(this, arguments);
+  if (pkyOn() && G.mode === 'level' && typeof RIV !== 'undefined' && RIV.L) {
+    setTimeout(function () {                                           // con la tarjeta ya puesta (no retrasa que salga)
+      try { RIV.L.forEach(function (R) { ['r', 'f', 'l'].forEach(function (v) { rivCarton(R, v); }); }); if (typeof pkgCarton === 'function') pkgCarton(); } catch (e) {}
+    }, 60);
+  }
+  return r;
+};
+var pauseGamePKY = pauseGame;
+pauseGame = function () { var r = pauseGamePKY.apply(this, arguments); pkyPendiente(); return r; };
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
