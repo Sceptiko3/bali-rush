@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v13 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v14 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -114903,6 +114903,31 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza nucleo/666_poki_erratas.js*/
+/* ================================================================
+   POKI V14 · ERRATAS
+   (1) EL CHICO DORMIDO AL ACABAR UN VÍDEO
+   Jose Javier (22-10-2026): «hay como una errata que al terminar cada
+   vídeo o empezar una partida sale como una imagen del chico dormido».
+   Lo que pasaba (150, cineFrame): cuando un vídeo llega a su final,
+   cineSalir() lo cierra y deja CINE.peli vacío, pero ese mismo
+   fotograma sigue y se pinta (cineDibuja) SIN película: se pinta la
+   intro de la historia en ese segundo, y entre los 12 y los 28 s de la
+   intro está el guiri KO, tumbado en la playa de noche. Esa imagen
+   quedaba en la capa del vídeo mientras se fundía (0,8 s), al volver
+   a la tarjeta o al empezar la partida. Con «Saltar» no pasaba (se
+   cierra con el toque, fuera del bucle).
+   Arreglo: una vez cerrándose el vídeo, no se pinta nada más en él (se
+   funde con su último fotograma de verdad).
+   PKE.vivo = false: como antes.
+   ================================================================ */
+var PKE = { vivo: true };
+function pkeOn() { return POK.vivo && PKE.vivo; }
+var cineDibujaPKE = cineDibuja;
+cineDibuja = function (t) {
+  if (pkeOn() && CINE.sale && !CINE.on) return;                          // (el vídeo ya se está cerrando: nada de pintar la intro por debajo)
+  return cineDibujaPKE.apply(this, arguments);
+};
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
