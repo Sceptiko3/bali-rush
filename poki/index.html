@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v19 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v20 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -115261,6 +115261,145 @@ var hintShowPAE = hintShow;
 hintShow = function (key) {
   if (paeOn() && AES.on && key === 'curva') { SAVE.h = SAVE.h || {}; SAVE.hv = SAVE.hv || {}; if (!SAVE.h.curva || !SAVE.hv.curva) { SAVE.h.curva = 1; SAVE.hv.curva = 1; writeSave(); } return; }
   return hintShowPAE.apply(this, arguments);
+};
+/*#pieza nucleo/674_poki_mono.js*/
+/* ================================================================
+   POKI V20 · EL MONO QUE SALTA, ENTERO; Y LAS OFRENDAS DEL SUELO, EN 3D
+   Jose Javier (23-10-2026): «cuando salta el mono hay como una errata,
+   es transparente o algo y no está muy en 3D; también a veces hay algo
+   en el suelo en 2D».
+   (1) EL MONO. Fotograma a fotograma en Sangeh: el mono gris se agacha
+   y salta desde la orilla, justo donde está el pelinggih (la casita del
+   templo) y las piedras. Todo lo de la orilla se pinta de lejos a cerca,
+   y el pelinggih queda unos pasos más cerca que el mono: se pintaba
+   ENCIMA de él. Del mono, mientras salta, solo asomaban trozos grises
+   por los lados de la casita y de las piedras, y parecía un mono
+   transparente y plano. Ahora, agachado, saltando o dando el manotazo
+   (el pequeño), lo que hay en la orilla a menos de 36 pasos de donde
+   salta se pinta antes que él: el mono queda delante, entero, todo el
+   salto (tú, las motos y los demás bichos siguen en su sitio).
+   (2) LAS OFRENDAS DEL SUELO (el canang que no hay que pisar) eran un
+   cartón de pie con la bandejita dibujada de lado, y pisadas, una
+   pegatina en el asfalto. Ahora son el canang en 3D del vídeo de la
+   intro (la cestita de hoja con sus picos, los cuatro montones de
+   flores, el pandan y el incienso con su ascua y su humo), puesto en
+   el suelo y visto desde donde lo mira la cámara de la carrera
+   (cartones del modelo, como las motos de los rivales: barato de
+   pintar). Pisada: el mismo canang chafado y torcido, sin incienso.
+   Y los canangs chafados que ya había tirados por la calle (marcas
+   del asfalto desde la V12, otra pegatina): ese mismo chafado en 3D.
+   PMO.vivo = false: como la v19 (PMO.mono / PMO.canang, cada cosa).
+   ================================================================ */
+var PMO = { vivo: true, mono: true, canang: true, adelanta: 36, k: 0.4, lejos: 760 };
+function pmoOn() { return POK.vivo && PMO.vivo; }
+/* ---------- (1) el mono que salta, delante de lo de la orilla ---------- */
+function pmoSalta(o) { return o && o._k === 3 && o.t === 'mono' && (o.st === 'crouch' || o.st === 'leap' || o.st === 'zarpa'); }
+var collectPMO = collect;
+collect = function () {
+  collectPMO.apply(this, arguments);
+  if (!pmoOn() || !PMO.mono || G.mode !== 'level') return;
+  var M = null, i, j, o;
+  for (i = 0; i < STAND.length; i++) if (pmoSalta(STAND[i])) (M || (M = [])).push(STAND[i]);
+  if (!M) return;
+  for (var m = 0; m < M.length; m++) {
+    o = M[m]; i = STAND.indexOf(o); if (i < 0) continue;
+    var yb = (o.st === 'leap' && o.y0 != null ? Math.min(o.y, o.y0) : o.y) - PMO.adelanta, A = [];   // lo de la orilla (lo fijo y la decoración) hasta 36 pasos más cerca de donde salta se pinta antes que él;
+    for (j = i + 1; j < STAND.length && STAND[j].y >= yb; j++) if (STAND[j]._k === 1 || STAND[j]._k === 2 || STAND[j]._k === 6) A.push(j);   // tú, las motos y los demás bichos, en su sitio
+    if (!A.length) continue;
+    var Q = [];
+    for (j = A.length - 1; j >= 0; j--) Q.unshift(STAND.splice(A[j], 1)[0]);
+    Array.prototype.splice.apply(STAND, [i, 0].concat(Q));
+  }
+};
+/* ---------- (2) el canang del suelo, en 3D ----------
+   Pintar el canang de la intro pieza a pieza cada fotograma cuesta ~8 ms (en el móvil, el triple): se saca a CARTONES, como las
+   motos de los rivales: el mismo modelo en 3D visto desde cuatro alturas de cámara (de lejos se ve más de lado; al pasar a su
+   lado, más desde arriba) y con dos giros; cada ofrenda coge el que toca según desde dónde la mira la cámara. Se hacen al salir
+   a una carrera que los lleva (unos 35 ms en el ordenador, con la cuenta atrás). El ascua y el humo del incienso, en vivo. */
+PMO.alturas = [0.3, 0.5, 0.68, 0.86]; PMO.giros = [-0.34, 0.3]; PMO.cart = {}; PMO.sr = 7; PMO.ok = null;
+function pmoCanangOk() {
+  if (PMO.ok == null) PMO.ok = typeof icnPartes === 'function' && typeof ICN !== 'undefined' && typeof k3Abre === 'function' && typeof icnDupaPunta === 'function';
+  return pmoOn() && PMO.canang && PMO.ok;
+}
+function pmoCarton(ai, gi, pis) {                                         // el canang (o el chafado), visto desde la altura ai, con el giro gi
+  var key = (pis ? 'p' : 'n') + ai + '_' + gi; if (PMO.cart[key]) return PMO.cart[key];
+  var pa = PMO.alturas[ai], giro = PMO.giros[gi] + (pis ? 0.35 : 0), cp = Math.cos(pa), sp = Math.sin(pa), W = 36, H = 34, pie = 12, k = PMO.k, L = pis ? 0 : 16;
+  var I = ICN, guarda = { Lm: I.Lm, Vm: I.Vm, lw: I.lw, lwS: I.lwS, bo: I.bo, kk: I.kk, det: I.det, dupaDir: I.dupaDir, sil: I.sil, bx: I.bx };
+  var ab0 = icnAbre, v0 = icnV, pr = K3.proy, sr0 = SR, a0 = K3.alfa, Lz = icnN3(I.luzDe), c = Math.cos(giro), sn = Math.sin(giro), r = null;
+  var fino = (typeof TBO !== 'undefined' && TBO.on) ? TBO.fino : K3.fino, hacer = typeof mk68 === 'function' ? mk68 : mk;
+  I.Lm = [Lz[0] * c - Lz[1] * sn, Lz[0] * sn + Lz[1] * c, Lz[2]]; I.Vm = [sn, -c, 0];   // la luz y la cámara, vistas desde la bandeja (como en icnPrepara)
+  I.lw = 0.2; I.lwS = I.lw * I.silueta * 2; I.bo = I.lw / (k * fino); I.kk = k; I.det = 1; I.dupaDir = null;
+  icnAbre = function () { k3Abre(0, 0, 0, giro, 0, 0, k); I.sil = []; I.bx = [1e9, 1e9, -1e9, -1e9]; };
+  if (pis) icnV = function (x, y, zz) { var f = 1 + 0.05 * zz; return v0(x * 1.12 * f + y * 0.1, y * 1.04 * f, zz * 0.22); };   // chafado: aplastado, torcido y lo de arriba (las flores) desparramado hacia fuera
+  SR = PMO.sr; K3.alfa = 1;
+  K3.proy = function (X, Y, Z) { PX = X; PY = H / 2 - pie - (Y * sp + Z * cp); PS = 1; return 300 + Y * cp - Z * sp; };
+  try {
+    r = hacer(W, H, function (g) { icnPartes(giro, k, 1, true, L).forEach(function (P) { icnAbre(); P[1](); icnSuelta(g); }); });
+    r.k = 'bb'; r.pie = pie;
+    if (L) { icnAbre(); var q = icnDupaPunta(L), t = v0(q[0], q[1], q[2]); r.tip = [t[0], t[1] - (H / 2 - pie)]; }   // dónde queda la punta del incienso, respecto al pie
+  } finally {
+    icnAbre = ab0; icnV = v0; K3.proy = pr; SR = sr0; K3.alfa = a0;
+    for (var n in guarda) I[n] = guarda[n];
+  }
+  return (PMO.cart[key] = r);
+}
+function pmoPrepara() {                                                   // los cartones, antes de salir: el entero si hay ofrendas; el chafado si hay ofrendas o canangs tirados
+  if (!pmoCanangOk() || !L || !L.stat) return;
+  var ofr = false, cha = false, i, a, b;
+  for (i = 0; i < L.stat.length && !ofr; i++) ofr = L.stat[i].t === 'ofrenda';
+  if (L.decal && SP.canangD) for (i = 0; i < L.decal.length && !cha; i++) cha = SP.canangD.indexOf(L.decal[i].s) >= 0;
+  for (a = 0; a < PMO.alturas.length; a++) for (b = 0; b < PMO.giros.length; b++) { if (ofr) pmoCarton(a, b, false); if (ofr || cha) pmoCarton(a, b, true); }
+}
+function pmoAltura(x, y, z) {                                            // desde qué altura mira la cámara ese sitio: el cartón que toca
+  var alt = Math.atan2(CAM.z - z, Math.hypot(x - CAM.x, y - CAM.y)), ai = 0, i;
+  for (i = 1; i < PMO.alturas.length; i++) if (Math.abs(PMO.alturas[i] - alt) < Math.abs(PMO.alturas[ai] - alt)) ai = i;
+  return ai;
+}
+function pmoCanang(g, s, pis) {
+  var z = zAt(s.y), d = proj(s.x, s.y, z);
+  if (d < 10 || d > PMO.lejos || PX < -60 || PX > V.w + 60) return;
+  var x0 = PX, y0 = PY, ps = PS, al = 1 - fogK(d), ai = pmoAltura(s.x, s.y, z);
+  if (s.pmoGi == null) s.pmoGi = hash(s.x * 0.37 + s.y * 0.113) < 0.5 ? 0 : 1;   // cada uno con su giro (siempre el mismo en el mismo sitio)
+  var C = pmoCarton(ai, s.pmoGi, pis); if (!C) return;
+  k3Bill(g, C, s.x, s.y, z, pis ? 0.88 : 1, 0, false, 1);
+  scr(g);
+  if (C.tip && !pis) {                                                    // el ascua y el hilo de humo (lo único que se mueve)
+    var tx = x0 + C.tip[0] * ps, ty = y0 + C.tip[1] * ps * 0.9, sc = ps * PMO.k, lt = G.t + s.y * 0.01;
+    g.globalAlpha = al;
+    icnAscua(g, tx, ty, Math.max(0.5, 0.62 * sc), lt);
+    icnHumo(g, tx, ty, Math.max(0.3, Math.pow(sc, 0.8) * 0.62), lt, 12 + 13 * sc, 0.9);
+    g.globalAlpha = 1;
+  }
+}
+(function () {
+  if (typeof ST === 'undefined' || !ST.ofrenda) return;
+  var O = ST.ofrenda, flat0 = O.flat, draw0 = O.draw;
+  O.flat = function (g, s) {
+    if (!pmoCanangOk()) return flat0.apply(this, arguments);
+    if (s.pisada) return;                                                   // (la pegatina de antes, fuera: el chafado va en 3D, con su sombra)
+    glow(g, s.x, s.y, 13 + Math.sin(G.t * 3 + s.y) * 1, '#fff3b0', 0.34);    // el resplandor (es sagrada: que se vea); la sombra ya la lleva el canang
+  };
+  O.draw = function (g, s) {
+    if (!pmoCanangOk()) return draw0.apply(this, arguments);
+    pmoCanang(g, s, !!s.pisada);
+  };
+})();
+/* los canangs chafados que ya había por la calle (marcas del asfalto, V12: «canangD»): también el chafado en 3D, no la pegatina */
+var drawFlatPMO = drawFlat;
+drawFlat = function (g, o) {
+  if (o._k === 9 && pmoCanangOk() && SP.canangD && SP.canangD.indexOf(o.s) >= 0) {
+    var z = zAt(o.y), d = proj(o.x, o.y, z); if (d < 10 || d > PMO.lejos) return;
+    var C = pmoCarton(pmoAltura(o.x, o.y, z), hash(o.y * 0.29) < 0.5 ? 0 : 1, true); if (!C) return drawFlatPMO(g, o);
+    k3Bill(g, C, o.x, o.y, z, (o.sc || 1) * 0.85, 0, hash(o.x * 0.7) < 0.5, 0.95); scr(g);
+    return;
+  }
+  return drawFlatPMO(g, o);
+};
+var startLevelPMO = startLevel;
+startLevel = function () {
+  var r = startLevelPMO.apply(this, arguments);
+  if (G.mode === 'level') try { pmoPrepara(); } catch (e) { PMO.ok = false; }
+  return r;
 };
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
