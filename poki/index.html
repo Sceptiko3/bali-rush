@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v28</title>
+<title>Bali Rush Poki v29</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v28 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v29 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -118902,6 +118902,376 @@ if (PGC.vivo) {
     '¡Adelantamos!': ['We overtook!', 'Kita menyalip!'], '¡Toma ya!': ['Yes!', 'Mantap!'], '¡Vamos primeros!': ['We\'re in first!', 'Kita di depan!'], '¡Hemos ganado! ¡Campeones!': ['We won! Champions!', 'Kita menang! Juara!'],
     '¡Al podio! ¡Muy bien!': ['On the podium! Well done!', 'Naik podium! Bagus!'], '¡Casi! ¡La próxima ganamos!': ['Almost! We\'ll win next time!', 'Hampir! Lain kali kita menang!'], '¡Qué carrera! Seguimos': ['What a race! Let\'s go on', 'Balapan seru! Lanjut'],
     '¡Toc!': ['Bump!', 'Tok!'], '¡Uy!': ['Oops!', 'Ups!'], '¡Ey!': ['Hey!', 'Hei!'], '¡PUM!': ['BUMP!', 'BUK!'], '¡BOING!': ['BOING!', 'BOING!']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza nucleo/692_poki_playground_choques.js*/
+/* ================================================================
+   POKI V29 · PLAYGROUND: COSAS QUE SE ROMPEN Y SALEN VOLANDO,
+   RAMPAS PARA SALTAR Y DERRAPES
+   Jose Javier (25-10-2026): «algo que se rompan cosas, que salten
+   cosas, derrape, los conos, que sea llamativo para un niño, montones
+   de arroz, cocos, que si te chocas salen disparados, o que salte
+   mucho en alguna cosa… no sé».
+   - COSAS QUE SE ROMPEN (PGX.cosas): montones de arroz (gavillas
+     doradas, junto al arrozal y por el sur), pirámides de cocos (junto
+     a las palmeras), cajas de fruta (por el mercado y el barrio) y
+     filas de conos (un eslalon encima del circuito). Al pasar por
+     encima: ¡PAF!, ¡BONK!, ¡CRAC!, ¡TOC!, y salen volando en trozos
+     (gavillas y briznas, cocos, tablas y fruta, el cono dando vueltas)
+     que botan y ruedan por el suelo; los trozos se pueden volver a
+     patear. Cada cosa rota, una flor. Al rato (y lejos de ti) vuelven
+     a estar enteras. No tiran (ni hacen que se escape lo que llevas):
+     solo frenan un poco. Si vas por el aire, pasas por encima.
+   - RAMPAS (PGX.rampas): tres de madera con sus franjas amarillas y
+     negras, y la SÚPER RAMPA (más alta, con banderas). Subiendo con
+     velocidad, la moto sale volando: morro arriba, la sombra en el
+     suelo, y al caer polvo, ¡PUMBA! y flores según lo que has estado
+     en el aire (¡SALTO!, ¡SALTAZO!, ¡SÚPER SALTO!). Detrás de algunas,
+     algo que romper al caer.
+   - DERRAPES: girando fuerte y deprisa, humo blanco de las ruedas,
+     marcas en el suelo y el chirrido; aguantando el derrape, ¡DERRAPE!
+     y una flor.
+   PGX.vivo = false (o ?nopg7): el Playground como la v28.
+   ================================================================ */
+var PGX = {
+  vivo: PGC.vivo && !/[?&#]nopg7/.test(location.search + location.hash),
+  def: [                                                                      // [tipo, x, y]: lo que se rompe
+    ['cocos', 180, 720], ['cocos', 440, 790], ['cocos', -700, 760], ['cocos', -950, 220], ['cocos', -960, -260], ['cocos', 990, 470],
+    ['paja', -120, -1430], ['paja', 200, -1580], ['paja', -230, -1590], ['paja', 280, -1690], ['paja', -30, -1690], ['paja', 690, -770], ['paja', -560, -720],
+    ['paja', 300, -720], ['paja', 300, -790],
+    ['caja', 960, -90], ['caja', 520, -360], ['caja', 660, -360], ['caja', 1290, 120], ['caja', 1290, -330]
+  ],
+  quita: [[-300, 494]],                                                        // lo que estorba (una palmera en la franja del eslalon)
+  eslalon: { x0: -330, x1: 150, paso: 48, y: 490, a: 10 },                  // la fila de conos de encima del circuito (entre la pista y la carretera de arriba)
+  rampasDef: [
+    { x: -540, y: 490, a: Math.PI / 2, L: 46, W: 30, H: 10 },                 // encima del circuito: saltas al eslalon
+    { x: 60, y: -330, a: 0, L: 46, W: 34, H: 10 },                            // dentro del circuito, hacia el baniano
+    { x: 40, y: -755, a: Math.PI / 2, L: 72, W: 46, H: 17, sup: true },       // la SÚPER RAMPA, al sur del anillo: caes en los montones de arroz
+    { x: 660, y: -1500, a: -Math.PI / 2, L: 46, W: 34, H: 10 }                // en el sur, junto al arrozal
+  ],
+  E: { cocos: 1.6, paja: 1.5, caja: 1.4, cono: 1 },                         // su tamaño (grandes, que se vean bien)
+  R: { cocos: 14, paja: 18, caja: 14, cono: 6 },                             // lo que abulta cada cosa (para tocarla)
+  ALTO: { cocos: 18, paja: 32, caja: 24, cono: 14 },                         // lo alto (por encima, en el aire, no se toca)
+  g: 300, kSalto: 3.2, kSup: 1.45, vzMax: 230, vMin: 40,                                 // el salto: gravedad (algo flotona), lo que empuja la rampa, tope, y la velocidad mínima para volar
+  vuelve: 24, lejos: 280,                                                    // lo que tarda en volver a estar entera (y a qué distancia de ti, como poco)
+  derrLat: 230, derrV: 85, derrT0: 0.7,                                      // el derrape: «fuerza» lateral (giro × velocidad), velocidad mínima y lo que hay que aguantarlo para el premio
+  cosas: [], rampas: [], salto: null, derr: 0, derrPremio: -9, chirrido: -9, dichoT: {}, yoDib: false, rampaYa: null
+};
+function pgxLibre(x, y, r) {                                                   // ¿cabe aquí? (dentro de alguna zona del Playground —también el sur y el barrio—, lejos de las calles y de lo que no se pasa)
+  var Z = PG.zonas || [{ x0: -PGD.X, x1: PGD.X, y0: -PGD.Y, y1: PGD.Y }];
+  if (!Z.some(function (z) { return x > z.x0 + r && x < z.x1 - r && y > z.y0 + r && y < z.y1 - r; })) return false;
+  var c = cnlCalle(x, y, 0), o = { x: x, y: y };
+  if (c.n.d < c.n.w + 8 + r) return false;
+  return !pgEmpuja(o, r);
+}
+
+/* ---------- montar: las cosas y las rampas ---------- */
+function pgxGenera() {
+  var C = PGX.cosas = [], items = CITY.items, k, E = PGX.eslalon;
+  function cosa(t, x, y) {
+    if (!pgxLibre(x, y, PGX.R[t] + 4)) { PGX.fuera = (PGX.fuera || []).concat([t + '@' + x + ',' + y]); return; }
+    var o = { t: t, x: x, y: y, roto: false, rotoT: 0, trozos: [], v: C.length };
+    C.push(o); items.push({ k: 'pgx', m: 'cosa', o: o, x: x, y: y });
+  }
+  PGX.fuera = [];
+  PGX.quita.forEach(function (q) {                                             // fuera la palmera de en medio del eslalon (justo donde caes de la rampa)
+    CITY.items = items = items.filter(function (it) { return !(it.k === 'deco' && Math.abs(it.x - q[0]) < 3 && Math.abs(it.y - q[1]) < 3); });
+    PG.sol = PG.sol.filter(function (s) { return !(s.c === 1 && Math.abs(s.x - q[0]) < 3 && Math.abs(s.y - q[1]) < 3); });
+  });
+  PGX.def.forEach(function (d) { cosa(d[0], d[1], d[2]); });
+  for (k = 0; E.x0 + k * E.paso <= E.x1; k++) cosa('cono', E.x0 + k * E.paso, E.y + (k % 2 ? E.a : -E.a));
+  PGX.rampas = PGX.rampasDef.map(function (R) {
+    var q = { x: R.x, y: R.y, a: R.a, L: R.L, W: R.W, H: R.H, sup: !!R.sup, fx: Math.sin(R.a), fy: Math.cos(R.a), rx: Math.cos(R.a), ry: -Math.sin(R.a) };
+    items.push({ k: 'pgx', m: 'rampa', R: q, x: R.x + q.fx * R.L * 0.5, y: R.y + q.fy * R.L * 0.5 });
+    if (R.sup) items.push({ k: 'deco', s: signSprite('¡SÚPER SALTO!'), x: R.x - q.rx * (R.W / 2 + 26), y: R.y - q.ry * (R.W / 2 + 26), a: 0, sc: 1.1 });
+    return q;
+  });
+}
+function pgxEntero(o) { o.roto = false; o.trozos.length = 0; }
+
+/* ---------- romper: los trozos, según lo que era ---------- */
+function pgxRompe(o, vx, vy, quien) {
+  if (o.roto) return;
+  o.roto = true; o.rotoT = G.t; var T = o.trozos, v = Math.hypot(vx, vy), k, n, E = PGX.E[o.t];
+  function trozo(k2, dx, dy, dz, col, r, extra) {
+    dx *= E; dy *= E; dz *= E; r *= k2 === 'brizna' || k2 === 'cono' ? 1 : E;
+    var a = Math.random() * TAU, sp = 20 + Math.random() * 50, f = 0.55 + Math.random() * 0.5;
+    var t = { k: k2, x: o.x + dx, y: o.y + dy, z: dz, vx: vx * f + Math.sin(a) * sp, vy: vy * f + Math.cos(a) * sp, vz: 70 + Math.random() * (60 + v * 0.45), a: Math.random() * TAU, va: (Math.random() - 0.5) * 16, col: col, r: r, kick: -9, suelo: false };
+    if (extra) for (var q in extra) t[q] = extra[q];
+    T.push(t);
+  }
+  if (o.t === 'cocos') {
+    for (k = 0; k < 6; k++) trozo('coco', (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, 3 + (k > 3 ? 5 : 0), k % 3 ? '#8a5a2b' : '#4f8f35', 3.6);
+    SFX.bonk ? SFX.bonk() : SFX.clonk(); setTimeout(function () { SFX.clonk && SFX.clonk(); }, 120);
+  } else if (o.t === 'paja') {
+    for (k = 0; k < 7; k++) trozo('gavilla', (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12, 4 + Math.random() * 10, k % 2 ? '#e8c35a' : '#d9ad3c', 6);
+    for (k = 0; k < 16; k++) trozo('brizna', (Math.random() - 0.5) * 14, (Math.random() - 0.5) * 14, 6 + Math.random() * 12, '#f2d27a', 3, { vida: 1.2 + Math.random() * 1.2 });
+    SFX.whoosh ? SFX.whoosh() : SFX.thud();
+  } else if (o.t === 'caja') {
+    for (k = 0; k < 6; k++) trozo('tabla', (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12, 4 + Math.random() * 10, k % 2 ? '#c8935a' : '#b07a45', 7);
+    var FR = ['#ff8a2a', '#e2452f', '#f1c40f', '#8fd052'];
+    for (k = 0; k < 7; k++) trozo('fruta', (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10, 12 + Math.random() * 4, FR[k % 4], 2.4);
+    SFX.crash ? SFX.crash() : SFX.thud();
+  } else {
+    trozo('cono', 0, 0, 2, '#ff7a1a', 6, { vz: 120 + v * 0.5, va: (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 6) });
+    SFX.clonk();
+  }
+  var dice = { cocos: ['¡BONK!', '¡BONK BONK!', '¡COCOS!'], paja: ['¡PAF!', '¡FLOOF!', '¡PATAPLOF!'], caja: ['¡CRAC!', '¡CATACROC!', '¡CRASH!'], cono: ['¡TOC!', '¡PLONK!', '¡CONO!'] }[o.t];
+  pop(pickM(dice), o.x, o.y + 40, o.t === 'cono' ? '#ffd2a0' : '#ffffff', o.t === 'cono' ? 1 : 1.25);
+  if (quien === 'yo') {
+    G.fl += 1; pop('+1', o.x + 10, o.y + 62, '#ffe27a', 0.9);
+    if (o.t !== 'cono') { shake(0.14); if (o.t === 'paja') dust(o.x, o.y, 10); }
+    pgxDice('roto_' + o.t, 7);
+  }
+}
+function pgxDice(k, cada) { if (G.t - (PGX.dichoT[k] || -99) < (cada || 8)) return; PGX.dichoT[k] = G.t; pgDice('pgx_' + k); }
+
+/* ---------- cada fotograma: los choques, los trozos, la rampa, el salto y el derrape ---------- */
+function pgxCada(dt) {
+  var i, j, o, t, C = PGX.cosas, aire = PGX.salto ? P.z : 0, vx = Math.sin(P.h) * P.speed, vy = Math.cos(P.h) * P.speed;
+  for (i = 0; i < C.length; i++) {
+    o = C[i];
+    if (o.roto) {
+      if (G.t - o.rotoT > PGX.vuelve && d2(o.x, o.y, P.x, P.y) > PGX.lejos && !o.trozos.some(function (q) { return d2(q.x, q.y, P.x, P.y) < PGX.lejos * 0.6; })) { pgxEntero(o); sparkle(o.x, o.y + 10, 8, '#ffe27a'); }
+    } else if (P.state === 'ride' && aire < PGX.ALTO[o.t] && d2(o.x, o.y, P.x, P.y) < PGX.R[o.t] + 9) {
+      pgxRompe(o, vx, vy, 'yo');
+      P.speed *= o.t === 'cono' ? 0.94 : o.t === 'paja' ? 0.88 : 0.8;
+    }
+    if (PGC.car) PGC.car.R.forEach(function (R) { if (!o.roto && d2(o.x, o.y, R.x, R.y) < PGX.R[o.t] + 8) pgxRompe(o, Math.sin(R.h) * R.v, Math.cos(R.h) * R.v, 'riv'); });
+    /* los trozos */
+    for (j = o.trozos.length - 1; j >= 0; j--) {
+      t = o.trozos[j];
+      if (t.vida != null && (t.vida -= dt) <= 0) { o.trozos.splice(j, 1); continue; }
+      if (t.z > 0 || t.vz > 0) {
+        t.vz -= 380 * dt; t.z += t.vz * dt; t.x += t.vx * dt; t.y += t.vy * dt; t.a += t.va * dt;
+        if (t.z <= 0) {
+          t.z = 0;
+          if (t.vz < -70) { t.vz = -t.vz * (t.k === 'coco' || t.k === 'fruta' ? 0.5 : 0.32); t.vx *= 0.75; t.vy *= 0.75; t.va *= 0.6; if (t.k !== 'brizna' && Math.random() < 0.5) part({ k: 'dust', x: t.x, y: t.y, vx: rr(-10, 10), vy: rr(-10, 10), t: 0, m: 0.4, s: 2, c: '150,120,80' }); }
+          else { t.vz = 0; t.suelo = true; }
+        }
+      } else {                                                                 // por el suelo: rueda (los cocos y la fruta, más) y se para
+        var fr = 1 - dt * (t.k === 'coco' || t.k === 'fruta' ? 1.1 : t.k === 'cono' ? 2.2 : 3.4);
+        t.x += t.vx * dt; t.y += t.vy * dt; t.vx *= fr; t.vy *= fr;
+        if (t.k === 'coco' || t.k === 'fruta') t.a += Math.hypot(t.vx, t.vy) * dt / t.r; else t.va *= fr, t.a += t.va * dt;
+      }
+      if (Math.abs(t.vx) + Math.abs(t.vy) > 2 && pgEmpuja(t, t.r * 0.8)) { t.vx *= -0.4; t.vy *= -0.4; }
+      if (t.k !== 'brizna' && P.state === 'ride' && aire < 10 && P.speed > 25 && G.t - t.kick > 0.35 && d2(t.x, t.y, P.x, P.y) < t.r + 8) {   // ¡a patearlo otra vez!
+        t.kick = G.t; t.vx = vx * (0.8 + Math.random() * 0.4) + rr(-30, 30); t.vy = vy * (0.8 + Math.random() * 0.4) + rr(-30, 30); t.vz = 60 + P.speed * 0.35; t.va = rr(-14, 14); t.suelo = false;
+        if (t.k === 'coco') SFX.bonk ? SFX.bonk() : SFX.clonk(); else SFX.clonk();
+      }
+    }
+  }
+}
+/* la rampa y el salto (después de mover la moto: el alto lo pone esto, encima de lo del puentecillo) */
+function pgxRampa(dt) {
+  var S = PGX.salto;
+  if (S) {
+    S.t += dt; S.vz -= PGX.g * dt; S.z += S.vz * dt;
+    if (S.z <= 0) {                                                            // ¡al suelo!
+      PGX.salto = null; P.z = 0;
+      var imp = -S.vz, tA = S.t;
+      dust(P.x, P.y, imp > 180 ? 18 : 10); shake(Math.min(0.45, 0.15 + imp / 900)); SFX.land ? SFX.land() : SFX.thud();
+      if (imp > 200) P.bounce = 0.24;                                           // (un aterrizaje muy fuerte: lo que llevas se puede escapar, como con un bache)
+      var fl = tA >= 1.05 ? 3 : tA >= 0.7 ? 2 : tA >= 0.4 ? 1 : 0;
+      if (fl) {
+        G.fl += fl; petals(P.x, P.y + 20, 8 + fl * 6);
+        pop(TT(fl === 3 ? '¡SÚPER SALTO!' : fl === 2 ? '¡SALTAZO!' : '¡SALTO!') + ' +' + fl, P.x, P.y + 56, '#ffe27a', 1.1 + fl * 0.12);
+        pgxDice(fl === 3 ? 'super' : 'salto', fl === 3 ? 4 : 9);
+      } else pop('¡PUMBA!', P.x, P.y + 46, '#ffffff', 0.9);
+      return;
+    }
+    P.z = S.z;
+    return;
+  }
+  if (P.state !== 'ride') return;
+  var R = null, u = 0, i;
+  for (i = 0; i < PGX.rampas.length; i++) {
+    var q = PGX.rampas[i], dx = P.x - q.x, dy = P.y - q.y, uu = dx * q.fx + dy * q.fy, vv = dx * q.rx + dy * q.ry;
+    if (uu >= -2 && uu <= q.L + 2 && Math.abs(vv) <= q.W / 2 && Math.cos(adiff(P.h, q.a)) > 0.3) { R = q; u = uu; break; }
+  }
+  if (R) { P.z = Math.max(P.z || 0, R.H * clamp(u / R.L, 0, 1)); PGX.rampaYa = R; return; }
+  var Y = PGX.rampaYa; PGX.rampaYa = null;
+  if (Y) {                                                                     // acabas de salir de una rampa: ¿por arriba y con velocidad?
+    var dx2 = P.x - Y.x, dy2 = P.y - Y.y, u2 = dx2 * Y.fx + dy2 * Y.fy;
+    if (u2 > Y.L - 4 && P.speed > PGX.vMin) {
+      var vz = Math.min(PGX.vzMax, P.speed * (Y.H / Y.L) * PGX.kSalto * (Y.sup ? PGX.kSup : 1));
+      PGX.salto = { z: Y.H, vz: vz, t: 0, sup: Y.sup };
+      P.z = Y.H; SFX.jump ? SFX.jump() : SFX.whoosh();
+      pgSalta('feliz'); if (Y.sup) pgxDice('vuela', 4);
+    }
+  }
+}
+function pgxDerrape(dt) {
+  if (P.state !== 'ride' || PGX.salto) { PGX.derr = 0; return; }
+  var lat = Math.abs(P.giroV || 0) * P.speed;
+  if (lat > PGX.derrLat && P.speed > PGX.derrV) {
+    PGX.derr += dt;
+    var bx = P.x - Math.sin(P.h) * 9, by = P.y - Math.cos(P.h) * 9, k = clamp((lat - PGX.derrLat) / 160, 0.3, 1);
+    if (Math.random() < dt * 40 * k) part({ k: 'dust', x: bx + rr(-4, 4), y: by + rr(-4, 4), vx: rr(-18, 18), vy: rr(-18, 18), t: 0, m: rr(0.5, 0.95), s: rr(3, 5.5), c: '238,238,238' });
+    if (Math.random() < dt * 45) FX.mk.push({ x: bx + Math.cos(P.h) * 3 * (Math.random() < 0.5 ? -1 : 1), y: by - Math.sin(P.h) * 3, t: 0 });
+    if (G.t - PGX.chirrido > 0.45) { PGX.chirrido = G.t; SFX.slip ? SFX.slip() : 0; }
+    if (PGX.derr > PGX.derrT0 && G.t - PGX.derrPremio > 3) {
+      PGX.derrPremio = G.t; G.fl += 1;
+      pop(TT('¡DERRAPE!') + ' +1', P.x, P.y + 56, '#ffe27a', 1.15); pgxDice('derrape', 10);
+    }
+  } else PGX.derr = Math.max(0, PGX.derr - dt * 2);
+}
+
+/* ---------- pintar ---------- */
+function pgxCosa(g, o) {
+  var d = proj(o.x, o.y, 0); if (d < 14 || d > 760) return;
+  if (!o.roto) {
+    scr(g); K3.alfa = 1;
+    if (o.t === 'cono') { pg6Cono(g, { x: o.x, y: o.y, caido: false }); }
+    else if (o.t === 'paja') {
+      shadow(g, o.x, o.y, 13 * PGX.E.paja, 9 * PGX.E.paja, 0); scr(g);
+      k3Abre(o.x, o.y, 0, o.v * 0.7, 0, 0, PGX.E.paja);
+      k3Tubo(k3(0, 0, 0), k3(0, 0, 11), 12, 10, '#d9ad3c', { borde: 0.8, luz: 'rgba(255,240,180,.35)' });
+      k3Tubo(k3(0, 0, 7), k3(0, 0, 8.6), 11.2, 11, '#8a6a2a', { borde: 0.5, pr: -0.4 });
+      k3Tubo(k3(0, 0, 11), k3(0, 0, 21), 10, 1.6, '#e8c35a', { borde: 0.8, luz: 'rgba(255,245,200,.4)' });
+      k3Tubo(k3(0, 0, 20), k3(0.8, 0.4, 24.5), 1.6, 0.5, '#c99a30', { borde: 0.5 });
+      k3Pinta(g);
+    } else if (o.t === 'cocos') {
+      shadow(g, o.x, o.y, 10 * PGX.E.cocos, 7 * PGX.E.cocos, 0); scr(g);
+      k3Abre(o.x, o.y, 0, o.v * 0.9, 0, 0, PGX.E.cocos);
+      var r = 3.6, P4 = [[-1, -1], [1, -1], [1, 1], [-1, 1]], k;
+      for (k = 0; k < 4; k++) k3Bola(k3(P4[k][0] * r, P4[k][1] * r, r), r, k % 2 ? '#4f8f35' : '#8a5a2b', { borde: 0.7 });
+      k3Bola(k3(0, 0, r * 2.4), r, '#6a9a3a', { borde: 0.7 });
+      k3Bola(k3(0, 0, r * 3.9), r * 0.95, '#8a5a2b', { borde: 0.7 });
+      k3Pinta(g);
+    } else if (o.t === 'caja') {
+      shadow(g, o.x, o.y, 12 * PGX.E.caja, 9 * PGX.E.caja, 0); scr(g);
+      k3Abre(o.x, o.y, 0, o.v * 0.6, 0, 0, PGX.E.caja);
+      k3Bloque([-8, 8, -7, 7, 0], [-8, 8, -7, 7, 8], '#c8935a', { top: '#a8763f' });
+      k3Bloque([-6.5, 7.5, -6, 6, 8], [-6.5, 7.5, -6, 6, 15], '#b8834c', { top: '#8f6234' });
+      var FR = ['#ff8a2a', '#e2452f', '#f1c40f', '#ff8a2a', '#8fd052'];
+      for (k = 0; k < 5; k++) k3Bola(k3(-4 + (k % 3) * 4, -2.5 + Math.floor(k / 3) * 5, 16.6), 2.3, FR[k], { borde: 0.6 });
+      k3Pinta(g);
+    }
+  }
+  /* los trozos: del más lejano al más cercano */
+  if (o.trozos.length) {
+    var L = o.trozos.slice().sort(function (a, b) { return fwd(b.x, b.y) - fwd(a.x, a.y); });
+    L.forEach(function (t) { pgxTrozo(g, t); });
+  }
+}
+function pgxTrozo(g, t) {
+  if (t.k === 'cono') {
+    if (proj(t.x, t.y, t.z) < 12) return;
+    if (t.z < 1) shadow(g, t.x, t.y, 5, 3, 0); else shadow(g, t.x, t.y, 4, 2.5, 0);
+    scr(g); K3.alfa = 1;
+    k3Abre(t.x, t.y, t.z + 4, Math.atan2(t.vx, t.vy) || 0, 0, t.suelo ? Math.PI / 2 : t.a, 1);
+    k3Tubo(k3(0, 0, -4), k3(0, 0, 9), 4.2, 0.9, '#ff7a1a', { borde: 0.7, luz: 'rgba(255,255,255,.35)' });
+    k3Tubo(k3(0, 0, 1), k3(0, 0, 3.4), 2.95, 2.5, '#fbfbf7', { borde: 0.5, pr: -0.5 });
+    k3Pinta(g);
+    return;
+  }
+  var d = proj(t.x, t.y, t.z); if (d < 12) return;
+  var x = PX, y = PY, s = PS;
+  if (t.z > 2 && t.k !== 'brizna') { var sx = x, sy = y; if (proj(t.x, t.y, 0) >= 12) { scr(g); g.globalAlpha = 0.18; g.fillStyle = '#000'; g.beginPath(); g.ellipse(PX, PY, t.r * PS * 1.1, t.r * PS * 0.45, 0, 0, TAU); g.fill(); g.globalAlpha = 1; } x = sx; y = sy; }
+  scr(g);
+  var al = t.vida != null ? clamp(t.vida / 0.6, 0, 1) : 1;
+  g.globalAlpha = al * (1 - fogK(d) * 0.5); g.lineJoin = 'round'; g.lineCap = 'round';
+  if (t.k === 'coco' || t.k === 'fruta') {
+    var r = t.r * s;
+    g.beginPath(); g.arc(x, y - r, r, 0, TAU); g.fillStyle = t.col; g.fill(); g.strokeStyle = INK; g.lineWidth = Math.max(0.8, 0.5 * s); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.arc(x - r * 0.35, y - r * 1.35, r * 0.32, 0, TAU); g.fill();
+    if (t.k === 'coco') { g.fillStyle = '#3a2412'; for (var e = 0; e < 3; e++) { var aa = t.a + e * 2.1; g.beginPath(); g.arc(x + Math.cos(aa) * r * 0.45, y - r + Math.sin(aa) * r * 0.45, r * 0.13, 0, TAU); g.fill(); } }
+  } else if (t.k === 'gavilla' || t.k === 'tabla') {
+    var L = t.r * s, ca = Math.cos(t.a) * L, sa = Math.sin(t.a) * L * 0.55;
+    g.strokeStyle = INK; g.lineWidth = (t.k === 'tabla' ? 3.4 : 4.6) * s + 1.6; g.beginPath(); g.moveTo(x - ca, y - sa - 2 * s); g.lineTo(x + ca, y + sa - 2 * s); g.stroke();
+    g.strokeStyle = t.col; g.lineWidth = (t.k === 'tabla' ? 3.4 : 4.6) * s; g.stroke();
+    if (t.k === 'gavilla') { g.strokeStyle = '#8a6a2a'; g.lineWidth = 1.6 * s; g.beginPath(); g.moveTo(x - sa * 0.3, y + ca * 0.3 - 2 * s - 2.4 * s); g.lineTo(x + sa * 0.3, y - ca * 0.3 - 2 * s + 2.4 * s); g.stroke(); }
+    else { g.fillStyle = INK; g.beginPath(); g.arc(x - ca * 0.7, y - sa * 0.7 - 2 * s, 0.6 * s, 0, TAU); g.arc(x + ca * 0.7, y + sa * 0.7 - 2 * s, 0.6 * s, 0, TAU); g.fill(); }
+  } else {                                                                      // una brizna de paja
+    var l2 = 3.2 * s; g.strokeStyle = t.col; g.lineWidth = Math.max(0.8, 0.7 * s);
+    g.beginPath(); g.moveTo(x - Math.cos(t.a) * l2, y - Math.sin(t.a) * l2); g.lineTo(x + Math.cos(t.a) * l2, y + Math.sin(t.a) * l2); g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+function pgxRampaDib(g, R) {
+  var d = proj(R.x + R.fx * R.L / 2, R.y + R.fy * R.L / 2, 0); if (d < 14 || d > 820) return;
+  scr(g); K3.alfa = 1;
+  k3Abre(R.x, R.y, 0, R.a, 0, 0, 1);
+  var L = R.L, w = R.W / 2, H = R.H, MAD = R.sup ? '#c9874e' : '#b98a5a', LAD = '#8f5f35';
+  k3Poli([k3(0, -w, 0), k3(L, -w, H), k3(L, -w, 0)], LAD, { borde: 0.8 });
+  k3Poli([k3(0, w, 0), k3(L, w, 0), k3(L, w, H)], LAD, { borde: 0.8 });
+  k3Poli([k3(L, -w, 0), k3(L, -w, H), k3(L, w, H), k3(L, w, 0)], '#6e4626', { borde: 0.8 });
+  var n = R.sup ? 7 : 5, j;
+  for (j = 0; j < n; j++) {                                                     // las tablas de encima (y las franjas amarillas y negras al final)
+    var u0 = L * j / n, u1 = L * (j + 1) / n, col = j === n - 1 ? null : (j % 2 ? MAD : shadeCol(MAD, 0.92));
+    if (col) k3Poli([k3(u0, -w, H * u0 / L), k3(u1, -w, H * u1 / L), k3(u1, w, H * u1 / L), k3(u0, w, H * u0 / L)], col, { borde: 0.7 });
+    else for (var f = 0; f < 6; f++) {
+      var v0 = -w + 2 * w * f / 6, v1 = -w + 2 * w * (f + 1) / 6;
+      k3Poli([k3(u0, v0, H * u0 / L), k3(u1, v0, H * u1 / L), k3(u1, v1, H * u1 / L), k3(u0, v1, H * u0 / L)], f % 2 ? '#2a2b30' : '#f2c230', { borde: 0.5 });
+    }
+  }
+  if (R.sup) [-1, 1].forEach(function (sd) {                                   // la súper: dos banderas en lo alto
+    k3Tubo(k3(L, sd * (w + 2), 0), k3(L, sd * (w + 2), H + 22), 0.9, 0.7, '#e8e0cc', { borde: 0.5 });
+    var ond = Math.sin(G.t * 6 + sd) * 2;
+    k3Poli([k3(L, sd * (w + 2), H + 22), k3(L - 10, sd * (w + 2) + ond, H + 19), k3(L, sd * (w + 2), H + 15)], sd > 0 ? '#e2452f' : '#fbfbf7', { borde: 0.6 });
+  });
+  k3Pinta(g);
+}
+
+/* ---------- los enganches ---------- */
+if (PGX.vivo) {
+  var pgGeneraPGX = pgGenera;
+  pgGenera = function () { pgGeneraPGX(); if (MAPA === 'pg') pgxGenera(); };
+  var ciuItemPGX = ciuItem;
+  ciuItem = function (g, it, k, i) {
+    if (k === 'pgx' && MAPA === 'pg') { if (it.m === 'cosa') pgxCosa(g, it.o); else pgxRampaDib(g, it.R); return true; }
+    return ciuItemPGX(g, it, k, i);
+  };
+  var pgRidePGX = pgRide;
+  pgRide = function (dt) {
+    pgRidePGX(dt);
+    if (!pgOn()) return;
+    pgxRampa(dt);
+    pgxDerrape(dt);
+  };
+  var pgCadaPGX = pgCada;
+  pgCada = function (dt) {
+    pgCadaPGX(dt);
+    if (pgOn() && G.state === 'play' && !G.card) pgxCada(dt);
+  };
+  var pgEmpiezaPGX = pgEmpieza;
+  pgEmpieza = function () { pgEmpiezaPGX(); PGX.salto = null; PGX.rampaYa = null; PGX.derr = 0; PGX.cosas.forEach(pgxEntero); if (P) P.z = 0; };
+  var cityCrashPGX = cityCrash;
+  cityCrash = function (kind, txt) { if (pgOn()) { PGX.salto = null; PGX.rampaYa = null; } cityCrashPGX(kind, txt); };
+  var cityPlayerPGX = cityPlayer;
+  cityPlayer = function (g) { PGX.yoDib = pgOn(); try { cityPlayerPGX(g); } finally { PGX.yoDib = false; } };
+  var motoGuiri3DPGX = motoGuiri3D;
+  motoGuiri3D = function (g, x, y, z, ang, o) {
+    if (PGX.yoDib && o && !o.sinGuiri && PGX.salto) o.cab = clamp(PGX.salto.vz / 520, -0.32, 0.38);   // en el aire: morro arriba al subir, abajo al caer
+    else if (PGX.yoDib && o && !o.sinGuiri && PGX.rampaYa) o.cab = Math.atan(PGX.rampaYa.H / PGX.rampaYa.L);
+    return motoGuiri3DPGX.apply(this, arguments);
+  };
+}
+
+/* ---------- Pitik y los textos ---------- */
+if (PGX.vivo) {
+  PG_DICE.pgx_roto_cocos = [['🥥', '¡Cocos por todas partes!'], ['🥥', '¡BONK! ¡Jajaja!']];
+  PG_DICE.pgx_roto_paja = [['🌾', '¡Paja volando!'], ['🌾', '¡Cataplof! ¡Qué desastre!']];
+  PG_DICE.pgx_roto_caja = [['🍊', '¡Fruta por el aire!'], ['🍌', '¡Uy, la fruta!']];
+  PG_DICE.pgx_roto_cono = [['🚧', '¡Conos fuera!']];
+  PG_DICE.pgx_salto = [['🛵', '¡Volamos!'], ['🛵', '¡Uaaau!']];
+  PG_DICE.pgx_super = [['🚀', '¡SÚPER SALTO! ¡Hasta las nubes!']];
+  PG_DICE.pgx_vuela = [['🚀', '¡Agárrate, Pitik!']];
+  PG_DICE.pgx_derrape = [['💨', '¡Qué derrape!'], ['💨', '¡Fiuuu! ¡Humo!']];
+  ['pgx_roto_cocos', 'pgx_roto_paja', 'pgx_roto_caja', 'pgx_roto_cono', 'pgx_salto', 'pgx_super', 'pgx_vuela', 'pgx_derrape'].forEach(function (k) { PG_EST[k] = 'feliz'; });
+  PG_YA.pgx_super = 1;
+}
+(function () {
+  var N = {
+    '¡BONK!': ['BONK!', 'BONK!'], '¡BONK BONK!': ['BONK BONK!', 'BONK BONK!'], '¡COCOS!': ['COCONUTS!', 'KELAPA!'], '¡PAF!': ['POOF!', 'PUF!'], '¡FLOOF!': ['FLOOF!', 'FLUF!'], '¡PATAPLOF!': ['KERPLOP!', 'GEDEBUK!'],
+    '¡CRAC!': ['CRACK!', 'KRAK!'], '¡CATACROC!': ['KER-RUNCH!', 'KRAAK!'], '¡CRASH!': ['CRASH!', 'BRAK!'], '¡TOC!': ['TOCK!', 'TOK!'], '¡PLONK!': ['PLONK!', 'PLONK!'], '¡CONO!': ['CONE!', 'KERUCUT!'],
+    '¡PUMBA!': ['THUMP!', 'BUM!'], '¡SALTO!': ['JUMP!', 'LOMPAT!'], '¡SALTAZO!': ['BIG JUMP!', 'LOMPATAN BESAR!'], '¡SÚPER SALTO!': ['SUPER JUMP!', 'LOMPATAN SUPER!'], '¡DERRAPE!': ['DRIFT!', 'DRIFT!'],
+    '¡Cocos por todas partes!': ['Coconuts everywhere!', 'Kelapa di mana-mana!'], '¡BONK! ¡Jajaja!': ['BONK! Hahaha!', 'BONK! Hahaha!'], '¡Paja volando!': ['Flying straw!', 'Jerami terbang!'],
+    '¡Cataplof! ¡Qué desastre!': ['Kerplop! What a mess!', 'Gedebuk! Berantakan!'], '¡Fruta por el aire!': ['Fruit in the air!', 'Buah beterbangan!'], '¡Uy, la fruta!': ['Oops, the fruit!', 'Ups, buahnya!'],
+    '¡Conos fuera!': ['Cones down!', 'Kerucut jatuh!'], '¡Volamos!': ['We\'re flying!', 'Kita terbang!'], '¡Uaaau!': ['Woooow!', 'Wuaaah!'], '¡SÚPER SALTO! ¡Hasta las nubes!': ['SUPER JUMP! Up to the clouds!', 'LOMPATAN SUPER! Sampai awan!'],
+    '¡Agárrate, Pitik!': ['Hold on, Pitik!', 'Pegangan, Pitik!'], '¡Qué derrape!': ['What a drift!', 'Drift-nya keren!'], '¡Fiuuu! ¡Humo!': ['Whoosh! Smoke!', 'Wuss! Asap!']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
