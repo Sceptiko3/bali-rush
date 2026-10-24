@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v24</title>
+<title>Bali Rush Poki v25</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v24 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v25 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -117004,7 +117004,7 @@ function pg2Bordillos() {
     for (i = 1; i < n - 1; i++) gi.push(Math.abs(adiff(Math.atan2(P0[i + 1][0] - P0[i][0], P0[i + 1][1] - P0[i][1]), Math.atan2(P0[i][0] - P0[i - 1][0], P0[i][1] - P0[i - 1][1]))));
     gi.push(0);
     for (i = 0; i < n - 1; i++) {
-      if (Math.max(gi[i], gi[i + 1]) < 0.085) { cnt = 0; continue; }
+      if (Math.max(gi[i], gi[i + 1]) < 0.085 || w < 24 || Math.hypot(P0[i + 1][0] - P0[i][0], P0[i + 1][1] - P0[i][1]) > 80) { cnt = 0; continue; }   // (v25: ni en las callejas ni en un tramo largo con una esquina al final)
       var a = P0[i], b = P0[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy, ny = -ux, m = Math.max(1, Math.round(L / 11));
       for (j = 0; j < m; j++) {
         var x0 = a[0] + ux * L * j / m, y0 = a[1] + uy * L * j / m, x1 = a[0] + ux * L * (j + 1) / m, y1 = a[1] + uy * L * (j + 1) / m;
@@ -117737,6 +117737,282 @@ if (PG3.vivo) {
     '¡Brrr! ¡Venga, otra vez!': ['Brrr! Come on, again!', 'Brrr! Ayo, lagi!'],
     'Los arrozales de Bali se riegan entre todos: se llama subak': ['Bali\'s rice fields are watered together: it\'s called subak', 'Sawah di Bali diairi bersama: namanya subak'],
     '¡PLASH!': ['SPLASH!', 'BYUR!'], '¡Brrr!': ['Brrr!', 'Brrr!'], '🌉 ¡Sin caerte! +5': ['🌉 No fall! +5', '🌉 Tidak jatuh! +5'], '+2': ['+2', '+2']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza nucleo/684_poki_playground_barrio.js*/
+/* ================================================================
+   POKI V25 · PLAYGROUND: EL BARRIO DE CALLEJAS, EL TALLER Y LA TIENDA
+   Jose Javier (24-10-2026), con la v23: «una parte pon típica parte de
+   la ciudad con callejas… el taller, y que allí pueda cambiar el color,
+   tienda que se cambie la ropa, algo más que se te ocurra».
+   - LA EXPLANADA CRECE HACIA LA DERECHA: dos puertas en la tapia de la
+     derecha llevan al BARRIO: la calle Jalan Kota (una U que entra por
+     una puerta y sale por la otra) y, de ella, las callejas (gang:
+     estrechas, sin tráfico) entre tapias de casas con su angkul-angkul,
+     tiendas y warungs, motos aparcadas, gente, un perro…
+   - EL TALLER DE WAYAN (bengkel): un aro verde con la llave inglesa
+     delante; al entrar, se para el juego y sale el taller (solo la
+     pestaña de la moto: elegir moto, el color y el tubo); «¡A jugar!» y
+     sigues donde estabas, con la moto nueva.
+   - LA TIENDA DE ROPA (toko baju): igual, con la ropa del piloto y la de
+     Pitik.
+     (Lo que no tienes se compra con las flores del bolsillo, como en el
+     taller de siempre.)
+   - LA CASA DE NI LUH, al fondo de las callejas: un sitio más de los
+     encargos (los muebles de la 1.ª ronda van allí).
+   - LA FLECHA, si lo que toca está en el barrio (o sales de él), sigue
+     las calles (route): por las callejas no se puede ir en línea recta.
+   PGB.vivo = false (o ?nopg4): el Playground como la v24.
+   ================================================================ */
+var PGB = {
+  vivo: PG3.vivo && !/[?&#]nopg4/.test(location.search + location.hash),
+  E: 2250,                                         // hasta dónde llega el barrio por la derecha
+  puertas: [[-256, -164], [204, 296]],             // en la tapia de la derecha (y)
+  kota: 1400,                                      // la x de la parte de Jalan Kota que va de arriba abajo
+  taller: { x: 1505, y: -110, rx: 1456, ry: -110, ico: '🔧' },   // (el aro, delante de la puerta y fuera de la calle: pasando por Jalan Kota no se entra sin querer)
+  tienda: { x: 1505, y: 150, rx: 1456, ry: 150, ico: '👕' },
+  abierto: null, fuera: null, via: null, dicho: {}
+};
+function pg4EnBarrio(x) { return x > PGD.X + 2; }
+
+/* ---------- el mapa: Jalan Kota y las callejas ---------- */
+var pgMapDefPGB = pgMapDef;
+pgMapDef = function () {
+  var S = pgMapDefPGB(); if (!PGB.vivo) return S;
+  var K = PGB.kota, R = PGD.rx;
+  S.push({ n: 'Jalan Kota', w: 28, pts: [[R, -210], [K, -210], [K, 250], [R, 250]] });
+  S.push({ n: 'Gang Melati', w: 18, pts: [[K, 20], [1820, 20], [2120, 20]] });
+  S.push({ n: 'Gang Kenanga', w: 18, pts: [[1820, -650], [1820, -330], [1870, -200], [1820, -90], [1820, 130], [1770, 260], [1820, 400], [1820, 650]] });
+  S.push({ n: 'Gang Cempaka', w: 18, pts: [[K, -210], [K, -650], [1820, -650]] });
+  S.push({ n: 'Gang Sandat', w: 18, pts: [[K, 250], [K, 650], [1820, 650]] });
+  ZONES.push({ k: 'barrio', x0: PGD.X, x1: PGB.E, y0: -PGD.Y, y1: PGD.Y });
+  return S;
+};
+if (PGB.vivo) {
+  PG_SITIOS.nenek = { ico: '🏡', n: 'la casa de Ni Luh', sign: 'RUMAH NI LUH', x: 2195, y: 20, a: Math.PI / 2, rx: 2112, ry: 20 };
+  PG_TAREAS = [
+    { id: 'pollos', de: 'kandang', a: ['pasar', 'warung', 'sawah'] },
+    { id: 'pax', de: ['sekolah', 'pasar', 'warung'], a: ['pura', 'sawah', 'nenek'], q: ['nina', 'abuela', 'turista'] },
+    { id: 'muebles', de: 'kayu', a: ['nenek', 'pasar', 'sekolah'] },
+    { id: 'cerdo', de: 'babi', a: ['sawah', 'rumah', 'warung'] }
+  ];
+}
+
+/* ---------- el barrio ---------- */
+function pg4Genera() {
+  var items = CITY.items, obs = CITY.obs, O = ESN.s.obra, r = mulberry(4417), i, k, X = PGD.X, Y = PGD.Y, E = PGB.E;
+  function deco(s, x, y, a, sc, o) { var d = { k: 'deco', s: s, x: x, y: y, a: a || 0, sc: sc || 1 }, q; if (o) for (q in o) d[q] = o[q]; items.push(d); return d; }
+  function obra(ob, x, y, a, sc) { return deco(O, x, y, a, sc, { ob: ob }); }
+  function arbol(s, x, y, sc, solido) { deco(s, x, y, r() * TAU, sc); if (solido) pgCirculo(x, y, solido); }
+  function moto(x, y, h, v) { deco(SP.parked[v % SP.parked.length], x, y, 0, 0.9, { ap: v % 4, h: h }); }
+  function tapia(x0, y0, x1, y1) {                                             // una tapia recta, a tramos de 100 como mucho
+    var L = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(L / 100)), ux = (x1 - x0) / L, uy = (y1 - y0) / L;
+    for (var j = 0; j < n; j++) items.push({ k: 'wall', x: x0 + ux * L * (j + 0.5) / n, y: y0 + uy * L * (j + 0.5) / n, ux: ux, uy: uy, L: L / n, side: 0 });
+  }
+  function ruko(x, y, a, n) { obra(blEdif(n), x, y, a, 1.25); pgCaja(x, y, a, 27, 24); }
+  /* una casa balinesa: su tapia con la puerta (angkul-angkul) hacia la calleja, el pabellón y un árbol dentro */
+  function casa(x0, x1, y0, y1, lado, pos, v) {
+    var g = 13;
+    if (lado === 'S') { tapia(x0, y0, pos - g, y0); tapia(pos + g, y0, x1, y0); } else tapia(x0, y0, x1, y0);
+    if (lado === 'N') { tapia(x0, y1, pos - g, y1); tapia(pos + g, y1, x1, y1); } else tapia(x0, y1, x1, y1);
+    if (lado === 'W') { tapia(x0, y0, x0, pos - g); tapia(x0, pos + g, x0, y1); } else tapia(x0, y0, x0, y1);
+    if (lado === 'E') { tapia(x1, y0, x1, pos - g); tapia(x1, pos + g, x1, y1); } else tapia(x1, y0, x1, y1);
+    var ga = { S: [pos, y0, Math.PI], N: [pos, y1, 0], W: [x0, pos, -Math.PI / 2], E: [x1, pos, Math.PI / 2] }[lado];   // (la puerta mira hacia fuera: a la calleja)
+    obra(blAngkul(v % 3), ga[0], ga[1], ga[2] + Math.PI, 0.62);
+    var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    obra(blMeten(18, 14.4, v % 4), cx + (r() - 0.5) * 30, cy + (r() - 0.5) * 30, r() < 0.5 ? 0 : Math.PI / 2, 1.15);
+    deco(r() < 0.5 ? SP.frang : SP.palm[v % SP.palm.length], x0 + 30 + r() * 20, y0 + 30 + r() * 20, r() * TAU, 1.2);
+    pgCaja(cx, cy, 0, (x1 - x0) / 2 + 2, (y1 - y0) / 2 + 2);
+    PGB.casas.push([x0, x1, y0, y1]);
+  }
+  PGB.casas = [];
+  /* fuera lo que había detrás de la tapia de la derecha (ahora es barrio) y los tramos de las puertas */
+  function enPuerta(y0, y1) { return PGB.puertas.some(function (p) { return y1 > p[0] + 1 && y0 < p[1] - 1; }); }
+  CITY.items = items = items.filter(function (it) {
+    if (it.k === 'wall' && Math.abs(it.x - X - 4) < 1 && it.ux === 0 && enPuerta(it.y - it.L / 2, it.y + it.L / 2)) return false;
+    if (it.k !== 'wall' && it.x > X + 6 && Math.abs(it.y) < Y + 6) return false;
+    return true;
+  });
+  var tramos = [[-Y, PGB.puertas[0][0]], [PGB.puertas[0][1], PGB.puertas[1][0]], [PGB.puertas[1][1], Y]];
+  tramos.forEach(function (q) { pgCaja(X + 4, (q[0] + q[1]) / 2, 0, 5, (q[1] - q[0]) / 2); });
+  PGB.puertas.forEach(function (q) { [-1, 1].forEach(function (sd) { obra(blCandi(false), X + 4, (q[0] + q[1]) / 2 + sd * 52, Math.PI / 2, 0.42); }); });
+  tapia(E + 4, -Y - 4, E + 4, Y + 4); tapia(X + 4, Y + 4, E + 4, Y + 4); tapia(X + 4, -Y - 4, E + 4, -Y - 4);
+  PG.zonas.push({ x0: X - 40, x1: E, y0: -Y, y1: Y });
+  /* fuera del barrio: palmeras y arrozales */
+  for (i = 0; i < 16; i++) { var fy = -Y + r() * 2 * Y, fx = E + 70 + r() * 260; if (r() < 0.7) deco(SP.palm[i % SP.palm.length], fx, fy, r() * TAU, 1.5 + r() * 0.5); else deco(SP.canopy[i % SP.canopy.length], fx, fy, r() * TAU, 1.6 + r() * 0.5); }
+  for (i = 0; i < 10; i++) { var gx = X + 40 + r() * (E - X), gy = (i % 2 ? 1 : -1) * (Y + 70 + r() * 220); deco(SP.palm[i % SP.palm.length], gx, gy, r() * TAU, 1.5 + r() * 0.4); }
+  /* el taller de Wayan y la tienda de ropa, mirando a Jalan Kota */
+  var T = PGB.taller, TI = PGB.tienda;
+  obra(blEdif(7), T.x, T.y, Math.PI / 2, 1.25); pgCaja(T.x, T.y, Math.PI / 2, 27, 24);
+  deco(signSprite('BENGKEL WAYAN'), T.x - 30, T.y + 46, 0, 1.3);
+  items.push({ k: 'pg2', m: 'neum', x: T.x - 8, y: T.y - 46, a: 0, v: 1 }); PG.sol.push({ c: 1, x: T.x - 8, y: T.y - 46, r: 14, b: 1 });
+  moto(T.x - 34, T.y + 30, Math.PI / 2, 2);
+  obra(blEdif(14), TI.x, TI.y, Math.PI / 2, 1.25); pgCaja(TI.x, TI.y, Math.PI / 2, 27, 24);
+  deco(signSprite('TOKO BAJU'), TI.x - 30, TI.y - 46, 0, 1.3);
+  items.push({ k: 'pg4', m: 'percha', x: TI.x - 36, y: TI.y + 34, a: 0 }); PG.sol.push({ c: 1, x: TI.x - 36, y: TI.y + 34, r: 9, b: 1 });
+  [T, TI].forEach(function (q, j) { items.push({ k: 'pg4', m: 'aro', x: q.rx, y: q.ry, ico: q.ico, j: j }); });
+  /* las tiendas de la calleja Melati */
+  [[1575, 0], [1645, 4], [1715, 8], [1905, 1], [1975, 5], [2045, 9]].forEach(function (q) { ruko(q[0], 71, 0, q[1]); });
+  [[1575, 2], [1645, 6], [1715, 13], [1905, 10], [1975, 11], [2045, 16]].forEach(function (q) { ruko(q[0], -31, Math.PI, q[1]); });
+  /* las casas, cada una con su puerta a una calleja */
+  casa(1440, 1600, -620, -260, 'S', 1520, 0); casa(1620, 1780, -620, -260, 'E', -470, 1);
+  casa(1440, 1600, 300, 620, 'N', 1520, 2); casa(1620, 1740, 330, 620, 'N', 1680, 3);
+  casa(1880, 2060, -620, -250, 'W', -470, 4); casa(1880, 2060, 130, 620, 'W', 500, 5);
+  casa(1440, 1780, -880, -690, 'N', 1600, 6); casa(1440, 1780, 690, 880, 'S', 1600, 7);
+  casa(2150, 2240, -90, 130, 'W', 20, 8);                                                       // la de Ni Luh, al fondo de Melati
+  deco(signSprite(PG_SITIOS.nenek.sign), 2128, 76, 0, 1.2);
+  /* los solares de la izquierda: el bale banjar (donde se reúne el barrio) y un warung, con motos aparcadas */
+  obra(blBale(20, 16, 1, true), 1265, -470, 0, 1.4); pgCaja(1265, -470, 0, 31, 25);
+  for (k = 0; k < 4; k++) moto(1190 + k * 24, -300, Math.PI + 0.1 * (k - 1.5), k);
+  pgCaja(1226, -300, 0, 44, 10);
+  obra(blEdif(3), 1265, 310, 0, 1.25); pgCaja(1265, 310, 0, 26, 23);
+  for (k = 0; k < 2; k++) moto(1190 + k * 22, 304, 0.1 * k, k + 1);
+  pgCaja(1201, 304, 0, 20, 10);
+  /* motos aparcadas por las callejas, árboles, fruta y un perro dormido */
+  [[1610, 62, 0.1], [1680, 62, -0.1], [1940, -20, Math.PI], [1500, -186, Math.PI / 2]].forEach(function (q, j) { moto(q[0], q[1], q[2], j + 2); pgCaja(q[0], q[1], 0, 5, 9); });   // (entre tienda y tienda, de cara a la calleja)
+  arbol(SP.canopy[0], 1265, 640, 1.4, 11); arbol(SP.frang, 1310, 480, 1.1, 8); arbol(SP.banana[0], 1200, -640, 1.2, 8); arbol(SP.canopy[1 % SP.canopy.length], 2160, -500, 1.4, 11);
+  arbol(SP.palm[0], 2170, 450, 1.5, 8); arbol(SP.frang, 2200, -760, 1.1, 8); arbol(SP.banana[0], 2190, 760, 1.2, 8);
+  obra(blFruta(1), 1760, 44, 0, 1.2); pgCaja(1760, 44, 0, 16, 4.4);
+  obs.push({ t: 'perro', x: 1760, y: 2, side: -1, nx: 0, ny: 1, st: 'sleep', a: 0.6 });
+  /* la gente */
+  function fija(Q, x, y, a) { PG.gente.push({ t: 'pgw', k: 'pgw', Q: Q, fijo: true, x: x, y: y, x0: x, y0: y, a: a, a0: a, v: 0, paso: 0, pose: 'pie', huye: 0, saluda: 0 }); }
+  function camina(Q, ruta, v) { PG.gente.push({ t: 'pgw', k: 'pgw', Q: Q, ruta: ruta, i: 1, x: ruta[0][0], y: ruta[0][1], v: v, a: 0, paso: Math.random() * 3, extra: null, pose: 'anda', huye: 0, saluda: 0 }); }
+  fija(GE3_Q.lib_carpintero, T.x - 32, T.y - 22, -Math.PI / 2); fija(GE3_Q.lib_mensari, TI.x - 32, TI.y - 22, -Math.PI / 2);
+  camina(GE3_Q.lib_ketut, [[1440, 34], [2100, 34], [2100, 6], [1440, 6]], 22);
+  var K2 = [[1834, -640], [1834, -330], [1884, -200], [1834, -90], [1834, 130], [1784, 260], [1834, 400], [1834, 640]];
+  camina(GE3_Q.lib_nyoman, K2.concat(K2.slice(1, -1).reverse()), 24);
+}
+var pgGeneraPGB = pgGenera;
+pgGenera = function () { pgGeneraPGB(); if (PGB.vivo) pg4Genera(); };
+
+/* ---------- la flecha por las calles, si el barrio anda por medio ---------- */
+function pg4Via(px, py, tx, ty) {
+  if (Math.hypot(tx - px, ty - py) < 110) return null;
+  var V = PGB.via;
+  if (!V || G.t - V.t > 0.3 || Math.abs(V.tx - tx) > 2 || Math.abs(V.ty - ty) > 2) { V = PGB.via = { t: G.t, tx: tx, ty: ty, R: route(px, py, tx, ty) }; }
+  var pts = V.R.pts, best = 0, bd = 1e9, j;
+  for (j = 0; j < pts.length - 1; j++) { var q = segDist(px, py, pts[j][0], pts[j][1], pts[j + 1][0], pts[j + 1][1]); if (q.d < bd) { bd = q.d; best = j + q.t; } }
+  if (bd > 60) { var j0 = Math.floor(best), tq = best - j0, a = pts[j0], b = pts[Math.min(j0 + 1, pts.length - 1)]; return { x: a[0] + (b[0] - a[0]) * tq, y: a[1] + (b[1] - a[1]) * tq, len: V.R.len + bd }; }   // primero, a la calle
+  var falta = 80, i = Math.floor(best), x = pts[i][0] + (pts[Math.min(i + 1, pts.length - 1)][0] - pts[i][0]) * (best - i), y = pts[i][1] + (pts[Math.min(i + 1, pts.length - 1)][1] - pts[i][1]) * (best - i);
+  for (i = i + 1; i < pts.length; i++) { var dl = Math.hypot(pts[i][0] - x, pts[i][1] - y); if (dl >= falta) { var k = falta / dl; return { x: x + (pts[i][0] - x) * k, y: y + (pts[i][1] - y) * k, len: V.R.len }; } falta -= dl; x = pts[i][0]; y = pts[i][1]; }
+  return null;
+}
+var pgObjetivoPGB = pgObjetivo;
+pgObjetivo = function () {
+  if (!PGB.vivo || !pgOn()) return pgObjetivoPGB();
+  var O = pgObjetivoPG3();                                                    // (lo que toca de verdad, sin los rodeos del río)
+  if (!O || (!pg4EnBarrio(P.x) && !pg4EnBarrio(O.x))) return pgObjetivoPGB();
+  var w = pg4Via(P.x, P.y, O.x, O.y); if (!w) return O;
+  return { x: w.x, y: w.y, d: Math.max(w.len, Math.hypot(w.x - P.x, w.y - P.y)), suelo: O.suelo, via: true };
+};
+
+/* ---------- el taller y la tienda: entras en su aro y se abren ---------- */
+function pg4Abre(que) {
+  PGB.abierto = que; pokiStop(); G.state = 'pause'; IN.gas = IN.brake = IN.left = IN.right = 0; P.speed = 0; pgCalla();
+  TLN.pes = que === 'taller' ? 'moto' : 'piloto';
+  showTaller('pg');
+  var c = document.querySelector('#scr .card.taller');
+  if (c) { c.classList.add('pg-' + que); var h = c.querySelector('.tln-cab h2'); if (h && que === 'tienda') h.textContent = TT('La tienda de ropa'); }
+  SFX.pick(5);
+}
+function pg4Cierra() {
+  var que = PGB.abierto, Q = PGB[que]; PGB.abierto = null; G.tallerVolver = null;
+  hideScr(); G.state = 'play'; pokiStart();
+  P.x = Q.rx - 56; P.y = Q.ry + (que === 'taller' ? -40 : 40); P.h = P.ht = que === 'taller' ? Math.PI : 0; P.speed = 0; P.si = null;   // (fuera del aro, en Jalan Kota, mirando calle abajo / arriba)
+  CAM.yaw = P.h; PGB.fuera = que;
+  rebuildGuiri(); pgSalta('feliz'); pgDice(que === 'taller' ? 'pintada' : 'vestido');
+}
+var menuActPGB = menuAct;
+menuAct = function (a) {
+  if (PGB.vivo && a === 'tallerOut' && G.tallerVolver === 'pg') { pg4Cierra(); return true; }
+  return menuActPGB(a);
+};
+var tlnRestoPGB = tlnResto;
+tlnResto = function (L, dor, fl) {
+  var h = tlnRestoPGB(L, dor, fl);
+  if (G.tallerVolver === 'pg') h = h.replace(/(<button class="b1" data-act="tallerOut">)[\s\S]*?(<\/button>)/, '$1▶ ' + TT('¡A jugar!') + '$2');
+  return h;
+};
+
+/* ---------- cada fotograma: los aros del taller y la tienda, y lo que dice Pitik ---------- */
+var pgCadaPGB = pgCada;
+pgCada = function (dt) {
+  pgCadaPGB(dt);
+  if (!PGB.vivo || !pgOn() || G.state !== 'play' || G.card || P.state !== 'ride' || (PG3.plash)) return;
+  ['taller', 'tienda'].forEach(function (que) {
+    var Q = PGB[que], d = d2(P.x, P.y, Q.rx, Q.ry);
+    if (PGB.fuera === que) { if (d > 80) PGB.fuera = null; return; }
+    if (d < 24 && !PGB.abierto && (Math.sin(P.h) > 0.35 || P.speed < 30)) pg4Abre(que);   // (hay que entrar hacia la puerta, o despacio: pasando de largo por el aro no se abre)
+    else if (d < 220 && !PGB.dicho[que]) { PGB.dicho[que] = 1; pgDice(que + '_cerca'); }
+  });
+  if (!PGB.dicho.barrio && pg4EnBarrio(P.x)) { PGB.dicho.barrio = 1; pgDice('barrio'); }
+};
+var pgEmpiezaPGB = pgEmpieza;
+pgEmpieza = function () { pgEmpiezaPGB(); if (PGB.vivo) { PGB.dicho = {}; PGB.fuera = null; PGB.via = null; } };
+
+/* ================================================================
+   EL DIBUJO
+   ================================================================ */
+function pg4SueloBajo(g) {
+  var X = PGD.X, Y = PGD.Y, E = PGB.E;
+  if (fwd((X + E) / 2, 0) < -1200) return;
+  groundPoly(g, [[X - 8, -Y - 8], [E + 8, -Y - 8], [E + 8, Y + 8], [X - 8, Y + 8]], '#d6c8a4');   // el suelo del barrio
+  (PGB.casas || []).forEach(function (c) { var f = fwd((c[0] + c[1]) / 2, (c[2] + c[3]) / 2); if (f > -300 && f < CFAR + 300) groundPoly(g, [[c[0], c[2]], [c[1], c[2]], [c[1], c[3]], [c[0], c[3]]], '#9fc25e'); });   // los patios
+  groundPoly(g, [[1190, -880], [1372, -880], [1372, -250], [1190, -250]], '#c9b98f');                // el solar del bale banjar
+}
+var pgEstanqueSueloPGB = pgEstanqueSuelo;
+pgEstanqueSuelo = function (g) { if (PGB.vivo && MAPA === 'pg') pg4SueloBajo(g); pgEstanqueSueloPGB(g); };
+var ciuItemPGB = ciuItem;
+ciuItem = function (g, it, k, i) {
+  if (k === 'pg4' && MAPA === 'pg') { if (it.m === 'aro') pg4Aro(g, it); else if (it.m === 'percha') pg4Percha(g, it); return true; }
+  return ciuItemPGB(g, it, k, i);
+};
+function pg4Aro(g, it) {                                                      // el aro verde de la puerta, con su dibujo flotando encima
+  var d = plane(g, it.x, it.y, 0.5, 0, 1); if (d < PLN.min || d > 900) return;
+  var t = G.t + it.j, r = 22 + Math.sin(t * 4) * 1.5;
+  g.globalAlpha = 0.22; g.fillStyle = '#3ddc84'; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill();
+  g.globalAlpha = 0.95; g.strokeStyle = '#ffffff'; g.lineWidth = 6; g.setLineDash([12, 8]); g.lineDashOffset = -t * 26; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.stroke();
+  g.strokeStyle = '#2bb673'; g.lineWidth = 3.6; g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+  var dd = proj(it.x, it.y, 62 + Math.abs(Math.sin(t * 3)) * 8); if (dd < 10) return;
+  scr(g); var kk = clamp(PS * 1.25, 0.55, 1.35) * 44, c = pgIcoSpr(it.ico);
+  g.drawImage(c, PX - kk / 2, PY - kk * 0.92, kk, kk);
+}
+function pg4Percha(g, it) {                                                   // el burro de la ropa de la tienda: camisas de colores colgadas
+  var dd = proj(it.x, it.y, 0); if (dd < 16 || dd > 600) return;
+  shadow(g, it.x, it.y, 14, 5, 0); scr(g); K3.alfa = 1;
+  k3Abre(it.x, it.y, 0, 0, 0, 0, 1);
+  k3Tubo(k3(0, -12, 0), k3(0, -12, 22), 0.7, 0.7, '#8a8f96', { borde: 0.6 }); k3Tubo(k3(0, 12, 0), k3(0, 12, 22), 0.7, 0.7, '#8a8f96', { borde: 0.6 });
+  k3Tubo(k3(0, -13, 22), k3(0, 13, 22), 0.7, 0.7, '#8a8f96', { borde: 0.6 });
+  var C = ['#e2452f', '#2f86d6', '#f1c40f', '#27ae60', '#ff7eb3', '#9b59b6'];
+  for (var j = 0; j < 6; j++) { var v = -10 + j * 4; k3Bloque([-3.2, 3.2, v - 1.6, v + 1.6, 9], [-3.6, 3.6, v - 1.6, v + 1.6, 21], C[j], { top: shadeCol(C[j], 1.1) }); }
+  k3Pinta(g);
+}
+
+/* ---------- Pitik: lo nuevo ---------- */
+if (PGB.vivo) {
+  PG_DICE.lleva_nenek = [['🏡', 'Ahora, ¡a casa de Ni Luh! Está en las callejas']];
+  PG_DICE.barrio = [['🏘️', '¡El barrio! Por las callejas, despacito']];
+  PG_DICE.taller_cerca = [['🔧', '¡El taller de Wayan! Entra y pinta tu moto']];
+  PG_DICE.tienda_cerca = [['👕', '¡La tienda de ropa! Entra a cambiarte']];
+  PG_DICE.pintada = [['🎨', '¡Qué moto más chula!']];
+  PG_DICE.vestido = [['😎', '¡Qué guapo vas!']];
+  PG_DICE.bali.push(['🚪', 'En Bali cada casa tiene su tapia y su puerta: el angkul-angkul']);
+  PG_YA.pintada = 1; PG_YA.vestido = 1;
+  PG_EST.barrio = 'feliz'; PG_EST.taller_cerca = 'feliz'; PG_EST.tienda_cerca = 'feliz'; PG_EST.pintada = 'feliz'; PG_EST.vestido = 'feliz';
+}
+(function () {
+  var css = '.pg-taller .tln-tabs [data-act="tln:pes:piloto"],.pg-taller .tln-tabs [data-act="tln:pes:pitik"],.pg-taller .tln-tabs [data-act="tln:pes:mej"],' +
+    '.pg-tienda .tln-tabs [data-act="tln:pes:moto"],.pg-tienda .tln-tabs [data-act="tln:pes:mej"]{display:none}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  var N = {
+    'Ahora, ¡a casa de Ni Luh! Está en las callejas': ['Now, to Ni Luh\'s house! It\'s down the alleys', 'Sekarang, ke rumah Ni Luh! Ada di gang'],
+    '¡El barrio! Por las callejas, despacito': ['The neighbourhood! Slowly through the alleys', 'Kampung! Pelan-pelan lewat gang'],
+    '¡El taller de Wayan! Entra y pinta tu moto': ['Wayan\'s workshop! Go in and paint your bike', 'Bengkel Wayan! Masuk dan cat motormu'],
+    '¡La tienda de ropa! Entra a cambiarte': ['The clothes shop! Go in and change', 'Toko baju! Masuk dan ganti baju'],
+    '¡Qué moto más chula!': ['What a cool bike!', 'Motornya keren!'], '¡Qué guapo vas!': ['Looking good!', 'Kamu keren!'],
+    'En Bali cada casa tiene su tapia y su puerta: el angkul-angkul': ['In Bali every house has its wall and its gate: the angkul-angkul', 'Di Bali tiap rumah punya tembok dan gerbang: angkul-angkul'],
+    'La tienda de ropa': ['The clothes shop', 'Toko baju']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
