@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v22</title>
+<title>Bali Rush Poki v23</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v22 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v23 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -115768,9 +115768,14 @@ function pgGenteUpd(dt) {
       w.tg -= dt;
       if (bd > 18) { var vq = Math.min(w.v, bd * 1.6); w.x += bx / bd * vq * dt; w.y += by / bd * vq * dt; w.a = Math.atan2(bx, by); w.pose = vq > 20 ? 'corre' : 'pie'; }
       else if (w.tg <= 0 && B.z < 1) {                                        // le da una patada hacia otro sitio del campo
-        w.tg = 0.8 + Math.random(); var tx = -480 + Math.random() * 440 - B.x, ty = -380 + Math.random() * 360 - B.y, tl = Math.hypot(tx, ty) || 1;
+        var CA = PG.campo || { x0: -480, x1: -40, y0: -380, y1: -20 };          // (v23: el campo de fútbol)
+        w.tg = 0.8 + Math.random(); var tx = CA.x0 + Math.random() * (CA.x1 - CA.x0) - B.x, ty = CA.y0 + Math.random() * (CA.y1 - CA.y0) - B.y, tl = Math.hypot(tx, ty) || 1;
         B.vx = tx / tl * (110 + Math.random() * 60); B.vy = ty / tl * (110 + Math.random() * 60); B.vz = 30 + Math.random() * 40;
       } else w.pose = 'pie';
+    } else if (w.fijo) {                                                      // (v23) los del mercado: en su puesto, mirando a la calle (si se apartan, vuelven)
+      var hx = w.x0 - w.x, hy = w.y0 - w.y, hl = Math.hypot(hx, hy);
+      if (hl > 3) { w.x += hx / hl * 30 * dt; w.y += hy / hl * 30 * dt; w.a = Math.atan2(hx, hy); w.pose = 'anda'; }
+      else { w.pose = 'pie'; w.a += adiff(w.a0, w.a) * expo(3, dt); }
     } else {                                                                  // de un punto a otro de su ruta
       var q = w.ruta[w.i], qx = q[0] - w.x, qy = q[1] - w.y, ql = Math.hypot(qx, qy) || 1;
       if (ql < 8) w.i = (w.i + 1) % w.ruta.length;
@@ -115805,12 +115810,12 @@ function pgEmpuja(o, rM) {                                                    //
       var m = s.r + rM; if (dx > m || dx < -m || dy > m || dy < -m) continue;
       var d = Math.sqrt(dx * dx + dy * dy); if (d >= m) continue;
       if (d < 0.01) { dx = 1; d = 1; }
-      o.x = s.x + dx / d * m; o.y = s.y + dy / d * m; out = [dx / d, dy / d, m - d];
+      o.x = s.x + dx / d * m; o.y = s.y + dy / d * m; out = [dx / d, dy / d, m - d, s.b];
     } else if (s.c === 0) {
       var lu = dx * s.ux + dy * s.uy, lv = dx * -s.uy + dy * s.ux, pu = s.hl + rM - Math.abs(lu), pv = s.hw + rM - Math.abs(lv);
       if (pu <= 0 || pv <= 0) continue;
-      if (pu < pv) { var su = sgn(lu); o.x += s.ux * su * pu; o.y += s.uy * su * pu; out = [s.ux * su, s.uy * su, pu]; }
-      else { var sv = sgn(lv); o.x += -s.uy * sv * pv; o.y += s.ux * sv * pv; out = [-s.uy * sv, s.ux * sv, pv]; }
+      if (pu < pv) { var su = sgn(lu); o.x += s.ux * su * pu; o.y += s.uy * su * pu; out = [s.ux * su, s.uy * su, pu, s.b]; }
+      else { var sv = sgn(lv); o.x += -s.uy * sv * pv; o.y += s.ux * sv * pv; out = [-s.uy * sv, s.ux * sv, pv, s.b]; }
     } else {
       var ex = dx / (s.rx + rM), ey = dy / (s.ry + rM), e = ex * ex + ey * ey; if (e >= 1) continue;
       var k = 1 / Math.sqrt(Math.max(e, 1e-4)), nx = dx / ((s.rx + rM) * (s.rx + rM)), ny = dy / ((s.ry + rM) * (s.ry + rM)), nl = Math.hypot(nx, ny) || 1;
@@ -115852,7 +115857,7 @@ function pgRide(dt) {
   manInclina(P, w, dt, 0.42, sIn);
   var paso = P.speed * dt;
   P.x += Math.sin(P.h) * paso; P.y += Math.cos(P.h) * paso; P.odo += paso;
-  var o = pgEmpuja(P, 9); if (o) pgGolpe(-o[0], -o[1], dt); else P.pgPega = 0;
+  var o = pgEmpuja(P, 9); if (o) pgGolpe(-o[0], -o[1], dt, o[3]); else P.pgPega = 0;
   /* la carretera: ¿estás en ella? (y lo que el resto del juego necesita saber de tu calle) */
   var c = cnlCalle(P.x, P.y, P.h, P.si), n = c.n, a = c.a, sa = CITY.streets[a.si];
   var enC = n.d < n.w + 3;
@@ -115873,16 +115878,16 @@ function pgRide(dt) {
   P.intent = 0; P.tapGiro = 0;
   MIS.street = { ang: P.ht };
 }
-/* contra algo que no se pasa (nx, ny: hacia la pared, desde la moto): de refilón te pone a lo largo; de frente frena; muy fuerte, te caes */
-function pgGolpe(nx, ny, dt) {
+/* contra algo que no se pasa (nx, ny: hacia la pared, desde la moto): de refilón te pone a lo largo; de frente frena; muy fuerte, te caes (blando: los neumáticos, las banderolas… nunca te tiran) */
+function pgGolpe(nx, ny, dt, blando) {
   var fx = Math.sin(P.h), fy = Math.cos(P.h), vn = fx * nx + fy * ny;
   if (vn <= 0) return;
   var imp = vn * P.speed;
-  if (imp > PGD.pared * cargaK().vmax && P.inv <= 0 && P.state === 'ride') { P.pgPared = true; cityCrash('pared', pickM(['¡CATAPLÁN!', '¡PATAPAM!', '¡CRASH!'])); return; }
+  if (!blando && imp > PGD.pared * cargaK().vmax && P.inv <= 0 && P.state === 'ride') { P.pgPared = true; cityCrash('pared', pickM(['¡CATAPLÁN!', '¡PATAPAM!', '¡CRASH!'])); return; }
   var tx = fx - nx * vn, ty = fy - ny * vn, tl = Math.sqrt(tx * tx + ty * ty);
   if (tl > 0.06) P.h = adiff(P.h + adiff(Math.atan2(tx, ty), P.h) * expo(9, dt), 0);
   P.speed -= P.speed * vn * 1.6 * dt;
-  if (imp > PGD.roce && G.t - (P.pgGolT || 0) > 0.6) {
+  if (imp > PGD.roce * (blando ? 2 : 1) && G.t - (P.pgGolT || 0) > 0.6) {               // (lo blando —los puestos del mercado, los neumáticos…— solo da golpe si vas fuerte)
     P.pgGolT = G.t; P.speed *= clamp(1 - vn * 0.55, 0.35, 0.9); P.bounce = 0.24; shake(0.18 + vn * 0.2); SFX.thud();
     pop(pickM(['¡PUM!', '¡TOC!', '¡Uy!']), P.x + nx * 8, P.y + ny * 8 + 18, '#ffffff', 0.9);
   }
@@ -116241,10 +116246,10 @@ function pgSuelo(g) {
   for (i = 0; i < SG.length; i++) if (segVisible(SG[i].a, SG[i].b, 80)) vis.push(SG[i]);
   for (i = 0; i < vis.length; i++) segQuad(g, vis[i], vis[i].w + 9, '#c3ab78');
   CITY.streets.forEach(function (st) { for (var q = 1; q < st.pts.length - 1; q++) { var f2 = fwd(st.pts[q][0], st.pts[q][1]); if (f2 > NEAR && f2 < CFAR) discPoly(g, st.pts[q][0], st.pts[q][1], st.w + 9, '#c3ab78'); } });
-  CITY.nodes.forEach(function (n) { var f2 = fwd(n.x, n.y); if (f2 > NEAR && f2 < CFAR) discPoly(g, n.x, n.y, PGD.w + 9, '#c3ab78'); });
+  CITY.nodes.forEach(function (n) { var f2 = fwd(n.x, n.y); if (f2 > NEAR && f2 < CFAR) discPoly(g, n.x, n.y, (n.w || PGD.w) + 9, '#c3ab78'); });
   for (i = 0; i < vis.length; i++) segQuad(g, vis[i], vis[i].w, '#606369');
   CITY.streets.forEach(function (st) { for (var q = 1; q < st.pts.length - 1; q++) { var f2 = fwd(st.pts[q][0], st.pts[q][1]); if (f2 > NEAR && f2 < CFAR) discPoly(g, st.pts[q][0], st.pts[q][1], st.w, '#606369'); } });
-  CITY.nodes.forEach(function (n) { var f2 = fwd(n.x, n.y); if (f2 > NEAR && f2 < CFAR) discPoly(g, n.x, n.y, PGD.w, '#606369'); });
+  CITY.nodes.forEach(function (n) { var f2 = fwd(n.x, n.y); if (f2 > NEAR && f2 < CFAR) discPoly(g, n.x, n.y, n.w || PGD.w, '#606369'); });
   for (i = 0; i < vis.length; i++) {
     s2 = vis[i];
     var a = s2.a, b = s2.b, L = d2(a[0], a[1], b[0], b[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
@@ -116711,6 +116716,16 @@ if (PGD.vivo) {
   POK_ACT.playground = ['🐥', 'Playground', 'Para los peques: la explanada con Pitik'];
   POK.moto.unshift('playground');
 }
+/* (v23) startCity elige la calle de salida de una lista fija por ronda (la 3.ª ronda usaba la calle n.º 11, que aquí no hay: «Otra ronda» por segunda vez se
+   quedaba colgado). Aquí la salida la pone pgEmpieza: se le pide la ronda 1 o 2 y luego se pone la que es */
+var startCityPGD = startCity;
+startCity = function (round) {
+  if (!(PGD.vivo && G.sub === 'pg')) return startCityPGD.apply(this, arguments);
+  round = round || 1;
+  var r0 = 1 + (round - 1) % 2;
+  startCityPGD(r0);
+  if (r0 !== round) { MIS.round = round; MIS.rnd = mulberry(round * 7919); pgEmpieza(); spawnFlores(round); }
+};
 var menuActPGD = menuAct;
 menuAct = function (a) {
   if (PGD.vivo && a === 'modo:playground') {
@@ -116782,6 +116797,530 @@ act = function (a) {                                                       // «
     'La bandera de Indonesia es roja y blanca': ['Indonesia\'s flag is red and white', 'Bendera Indonesia merah putih'],
     'Vale, ya no hablo. ¡Pío!': ['OK, I\'ll be quiet. Cheep!', 'Oke, aku diam. Ciap!'], '¡Ya puedo hablar otra vez!': ['I can talk again!', 'Aku bisa bicara lagi!'],
     '¡Om swastiastu!': ['Om swastiastu!', 'Om swastiastu!']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza nucleo/680_poki_playground_circuito.js*/
+/* ================================================================
+   POKI V23 · PLAYGROUND: EL CIRCUITO DE DENTRO, EL MERCADO Y MÁS COLOR
+   Jose Javier (24-10-2026), tras la v22: «más o menos, pero más
+   divertido: otro circuito dentro, porque hay demasiado césped; que
+   haya motos aparcadas, el mercado, más colorido, que fue lo que creo
+   que le gustó».
+   - EL CIRCUITO DE DENTRO («Sirkuit»): una pista con curvas dentro del
+     lapangan (una horquilla arriba a la izquierda, una chicane a la
+     derecha), con bordillos rojos y blancos en las curvas, montones de
+     neumáticos pintados (blandos: con ellos no te caes), banderolas
+     balinesas (umbul-umbul) y el arco de salida con la línea de
+     cuadros. Se une al anillo por tres sitios. Por él solo van motos.
+     Al dar una vuelta entera (pasando por toda la pista y cruzando la
+     línea), confeti, «¡Vuelta!» y tres flores; las tiras de flores
+     van ahora por la pista. Se empieza en la línea de salida.
+   - EL MERCADO (pasar), a la derecha, en su calle: la nave del
+     mercado, puestos con toldos de colores y su fruta, vendedoras,
+     guirnaldas de banderines de lado a lado, el mercado de flores con
+     sombrillas y cestos, y gente comprando. Es un sitio más de los
+     encargos (las gallinas de la 1.ª ronda van al mercado…).
+   - MOTOS APARCADAS: en el aparcamiento del mercado, delante del
+     mercado, del warung y del templo.
+   - MÁS COLOR Y MENOS CÉSPED: el suelo del mercado, el aparcamiento con
+     sus rayas, un campo de fútbol de tierra con porterías para los
+     niños del balón, flores (tagetes) alrededor del baniano y los
+     bordillos de colores también en las curvas del anillo.
+   PG2.vivo = false (o ?nopg2): el Playground como la v22.
+   ================================================================ */
+var PG2 = {
+  vivo: PGD.vivo && !/[?&#]nopg2/.test(location.search + location.hash),
+  w: 28,                            // medio ancho del circuito y de la calle del mercado (menos de 30: solo motos)
+  ctl: [[-520, -410], [-300, -425], [-80, -425], [120, -415], [230, -360], [255, -270], [205, -185], [265, -90], [268, 40], [260, 180], [230, 320], [130, 410], [-40, 420],
+    [-170, 370], [-220, 270], [-300, 190], [-410, 210], [-480, 300], [-580, 330], [-650, 230], [-660, 0], [-650, -220], [-620, -340]],
+  paso: 34,                         // cada cuánto un punto de la pista
+  salida: [-160, -425],             // la línea de salida (en la recta de abajo)
+  vuelta: 3,                        // flores por vuelta al circuito
+  campo: { x0: -430, x1: -90, y0: -280, y1: -60 },
+  loop: null, acc: null, L: 0, ini: 0, kerb: [], si: [], sAnt: null, cuartos: {}, vueltas: 0, dichoC: 0, dichoM: 0
+};
+/* la pista: una curva suave por los puntos de control (Catmull-Rom), cerrada */
+function pg2Catmull(P, step) {
+  var n = P.length, out = [], i, k;
+  for (i = 0; i < n; i++) {
+    var p0 = P[(i - 1 + n) % n], p1 = P[i], p2 = P[(i + 1) % n], p3 = P[(i + 2) % n], m = Math.max(2, Math.round(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (k = 0; k < m; k++) {
+      var t = k / m, t2 = t * t, t3 = t2 * t;
+      out.push([0, 1].map(function (c) { return Math.round(0.5 * (2 * p1[c] + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3)); }));
+    }
+  }
+  return out;
+}
+function pg2Prepara() {
+  if (PG2.loop) return;
+  var L = PG2.loop = pg2Catmull(PG2.ctl, PG2.paso), A = PG2.acc = [0], i, bd = 1e9;
+  for (i = 0; i < L.length; i++) { var q = L[(i + 1) % L.length]; A.push(A[i] + Math.hypot(q[0] - L[i][0], q[1] - L[i][1])); }
+  PG2.L = A[L.length];
+  for (i = 0; i < L.length; i++) { var d = Math.hypot(L[i][0] - PG2.salida[0], L[i][1] - PG2.salida[1]); if (d < bd) { bd = d; PG2.ini = i; } }
+  PG2.sIni = A[PG2.ini];
+}
+function pg2Punto(s) {                                                       // el punto de la pista a s del principio, y hacia dónde va
+  var L = PG2.loop, A = PG2.acc, n = L.length, i = 0; s = ((s % PG2.L) + PG2.L) % PG2.L;
+  while (i < n - 1 && A[i + 1] < s) i++;
+  var a = L[i], b = L[(i + 1) % n], t = (s - A[i]) / ((A[i + 1] - A[i]) || 1);
+  return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, h: Math.atan2(b[0] - a[0], b[1] - a[1]) };
+}
+function pg2XEn(y, lado) {                                                  // la x de la pista a esa altura (por la derecha o por la izquierda)
+  var L = PG2.loop, best = null;
+  for (var i = 0; i < L.length; i++) { var a = L[i], b = L[(i + 1) % L.length]; if ((a[1] - y) * (b[1] - y) > 0 || a[1] === b[1]) continue; var x = a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]); if (best === null || (lado > 0 ? x > best : x < best)) best = x; }
+  return best;
+}
+
+/* ---------- el mapa: el anillo de siempre, la pista (en dos mitades) y las calles que la unen ---------- */
+var pgMapDefPG2 = pgMapDef;
+pgMapDef = function () {
+  var S = pgMapDefPG2(); if (!PG2.vivo) return S;
+  pg2Prepara();
+  var L = PG2.loop, h = Math.floor(L.length / 2), w = PG2.w, xr = Math.round(pg2XEn(0, 1)), xl = Math.round(pg2XEn(-60, -1));
+  S.push({ n: 'Sirkuit', w: w, pts: L.slice(0, h + 1).map(function (p) { return [p[0], p[1]]; }) });
+  S.push({ n: 'Sirkuit', w: w, pts: L.slice(h).concat([L[0]]).map(function (p) { return [p[0], p[1]]; }) });
+  S.push({ n: 'Gang Pasar', w: w, pts: [[xr, 0], [PGD.rx, 0]] });                          // la calle del mercado, de la pista a la carretera de la derecha
+  S.push({ n: 'Gang Pura', w: w, pts: [[-PGD.rx, -60], [xl, -60]] });                       // a la izquierda, a la carretera del templo
+  S.push({ n: 'Gang Sekolah', w: w, pts: [[-420, -PGD.ry], [-420, -412]] });                // abajo, a la de la escuela
+  return S;
+};
+
+/* ---------- los sitios: el mercado es uno más ---------- */
+if (PG2.vivo) {
+  PG_SITIOS.pasar = { ico: '🧺', n: 'el mercado', sign: 'PASAR', x: 720, y: 60, a: 0, rx: 720, ry: 0 };   // (el aro, en la calle del mercado, cerca de la carretera)
+  PG_TAREAS = [
+    { id: 'pollos', de: 'kandang', a: ['pasar', 'warung', 'pura'] },
+    { id: 'pax', de: ['sekolah', 'pasar', 'warung'], a: ['pura', 'warung', 'pasar'], q: ['nina', 'abuela', 'turista'] },
+    { id: 'muebles', de: 'kayu', a: ['rumah', 'pasar', 'sekolah'] },
+    { id: 'cerdo', de: 'babi', a: ['pura', 'rumah', 'warung'] }
+  ];
+  PG.campo = PG2.campo;
+}
+
+/* ---------- el decorado nuevo ---------- */
+function pg2Arco() {                                                          // el arco de salida: dos postes y el cartel
+  return blPlan('pg2arco', function () {
+    var P = [];
+    [-1, 1].forEach(function (s) { P.push(blC(1.8, 1.8, 0, 52, '#e74c3c', '#ffffff', s * 37, 0, { m: 1 })); P.push(blC(2.4, 2.4, 0, 3, '#ffffff', '#ffffff', s * 37, 0, { m: 1 })); });
+    P.push(blC(39.5, 1.1, 41, 53, '#1f6fd0', '#f1c40f', 0, 0, { m: 1, fx: blRotuloFx('SIRKUIT', '#1f6fd0', '#ffffff', 0.14, 0.86) }));
+    return { p: P };
+  });
+}
+function pg2Genera() {
+  var items = CITY.items, obs = CITY.obs, O = ESN.s.obra, r = mulberry(2323), i, k, w = PG2.w;
+  var COL = ['#f1c40f', '#e74c3c', '#ffffff', '#2f7fd8', '#27ae60', '#ff7a45', '#9b59b6'];
+  function deco(s, x, y, a, sc, o) { var d = { k: 'deco', s: s, x: x, y: y, a: a || 0, sc: sc || 1 }, q; if (o) for (q in o) d[q] = o[q]; items.push(d); return d; }
+  function obra(ob, x, y, a, sc) { return deco(O, x, y, a, sc, { ob: ob }); }
+  function cosa(m, x, y, a, o) { var d = { k: 'pg2', m: m, x: x, y: y, a: a || 0 }, q; if (o) for (q in o) d[q] = o[q]; items.push(d); return d; }
+  function blando(x, y, rr) { PG.sol.push({ c: 1, x: x, y: y, r: rr, b: 1 }); }
+  function caja(x, y, a, hu, hv) { pgCaja(x, y, a, hu, hv); PG.sol[PG.sol.length - 1].b = 1; }   // (lo del mercado: blando, para que perseguir gallinas entre los puestos no sea un pinball)
+  function moto(x, y, h, v) { deco(SP.parked[v % SP.parked.length], x, y, 0, 0.9, { ap: v % 4, h: h }); }
+  /* lo de la v22 que ahora se pisaba con la pista o el mercado: fuera (y los perros, a otro sitio) */
+  var quita = [[-470, 290], [-640, -300], [320, -180], [430, 300]];
+  function cerca(x, y) { return quita.some(function (q) { return Math.abs(q[0] - x) < 2 && Math.abs(q[1] - y) < 2; }); }
+  CITY.items = items = items.filter(function (it) { return !(it.k === 'deco' && cerca(it.x, it.y)); });
+  PG.sol = PG.sol.filter(function (s) { return !(s.c === 1 && cerca(s.x, s.y)); });
+  obs.forEach(function (o) {
+    if (o.t !== 'perro') return;
+    if (cerca(o.x, o.y) && o.x > 0) { o.x = 455; o.y = -282; }                         // a dormir al mercado de las flores
+    else if (cerca(o.x, o.y)) { o.x = 150; o.y = -250; }
+  });
+  /* EL MERCADO: la nave, los puestos con su fruta, las vendedoras y las guirnaldas */
+  /* (por el norte, del gallinero y del warung, se llega en línea recta hasta el aro: la nave y el aparcamiento quedan a la izquierda, y a la derecha no hay nada) */
+  obra(blPasar(), 470, 170, 0, 1.15); caja(470, 170, 0, 68.5, 47.8);
+  var NOR = [330, 420, 520], SUR = [330, 400, 470, 540, 610, 680];
+  /* (el puesto y su fruta, una sola caja: entre los dos no cabe la moto, y una rendija así era una trampa) */
+  NOR.forEach(function (x, j) { obra(blLapak(j), x, 70, 0, 1.25); if (j % 2 === 0) { obra(blFruta(j), x, 47, 0, 1.2); caja(x, 61, 0, 16, 18.5); } else caja(x, 70, 0, 14, 9.5); });
+  SUR.forEach(function (x, j) { obra(blLapak(j + 1), x, -70, Math.PI, 1.25); if (j % 2 === 1) { obra(blFruta(j + 1), x, -47, 0, 1.2); caja(x, -61, 0, 16, 18.5); } else caja(x, -70, 0, 14, 9.5); });
+  [[610, 46], [680, 46]].forEach(function (p, j) { cosa('umbul', p[0], p[1], 0, { nx: 0, ny: 1, col: COL[(j + 2) % COL.length], col2: COL[(j + 5) % COL.length], ph: j * 2 }); blando(p[0], p[1], 3); });
+  [[330, 60, 330], [420, 60, 400], [520, 60, 540], [610, 46, 610], [680, 46, 680]].forEach(function (q3, j) { cosa('cuerda', (q3[0] + q3[2]) / 2, 0, 0, { x0: q3[0], y0: q3[1], x1: q3[2], y1: -60, z: 30, v: j }); });
+  /* el mercado de las flores: sombrillas de colores con sus cestos */
+  [[360, -215], [480, -235], [600, -215], [720, -235], [420, -345], [560, -355], [700, -345]].forEach(function (p, j) { cosa('payung', p[0], p[1], r() * TAU, { v: j }); PG.sol.push({ c: 1, x: p[0], y: p[1], r: 12, b: 1 }); });
+  /* las motos aparcadas: el aparcamiento del mercado, delante de los puestos, en el warung y en el templo */
+  for (k = 0; k < 6; k++) { moto(310 + k * 30, 320, 0.08 * (k % 3 - 1), k); moto(310 + k * 30, 392, Math.PI + 0.08 * (k % 3 - 1), k + 2); }
+  caja(385, 320, 0, 80, 10); caja(385, 392, 0, 80, 10);
+  for (k = 0; k < 3; k++) { moto(330 + k * 24, -122, 0.1 * (k - 1), k + 1); moto(560 + k * 24, -122, 0.1 * (1 - k), k + 5); }   // (en dos grupos, con sitio para pasar entre ellos)
+  caja(354, -122, 0, 30, 10); caja(584, -122, 0, 30, 10);
+  for (k = 0; k < 3; k++) { moto(392 + k * 22, 728, 0.12 * (k - 1), k + 3); moto(-745 + k * 23, 728, 0.12 * (1 - k), k); }
+  caja(414, 728, 0, 32, 10); caja(-722, 728, 0, 33, 10);
+  /* el campo de fútbol (las porterías, blandas) */
+  var CA = PG2.campo, cy = (CA.y0 + CA.y1) / 2;
+  cosa('porteria', CA.x0 + 6, cy, Math.PI / 2); cosa('porteria', CA.x1 - 6, cy, -Math.PI / 2);
+  PG.sol.push({ c: 0, x: CA.x0 + 2, y: cy, ux: 0, uy: 1, hl: 15, hw: 6, b: 1 }); PG.sol.push({ c: 0, x: CA.x1 - 2, y: cy, ux: 0, uy: 1, hl: 15, hw: 6, b: 1 });
+  /* el arco y la línea de salida */
+  var S0 = pg2Punto(PG2.sIni);
+  obra(pg2Arco(), S0.x, S0.y, S0.h, 1);
+  [-1, 1].forEach(function (s) { blando(S0.x + Math.cos(S0.h) * s * 37, S0.y - Math.sin(S0.h) * s * 37, 3); });
+  /* las banderolas, por fuera de la pista (la pista va al revés de las agujas: lo de fuera, a la derecha) */
+  var nB = 0;
+  for (var sB = 60; sB < PG2.L; sB += 230) {
+    var q = pg2Punto(sB), ox = Math.cos(q.h), oy = -Math.sin(q.h), fx = q.x + ox * (w + 20), fy = q.y + oy * (w + 20);
+    if (Math.abs(sB - PG2.sIni) < 60 || !pg2Libre(fx, fy, 6)) continue;
+    cosa('umbul', fx, fy, 0, { nx: ox, ny: oy, col: COL[nB % COL.length], col2: COL[(nB + 3) % COL.length], ph: r() * 6 }); blando(fx, fy, 3); nB++;
+  }
+  [[PGD.rx - 50, 46], [PGD.rx - 50, -46]].forEach(function (p, j) { cosa('umbul', p[0], p[1], 0, { nx: 0, ny: j ? -1 : 1, col: COL[j + 1], col2: COL[j + 4], ph: j }); blando(p[0], p[1], 3); });
+  /* los neumáticos pintados, por fuera de las curvas más cerradas */
+  var L = PG2.loop, n = L.length, giro = [], cur = [];
+  for (i = 0; i < n; i++) { var a = L[(i - 1 + n) % n], b = L[i], c = L[(i + 1) % n]; giro.push(adiff(Math.atan2(c[0] - b[0], c[1] - b[1]), Math.atan2(b[0] - a[0], b[1] - a[1]))); }
+  for (i = 0; i < n; i++) { var sum = 0; for (k = -2; k <= 2; k++) sum += giro[(i + k + n) % n]; cur.push({ i: i, g: sum }); }
+  cur.sort(function (m, q2) { return Math.abs(q2.g) - Math.abs(m.g); });
+  var puestos = [];
+  cur.forEach(function (c2) {
+    if (puestos.length >= 6 || Math.abs(c2.g) < 0.5 || puestos.some(function (j) { return Math.min(Math.abs(j - c2.i), n - Math.abs(j - c2.i)) < 8; })) return;
+    var p = L[c2.i], q2 = L[(c2.i + 1) % n], h = Math.atan2(q2[0] - p[0], q2[1] - p[1]), sd = c2.g > 0 ? -1 : 1, nx = Math.cos(h) * sd, ny = -Math.sin(h) * sd;   // (por fuera: al lado contrario de hacia donde gira)
+    var x = p[0] + nx * (w + 22), y = p[1] + ny * (w + 22);
+    if (!pg2Libre(x, y, 14)) return;
+    puestos.push(c2.i); cosa('neum', x, y, h, { v: puestos.length }); blando(x, y, 15);
+  });
+  /* los cruces: el redondel del asfalto, del ancho de sus calles */
+  CITY.streets.forEach(function (st) { st.sp.forEach(function (e) { var nd = CITY.nodes[e.n]; nd.w = Math.max(nd.w || 0, st.w); }); });
+  PG2.si = []; CITY.streets.forEach(function (st, j) { if (st.n === 'Sirkuit') PG2.si.push(j); });
+  pg2Bordillos();
+  pg2Gente();
+}
+function pg2Libre(x, y, rM) {                                                 // ¿cabe algo aquí? (ni en una calle, ni en algo que no se pasa, ni fuera de la tapia)
+  if (Math.abs(x) > PGD.X - rM || Math.abs(y) > PGD.Y - rM) return false;
+  var c = cnlCalle(x, y, 0), o = { x: x, y: y };
+  if (c.n.d < c.n.w + 9 + rM) return false;
+  return !pgEmpuja(o, rM);
+}
+var pgGeneraPG2 = pgGenera;
+pgGenera = function () { pgGeneraPG2(); if (PG2.vivo) pg2Genera(); };
+
+/* los bordillos rojos y blancos: en cada curva de cualquier calle, a los dos lados */
+function pg2Bordillos() {
+  var K = PG2.kerb = [];
+  CITY.streets.forEach(function (st) {
+    var P0 = st.pts, n = P0.length, w = st.w, cnt = 0, i, j;
+    if (n < 3) return;
+    var gi = [0];
+    for (i = 1; i < n - 1; i++) gi.push(Math.abs(adiff(Math.atan2(P0[i + 1][0] - P0[i][0], P0[i + 1][1] - P0[i][1]), Math.atan2(P0[i][0] - P0[i - 1][0], P0[i][1] - P0[i - 1][1]))));
+    gi.push(0);
+    for (i = 0; i < n - 1; i++) {
+      if (Math.max(gi[i], gi[i + 1]) < 0.085) { cnt = 0; continue; }
+      var a = P0[i], b = P0[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy, ny = -ux, m = Math.max(1, Math.round(L / 11));
+      for (j = 0; j < m; j++) {
+        var x0 = a[0] + ux * L * j / m, y0 = a[1] + uy * L * j / m, x1 = a[0] + ux * L * (j + 1) / m, y1 = a[1] + uy * L * (j + 1) / m;
+        [-1, 1].forEach(function (s) {
+          var e0 = w * s, e1 = (w + 6) * s;
+          K.push({ c: cnt % 2, x: (x0 + x1) / 2 + nx * (e0 + e1) / 2, y: (y0 + y1) / 2 + ny * (e0 + e1) / 2,
+            p: [x0 + nx * e0, y0 + ny * e0, x1 + nx * e0, y1 + ny * e0, x1 + nx * e1, y1 + ny * e1, x0 + nx * e1, y0 + ny * e1] });
+        });
+        cnt++;
+      }
+    }
+  });
+}
+
+/* la gente nueva: las vendedoras (quietas en su puesto) y los que van a comprar; y otros caminos para los de antes */
+function pg2Gente() {
+  var G2 = PG.gente, S = PG_SITIOS;
+  function fija(Q, x, y, a) { G2.push({ t: 'pgw', k: 'pgw', Q: Q, fijo: true, x: x, y: y, x0: x, y0: y, a: a, a0: a, v: 0, paso: Math.random() * 3, pose: 'pie', huye: 0, saluda: 0 }); }
+  function camina(Q, ruta, v) { G2.push({ t: 'pgw', k: 'pgw', Q: Q, ruta: ruta, i: 1, x: ruta[0][0], y: ruta[0][1], v: v, a: 0, paso: Math.random() * 3, extra: null, pose: 'anda', huye: 0, saluda: 0 }); }
+  fija(GE3_Q.lib_mensari, 420, 90, Math.PI); fija(GE3_Q.trv_ibu, 520, 90, Math.PI); fija(GE3_Q.lib_ketut, 540, -90, 0);   // (tres: cada muñeco de cerca cuesta lo suyo)
+  fija(GE3_Q.lib_panadera, 480, -262, 0.3); fija(GE3_Q.trv_sate, 700, -372, -0.4);
+  camina(GE3_Q.pax_turista, [[300, -33], [780, -33], [780, 33], [300, 33]], 24);
+  G2.forEach(function (w) {                                                    // los de la v22 que cruzaban por donde ahora hay pista o mercado
+    if (!w.ruta) return;
+    if (w.Q === GE3_Q.duena) w.ruta = [[S.sekolah.rx, S.sekolah.ry - 40], [-720, -110], [-540, -20], [-150, 20], [180, -30], [330, 33], [780, 33], [780, -33], [330, -33], [180, -30], [-150, 20], [-540, -20], [-720, -110]];
+    else if (w.Q === GE3_Q.proc_h) w.ruta = [[S.babi.rx - 60, S.babi.ry], [772, -420], [772, 380], [S.kandang.rx - 40, S.kandang.ry - 10], [772, 380], [772, -420]];
+    else if (w.extra === 'bakso') w.ruta = [[-520, -60], [-470, -330], [120, -340], [175, -60], [150, 200], [-60, 250], [-430, 40]];
+    w.x = w.ruta[0][0]; w.y = w.ruta[0][1]; w.i = 1;
+  });
+}
+
+/* ---------- si la moto se queda atascada (dando gas contra algo, en un rincón): se gira sola hacia donde hay sitio ---------- */
+var pgRidePG2 = pgRide;
+pgRide = function (dt) {
+  var x0 = P.x, y0 = P.y; pgRidePG2(dt);
+  if (!PG2.vivo || P.state !== 'ride') return;
+  var mv = Math.hypot(P.x - x0, P.y - y0);
+  if (IN.gas && P.speed > 12 && mv < P.speed * dt * 0.3) PG2.atasco = (PG2.atasco || 0) + dt; else PG2.atasco = Math.max(0, (PG2.atasco || 0) - dt * 2);
+  if (PG2.atasco < 0.9) return;
+  PG2.atasco = 0;
+  var O = pgObjetivo(), haciaO = O ? Math.atan2(O.x - P.x, O.y - P.y) : P.h, best = null, bd = 1e9, k;
+  for (k = 2; k <= 6; k++) [-1, 1].forEach(function (sd) {                   // de 60° a 180°, a cada lado: la primera que tenga sitio, la que más mire adonde vas
+    var h = adiff(P.h + sd * k * Math.PI / 6, 0), o = { x: P.x + Math.sin(h) * 24, y: P.y + Math.cos(h) * 24 };
+    if (pgEmpuja(o, 9)) return;
+    var d = Math.abs(adiff(h, haciaO)) + k * 0.15; if (d < bd) { bd = d; best = h; }
+  });
+  P.h = best != null ? best : adiff(P.h + Math.PI, 0); P.speed = Math.min(P.speed, 30); P.steer = 0;
+};
+/* ---------- empezar: en la línea de salida, mirando la pista ---------- */
+var pgEmpiezaPG2 = pgEmpieza;
+pgEmpieza = function () {
+  pgEmpiezaPG2();
+  if (!PG2.vivo) return;
+  pg2Prepara();
+  var q = pg2Punto(PG2.sIni - 34);
+  P.x = q.x; P.y = q.y; P.h = P.ht = q.h; P.si = null;
+  PG2.sAnt = null; PG2.cuartos = {}; PG2.vueltas = 0; PG2.dichoC = 'ini'; PG2.dichoM = 0;   // (en la pista ya se empieza: lo del circuito, la próxima vez que se entre)
+  PG.gente.forEach(function (w) { if (w.fijo) { w.x = w.x0; w.y = w.y0; w.a = w.a0; } });
+};
+/* el tráfico: por el circuito, solo motos, una por cada mitad y todas en el mismo sentido (el de la salida); las de fuera no se meten en él */
+function pg2EsCir(si) { return PG2.si.indexOf(si) >= 0; }
+function pg2Sentido(e) {                                                     // (en el circuito) que vaya hacia delante
+  if (!pg2EsCir(e.si) || e.dir === 1) return;
+  e.dir = 1; var q = trPose(e, CITY.streets[e.si]); e.x = q.x; e.y = q.y; e.ang = q.ang; e.bl = null; e.planN = null; e.plan = null;
+}
+var spawnTrafficPG2 = spawnTraffic;
+spawnTraffic = function () {
+  spawnTrafficPG2.apply(this, arguments);
+  if (!PG2.vivo || MAPA !== 'pg' || !PG2.si.length) return;
+  var visto = {};
+  for (var i = TRAF.length - 1; i >= 0; i--) {
+    var e = TRAF[i];
+    if (pg2EsCir(e.si)) { if (visto[e.si]) { TRAF.splice(i, 1); continue; } visto[e.si] = 1; pg2Sentido(e); }
+    if (P && d2(e.x, e.y, P.x, P.y) < 220) { trRecolocar(e); pg2Sentido(e); }       // nada encima de la salida
+  }
+};
+var trRecolocarPG2 = trRecolocar;
+trRecolocar = function (e) {
+  var r = trRecolocarPG2(e);
+  if (PG2.vivo && MAPA === 'pg') {
+    for (var k = 0; k < 6 && esGrande(e.kind) && CITY.streets[e.si].w < PGD.w; k++) r = trRecolocarPG2(e);   // coches y camiones, a la carretera (por dentro, solo motos)
+    pg2Sentido(e);
+  }
+  return r;
+};
+var trPlanPG2 = trPlan;
+trPlan = function (e, st) {
+  var r = trPlanPG2(e, st);
+  if (!PG2.vivo || MAPA !== 'pg' || !PG2.si.length || e.planN == null) return r;
+  var en = pg2EsCir(e.si), pl = e.plan, fin = e.planS < 6 || e.planS > st.len - 6;
+  if (en) {
+    if (fin) { var otra = PG2.si[1 - PG2.si.indexOf(e.si)]; e.plan = { si: otra, dir: 1, s: 0 }; }   // al final de una mitad, a la otra (hacia delante)
+    else if (pl) e.plan = null;                                                                       // por el circuito no se tuerce
+  } else if (pl && pl !== 'vuelta' && CITY.streets[pl.si].w < PGD.w && !fin) e.plan = null;           // los de la carretera no se meten por las calles de dentro
+  else if (pl && pl !== 'vuelta' && pg2EsCir(pl.si)) pl.dir = 1;                                          // (y si llega al circuito por una de ellas, entra hacia delante)
+  return r;
+};
+
+/* ---------- cada fotograma: las vueltas al circuito y lo que dice Pitik al llegar ---------- */
+var pgCadaPG2 = pgCada;
+pgCada = function (dt) {
+  pgCadaPG2(dt);
+  if (!PG2.vivo || !pgOn() || G.state !== 'play' || G.card || P.state !== 'ride') return;
+  var enPista = PG2.si.indexOf(P.si) >= 0 && !PG.fuera;
+  if (enPista) {
+    var sA = CITY.streets[PG2.si[0]].len, s = P.si === PG2.si[0] ? P.s : sA + P.s, Lt = sA + CITY.streets[PG2.si[1]].len;
+    PG2.cuartos[Math.min(3, Math.floor(4 * s / Lt))] = 1;
+    if (!PG2.dichoC && PG.n > 0) { PG2.dichoC = 1; pgDice('circuito'); }
+    if (PG2.sAnt != null) {
+      var d = s - PG2.sAnt; if (d > Lt / 2) d -= Lt; else if (d < -Lt / 2) d += Lt;
+      var ini = PG2.sIni * Lt / PG2.L, r0 = ((PG2.sAnt - ini) % Lt + Lt * 1.5) % Lt - Lt / 2, r1 = r0 + d;
+      if (Math.abs(r0) < 150 && r0 * r1 < 0 && Math.abs(d) < 60) {                // cruzas la línea de salida
+        var n = 0; for (var q in PG2.cuartos) n++;
+        if (n >= 4) { pg2Vuelta(); PG2.cuartos = {}; }
+        PG2.cuartos[Math.min(3, Math.floor(4 * s / Lt))] = 1;
+      }
+    }
+    PG2.sAnt = s;
+  } else { PG2.sAnt = null; if (PG2.dichoC === 'ini') PG2.dichoC = 0; }
+  if (!PG2.dichoM && P.x > 290 && P.x < 790 && P.y > -260 && P.y < 240) { PG2.dichoM = 1; pgDice('mercado'); }
+};
+function pg2Vuelta() {
+  PG2.vueltas++; G.fl += PG2.vuelta;
+  SFX.tlin(); petals(P.x, P.y + 30, 26); sparkle(P.x, P.y + 20, 14, '#ffe27a');
+  pop('🏁 ¡Vuelta! +' + PG2.vuelta, P.x, P.y + 48, '#ffe27a', 1.2);
+  pgSalta('feliz'); pgDice('vuelta');
+}
+
+/* ================================================================
+   EL DIBUJO
+   ================================================================ */
+/* el suelo de debajo (antes que la carretera): el mercado, el aparcamiento, el campo de fútbol y las flores del baniano */
+function pg2Rect(g, x0, y0, x1, y1, col) { groundPoly(g, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], col); }
+function pg2Linea(g, pts, col, lw) {                                           // una raya pintada en el suelo (puntos del mundo)
+  var f0 = fwd(pts[0][0], pts[0][1]), f1 = fwd(pts[pts.length - 1][0], pts[pts.length - 1][1]); if (Math.max(f0, f1) < NEAR + 4 || Math.min(f0, f1) > CFAR) return;
+  g.beginPath(); var ok = false;
+  for (var i = 0; i < pts.length; i++) { if (fwd(pts[i][0], pts[i][1]) < NEAR + 4) { ok = false; continue; } proj(pts[i][0], pts[i][1], 0.2); if (ok) g.lineTo(PX, PY); else g.moveTo(PX, PY); ok = true; }
+  g.strokeStyle = col; g.lineWidth = Math.max(1, lw * PS); g.stroke();
+}
+function pg2SueloBajo(g) {
+  var X = PGD.rx - PGD.w - 9, CA = PG2.campo, i;
+  pg2Rect(g, 291, 37, X, 250, '#dcc79c');                                      // el mercado: tierra apisonada clara
+  pg2Rect(g, 291, -37, X, -168, '#dcc79c');
+  pg2Rect(g, 291, -168, X, -425, '#e3c98e');                                    // el de las flores
+  pg2Rect(g, 292, 292, 478, 420, '#b9b3a6');                                     // el aparcamiento, con sus rayas
+  if (fwd(385, 356) > -200 && fwd(385, 356) < CFAR + 200) for (i = 0; i < 7; i++) { pg2Linea(g, [[295 + i * 30, 306], [295 + i * 30, 334]], 'rgba(255,255,255,.75)', 0.7); pg2Linea(g, [[295 + i * 30, 378], [295 + i * 30, 406]], 'rgba(255,255,255,.75)', 0.7); }
+  pg2Rect(g, CA.x0, CA.y0, CA.x1, CA.y1, '#d8b878');                            // el campo de fútbol, de tierra, con sus rayas
+  var cx = (CA.x0 + CA.x1) / 2, cy = (CA.y0 + CA.y1) / 2, m = 8;
+  if (fwd(cx, cy) > -260 && fwd(cx, cy) < CFAR + 260) {
+    pg2Linea(g, [[CA.x0 + m, CA.y0 + m], [CA.x1 - m, CA.y0 + m], [CA.x1 - m, CA.y1 - m], [CA.x0 + m, CA.y1 - m], [CA.x0 + m, CA.y0 + m]], 'rgba(255,255,255,.85)', 1);
+    pg2Linea(g, [[cx, CA.y0 + m], [cx, CA.y1 - m]], 'rgba(255,255,255,.85)', 1);
+    var cc = []; for (i = 0; i <= 16; i++) cc.push([cx + Math.cos(i / 16 * TAU) * 30, cy + Math.sin(i / 16 * TAU) * 30]); pg2Linea(g, cc, 'rgba(255,255,255,.85)', 1);
+  }
+  if (fwd(0, 130) > -80 && fwd(0, 130) < CFAR + 80) {                           // las tagetes alrededor del baniano
+    discPoly(g, 0, 130, 56, '#e8891c'); discPoly(g, 0, 130, 46, '#f6c02a'); discPoly(g, 0, 130, 36, '#7a9a3e');
+  }
+}
+var pgEstanqueSueloPG2 = pgEstanqueSuelo;
+pgEstanqueSuelo = function (g) { if (PG2.vivo && MAPA === 'pg') pg2SueloBajo(g); pgEstanqueSueloPG2(g); };
+/* lo de encima de la carretera: los bordillos (todos los rojos de una vez, todos los blancos de otra) y la línea de cuadros */
+function pg2SueloAlto(g) {
+  var K = PG2.kerb, i, j, cols = ['#e2382b', '#fbfbf7'];
+  for (var c = 0; c < 2; c++) {
+    g.beginPath();
+    for (i = 0; i < K.length; i++) {
+      var b = K[i]; if (b.c !== c) continue;
+      var f = fwd(b.x, b.y); if (f < NEAR + 14 || f > CFAR * 0.8) continue;
+      for (j = 0; j < 8; j += 2) { proj(b.p[j], b.p[j + 1], 0.1); if (j) g.lineTo(PX, PY); else g.moveTo(PX, PY); }
+      g.closePath();
+    }
+    g.fillStyle = cols[c]; g.fill();
+  }
+  var S0 = pg2Punto(PG2.sIni), ux = Math.sin(S0.h), uy = Math.cos(S0.h), nx = uy, ny = -ux, w = PG2.w, f0 = fwd(S0.x, S0.y);
+  if (f0 > NEAR + 16 && f0 < CFAR * 0.8) {
+    var q = function (a0, a1, b0, b1) { return [[S0.x + nx * a0 + ux * b0, S0.y + ny * a0 + uy * b0], [S0.x + nx * a1 + ux * b0, S0.y + ny * a1 + uy * b0], [S0.x + nx * a1 + ux * b1, S0.y + ny * a1 + uy * b1], [S0.x + nx * a0 + ux * b1, S0.y + ny * a0 + uy * b1]]; };
+    groundPoly(g, q(-w, w, -7, 7), '#fbfbf7');
+    g.beginPath();
+    for (i = 0; i < 8; i++) for (j = 0; j < 2; j++) {
+      if ((i + j) % 2) continue;
+      var Qd = q(-w + i * w / 4, -w + (i + 1) * w / 4, -7 + j * 7, j * 7);
+      for (var k = 0; k < 4; k++) { proj(Qd[k][0], Qd[k][1], 0.15); if (k) g.lineTo(PX, PY); else g.moveTo(PX, PY); } g.closePath();
+    }
+    g.fillStyle = '#1d1d22'; g.fill();
+  }
+}
+var pgSueloPG2 = pgSuelo;
+pgSuelo = function (g) { pgSueloPG2(g); if (PG2.vivo) pg2SueloAlto(g); };
+
+/* lo que va de pie: banderolas, neumáticos, guirnaldas, sombrillas y porterías */
+var ciuItemPG2 = ciuItem;
+ciuItem = function (g, it, k, i) {
+  if (k === 'pg2' && MAPA === 'pg') {
+    var m = it.m;
+    if (m === 'umbul') pg2Umbul(g, it); else if (m === 'neum') pg2Neum(g, it); else if (m === 'cuerda') pg2Cuerda(g, it);
+    else if (m === 'payung') pg2Payung(g, it); else if (m === 'porteria') pg2Porteria(g, it);
+    return true;
+  }
+  return ciuItemPG2(g, it, k, i);
+};
+function pg2Umbul(g, it) {                                                    // una banderola: la caña de bambú que se dobla arriba y su tela larga, que ondea
+  var dd = proj(it.x, it.y, 0); if (dd < 30 || dd > 900 || PX < -120 || PX > V.w + 120) return;
+  var s0 = PS, H = 78, pts = [], k, t, tela = [];
+  for (k = 0; k <= 10; k++) {
+    t = k / 10; var q = Math.max(0, (t - 0.72) / 0.28), lean = 16 * q * q;
+    proj(it.x + it.nx * lean, it.y + it.ny * lean, H * Math.min(1, t / 0.86) - 6 * q * q * q); pts.push(PX, PY);
+  }
+  shadow(g, it.x, it.y, 3, 2, 0); scr(g); g.lineCap = 'round'; g.lineJoin = 'round';   // (la sombra deja el lienzo tumbado en el suelo: scr después)
+  g.beginPath(); g.moveTo(pts[0], pts[1]); for (k = 2; k < pts.length; k += 2) g.lineTo(pts[k], pts[k + 1]);
+  g.strokeStyle = INK; g.lineWidth = 2.6 * s0; g.stroke(); g.strokeStyle = '#e2c46e'; g.lineWidth = 1.4 * s0; g.stroke();
+  /* la tela: cuelga de lo alto de la caña, por delante, y ondea */
+  var tt = G.t * 2.4 + it.ph, sx = -it.ny, sy = it.nx, N = 7;
+  for (k = 0; k <= N; k++) { var u = k / N, z = H * (0.98 - u * 0.62), o = Math.sin(tt + u * 3.2) * 3.2 * u; proj(it.x + sx * o, it.y + sy * o, z); tela.push([PX, PY]); }
+  var wd = 4.6 * s0;
+  g.beginPath(); g.moveTo(tela[0][0], tela[0][1]);
+  for (k = 1; k <= N; k++) g.lineTo(tela[k][0] + wd * (k / N) * 0.4, tela[k][1]);
+  for (k = N; k >= 0; k--) g.lineTo(tela[k][0] + wd * (1 + (k / N) * 0.4), tela[k][1] - (k === N ? wd * 1.2 : 0));
+  g.closePath(); g.fillStyle = it.col; g.fill(); g.strokeStyle = INK; g.lineWidth = 0.9 * s0; g.stroke();
+  g.beginPath();                                                               // una franja de otro color por el borde
+  for (k = 0; k <= N; k++) { var p = tela[k]; if (k) g.lineTo(p[0] + wd * (1 + (k / N) * 0.4) - 1.2 * s0, p[1]); else g.moveTo(p[0] + wd - 1.2 * s0, p[1]); }
+  g.strokeStyle = it.col2; g.lineWidth = 1.8 * s0; g.stroke();
+}
+function pg2Neum(g, it) {                                                     // tres montones de neumáticos pintados (cada uno, tres ruedas)
+  var dd = proj(it.x, it.y, 0); if (dd < 16 || dd > 560 || PX < -80 || PX > V.w + 80) return;
+  var C = [['#e2382b', '#fbfbf7'], ['#f1c40f', '#2f7fd8'], ['#27ae60', '#fbfbf7']][it.v % 3], ux = Math.cos(it.a), uy = -Math.sin(it.a), L = [], j, l;
+  for (j = -1; j <= 1; j++) L.push({ x: it.x + ux * j * 10, y: it.y + uy * j * 10, j: j });
+  L.sort(function (a, b) { return fwd(b.x, b.y) - fwd(a.x, a.y); });
+  shadow(g, it.x, it.y, 17, 7, it.a + Math.PI / 2); scr(g);
+  L.forEach(function (q) {
+    for (l = 0; l < 3; l++) {
+      var z0 = l * 3.3, z1 = z0 + 3.1, col = C[(l + q.j + 3) % 2], r = 4.8;
+      proj(q.x, q.y, z0); var ax = PX, ay = PY, s = PS; proj(q.x, q.y, z1); var bx = PX, by = PY;
+      var e = r * s * 0.42;
+      g.beginPath(); g.ellipse(ax, ay, r * s, e, 0, 0, Math.PI); g.lineTo(bx - r * s, by); g.ellipse(bx, by, r * s, e, 0, Math.PI, 0, true); g.closePath();
+      g.fillStyle = shadeCol(col, 0.82); g.fill(); g.strokeStyle = INK; g.lineWidth = 0.8 * s; g.stroke();
+      g.beginPath(); g.ellipse(bx, by, r * s, e, 0, 0, TAU); g.fillStyle = col; g.fill(); g.stroke();
+      g.beginPath(); g.ellipse(bx, by, r * s * 0.45, e * 0.45, 0, 0, TAU); g.fillStyle = '#2a2b30'; g.fill();
+    }
+  });
+}
+function pg2Cuerda(g, it) {                                                   // una guirnalda de banderines de un lado a otro de la calle
+  var f0 = fwd(it.x0, it.y0), f1 = fwd(it.x1, it.y1); if (Math.max(f0, f1) < NEAR + 6 || Math.min(f0, f1) > 760) return;
+  var N = 14, P2 = [], k, COL = ['#e2382b', '#f1c40f', '#2f7fd8', '#27ae60', '#ff7a45', '#fbfbf7'];
+  for (k = 0; k <= N; k++) { var t = k / N, x = it.x0 + (it.x1 - it.x0) * t, y = it.y0 + (it.y1 - it.y0) * t, z = it.z - 7 * 4 * t * (1 - t); if (fwd(x, y) < NEAR + 4) { P2.push(null); continue; } proj(x, y, z); P2.push([PX, PY, PS, x, y, z]); }
+  scr(g);
+  g.beginPath(); var on = false;
+  for (k = 0; k <= N; k++) { var p = P2[k]; if (!p) { on = false; continue; } if (on) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); on = true; }
+  g.strokeStyle = 'rgba(42,26,12,.75)'; g.lineWidth = 0.9; g.stroke();
+  for (var c = 0; c < COL.length; c++) {
+    g.beginPath();
+    for (k = 0; k < N; k++) {
+      if ((k + it.v) % COL.length !== c) continue;
+      var a = P2[k], b = P2[k + 1]; if (!a || !b) continue;
+      proj((a[3] + b[3]) / 2, (a[4] + b[4]) / 2, (a[5] + b[5]) / 2 - 6.5 + Math.sin(G.t * 3 + k) * 0.6);
+      g.moveTo(a[0] + (b[0] - a[0]) * 0.12, a[1] + (b[1] - a[1]) * 0.12); g.lineTo(a[0] + (b[0] - a[0]) * 0.88, a[1] + (b[1] - a[1]) * 0.88); g.lineTo(PX, PY); g.closePath();
+    }
+    g.fillStyle = COL[c]; g.fill(); g.strokeStyle = 'rgba(42,26,12,.5)'; g.lineWidth = 0.6; g.stroke();
+  }
+}
+function pg2Payung(g, it) {                                                   // una sombrilla del mercado de flores, con sus cestos
+  var dd = proj(it.x, it.y, 0); if (dd < 16 || dd > 640 || PX < -100 || PX > V.w + 100) return;
+  var C = [['#e2382b', '#fbfbf7'], ['#f1c40f', '#e2382b'], ['#2f7fd8', '#fbfbf7'], ['#27ae60', '#f1c40f'], ['#ff7a45', '#fbfbf7'], ['#9b59b6', '#f1c40f'], ['#e84393', '#fbfbf7']][it.v % 7];
+  var FL = [['#ff9f1a', '#f6c02a'], ['#e84393', '#fbfbf7'], ['#f6c02a', '#e2382b']];
+  shadow(g, it.x, it.y, 20, 18, 0); scr(g);
+  /* los cestos con las flores (delante y a los lados) */
+  var B = [[-9, 6], [8, 8], [0, -9]], fx = Math.sin(it.a), fy = Math.cos(it.a), rx = Math.cos(it.a), ry = -Math.sin(it.a), i;
+  B.sort(function (a, b) { return fwd(it.x + fx * b[1] + rx * b[0], it.y + fy * b[1] + ry * b[0]) - fwd(it.x + fx * a[1] + rx * a[0], it.y + fy * a[1] + ry * a[0]); });
+  B.forEach(function (b, j) {
+    var x = it.x + fx * b[1] + rx * b[0], y = it.y + fy * b[1] + ry * b[0], F = FL[(j + it.v) % 3];
+    proj(x, y, 0); var ax = PX, ay = PY, s = PS; proj(x, y, 3.4); var bx = PX, by = PY, r = 5 * s, e = r * 0.42;
+    g.beginPath(); g.ellipse(ax, ay, r * 0.86, e * 0.86, 0, 0, Math.PI); g.lineTo(bx - r, by); g.ellipse(bx, by, r, e, 0, Math.PI, 0, true); g.closePath();
+    g.fillStyle = '#b5874a'; g.fill(); g.strokeStyle = INK; g.lineWidth = 0.7 * s; g.stroke();
+    g.beginPath(); g.ellipse(bx, by - e * 0.3, r * 0.92, e * 1.1, 0, 0, TAU); g.fillStyle = F[0]; g.fill();
+    for (i = 0; i < 5; i++) { var an = i * 1.3 + j; g.beginPath(); g.arc(bx + Math.cos(an) * r * 0.5, by - e * 0.4 + Math.sin(an) * e * 0.5, 1.3 * s, 0, TAU); g.fillStyle = F[1]; g.fill(); }
+  });
+  /* el palo y la tela */
+  proj(it.x, it.y, 0); var px0 = PX, py0 = PY, s0 = PS; proj(it.x, it.y, 30); var px1 = PX, py1 = PY;
+  g.beginPath(); g.moveTo(px0, py0); g.lineTo(px1, py1); g.strokeStyle = INK; g.lineWidth = 1.8 * s0; g.stroke(); g.strokeStyle = '#d9d4ca'; g.lineWidth = 0.9 * s0; g.stroke();
+  var R = [], n = 8;
+  for (i = 0; i < n; i++) { var a = i / n * TAU + it.a, x2 = it.x + Math.cos(a) * 19, y2 = it.y + Math.sin(a) * 19; proj(x2, y2, 23); R.push([PX, PY, fwd(x2, y2)]); }
+  proj(it.x, it.y, 31.5); var cxp = PX, cyp = PY;
+  var T = []; for (i = 0; i < n; i++) T.push({ i: i, d: (R[i][2] + R[(i + 1) % n][2]) / 2 });
+  T.sort(function (a, b) { return b.d - a.d; });
+  T.forEach(function (q) {
+    var a = R[q.i], b = R[(q.i + 1) % n];
+    g.beginPath(); g.moveTo(cxp, cyp); g.lineTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 2.4 * s0, b[0], b[1]); g.closePath();
+    g.fillStyle = C[q.i % 2]; g.fill(); g.strokeStyle = INK; g.lineWidth = 0.8 * s0; g.stroke();
+  });
+  circ(g, cxp, cyp - 1, 1.6 * s0, '#f1c40f', INK, 0.6);
+}
+function pg2Porteria(g, it) {                                                 // una portería de palos blancos, con su red
+  var dd = proj(it.x, it.y, 0); if (dd < 16 || dd > 600) return;
+  var ux = Math.cos(it.a), uy = -Math.sin(it.a), bx = Math.sin(it.a), by = Math.cos(it.a), W = 15, H = 11, F = 8;   // u: a lo ancho; b: hacia atrás
+  function p(u, b, z) { proj(it.x + ux * u + bx * b, it.y + uy * u + by * b, z); return [PX, PY]; }
+  var A = p(-W, 0, 0), B = p(-W, 0, H), C = p(W, 0, H), D = p(W, 0, 0), E = p(-W, F, 0), Fq = p(W, F, 0), Gq = p(-W, F, H * 0.6), Hq = p(W, F, H * 0.6);
+  scr(g); g.lineCap = 'round';
+  g.beginPath(); g.moveTo(B[0], B[1]); g.lineTo(Gq[0], Gq[1]); g.lineTo(E[0], E[1]); g.moveTo(C[0], C[1]); g.lineTo(Hq[0], Hq[1]); g.lineTo(Fq[0], Fq[1]); g.moveTo(Gq[0], Gq[1]); g.lineTo(Hq[0], Hq[1]);
+  for (var k = 1; k < 6; k++) { var t = k / 6; g.moveTo(B[0] + (C[0] - B[0]) * t, B[1] + (C[1] - B[1]) * t); g.lineTo(Gq[0] + (Hq[0] - Gq[0]) * t, Gq[1] + (Hq[1] - Gq[1]) * t); }
+  g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = Math.max(0.6, 0.5 * PS); g.stroke();
+  g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.lineTo(C[0], C[1]); g.lineTo(D[0], D[1]);
+  g.strokeStyle = INK; g.lineWidth = Math.max(1.6, 2.2 * PS); g.stroke(); g.strokeStyle = '#fbfbf7'; g.lineWidth = Math.max(0.9, 1.3 * PS); g.stroke();
+}
+
+/* ---------- Pitik: lo nuevo ---------- */
+if (PG2.vivo) {
+  PG_DICE.lleva_pasar = [['🧺', 'Ahora, ¡al mercado!']];
+  PG_DICE.circuito = [['🏁', '¡El circuito! ¡Da una vuelta entera!']];
+  PG_DICE.mercado = [['🧺', '¡El mercado! ¡Cuántos colores!']];
+  PG_DICE.vuelta = [['🏁', '¡Vuelta al circuito! ¡Toma flores!'], ['🏁', '¡Otra vuelta! ¡Qué rápido vas!']];
+  PG_DICE.bali.push(['🧺', 'En el mercado se compran las flores de las ofrendas'], ['🏳️', 'Las banderolas de colores se llaman umbul-umbul']);
+  PG_EST.circuito = 'feliz'; PG_EST.mercado = 'feliz'; PG_EST.vuelta = 'feliz';
+  PG_YA.vuelta = 1;
+}
+(function () {
+  var N = {
+    'Ahora, ¡al mercado!': ['Now, to the market!', 'Sekarang, ke pasar!'],
+    '¡El circuito! ¡Da una vuelta entera!': ['The track! Do a full lap!', 'Sirkuit! Ayo satu putaran penuh!'],
+    '¡El mercado! ¡Cuántos colores!': ['The market! So many colours!', 'Pasar! Warnanya banyak sekali!'],
+    '¡Vuelta al circuito! ¡Toma flores!': ['A lap of the track! Have some flowers!', 'Satu putaran! Ini bunga untukmu!'],
+    '¡Otra vuelta! ¡Qué rápido vas!': ['Another lap! You\'re so fast!', 'Satu putaran lagi! Cepat sekali!'],
+    'En el mercado se compran las flores de las ofrendas': ['At the market people buy the flowers for the offerings', 'Di pasar orang membeli bunga untuk sesajen'],
+    'Las banderolas de colores se llaman umbul-umbul': ['The colourful banners are called umbul-umbul', 'Bendera warna-warni itu namanya umbul-umbul'],
+    '🏁 ¡Vuelta! +3': ['🏁 Lap! +3', '🏁 Putaran! +3']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
