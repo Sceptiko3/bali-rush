@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v23</title>
+<title>Bali Rush Poki v24</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v23 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v24 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -115822,6 +115822,12 @@ function pgEmpuja(o, rM) {                                                    //
       o.x = s.x + dx * k; o.y = s.y + dy * k; out = [nx / nl, ny / nl, 1];
     }
   }
+  if (PG.zonas) {                                                             // (v24) lo que se puede recorrer: varios rectángulos (la explanada y lo que se le ha ido añadiendo)
+    var Zs = PG.zonas, bz = null, bd = 1e9;
+    for (i = 0; i < Zs.length; i++) { var z = Zs[i], qx = clamp(o.x, z.x0 + rM, z.x1 - rM), qy = clamp(o.y, z.y0 + rM, z.y1 - rM), dq = (qx - o.x) * (qx - o.x) + (qy - o.y) * (qy - o.y); if (dq < bd) { bd = dq; bz = [qx, qy]; } }
+    if (bd > 1e-6) { var bl = Math.sqrt(bd); out = [(bz[0] - o.x) / bl, (bz[1] - o.y) / bl, bl]; o.x = bz[0]; o.y = bz[1]; }
+    return out;
+  }
   var X = PGD.X - rM, Y = PGD.Y - rM;
   if (o.x > X) { o.x = X; out = [-1, 0, 1]; } else if (o.x < -X) { o.x = -X; out = [1, 0, 1]; }
   if (o.y > Y) { o.y = Y; out = [0, -1, 1]; } else if (o.y < -Y) { o.y = -Y; out = [0, 1, 1]; }
@@ -117321,6 +117327,416 @@ if (PG2.vivo) {
     'En el mercado se compran las flores de las ofrendas': ['At the market people buy the flowers for the offerings', 'Di pasar orang membeli bunga untuk sesajen'],
     'Las banderolas de colores se llaman umbul-umbul': ['The colourful banners are called umbul-umbul', 'Bendera warna-warni itu namanya umbul-umbul'],
     '🏁 ¡Vuelta! +3': ['🏁 Lap! +3', '🏁 Putaran! +3']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
+/*#pieza nucleo/682_poki_playground_rio.js*/
+/* ================================================================
+   POKI V24 · PLAYGROUND: EL RÍO, ¡PLASH! Y EL PUENTECILLO
+   Jose Javier (24-10-2026), tras la v22: «si te caes al agua pues que
+   haga ¡plash!; a lo mejor un barranquillo que te caes…». Y con la
+   v23: «seguimos con lo que te dije… alguna cosa de subir y que no te
+   caigas, lo del agua… más jugable, fácil, para niños».
+   - LA EXPLANADA CRECE HACIA EL SUR: la tapia de abajo tiene dos
+     puertas; detrás, un prado con EL RÍO, metido en su barranquillo
+     (el agua más abajo que el suelo, con sus orillas de barro), que
+     cruza de lado a lado.
+   - ¡PLASH!: si la moto entra en el agua (el río o el estanque de la
+     explanada): ¡PLASH!, un chorro de gotas, ondas, y la moto se hunde…
+     y sale despedida a la orilla de la que venía, chorreando. No quita
+     cascos (es agua); lo que llevas se escapa a la orilla.
+   - EL PUENTECILLO (titi): un puente de tablas, estrecho, sin
+     barandilla y en arco: se sube por un lado y se baja por el otro.
+     Si te sales del tablero, ¡PLASH! Encima, flores de oro; cruzarlo
+     entero sin caerte, +5 y Pitik lo celebra.
+   - EL PUENTE DE LA CARRETERA: la calle nueva (Jalan Sawah) sale del
+     anillo por la puerta de la derecha y cruza el río por un puente con
+     barandillas (blandas). Por ella van motos.
+   - EL ARROZAL (sawah): al otro lado del río, la cabaña del arrozal con
+     el campesino; es un sitio de los encargos (el cerdito de la 1.ª
+     ronda va allí). Detrás, los arrozales.
+   PG3.vivo = false (o ?nopg3): el Playground como la v23.
+   ================================================================ */
+var PG3 = {
+  vivo: PG2.vivo && !/[?&#]nopg3/.test(location.search + location.hash),
+  sur: -1750,                                     // hasta dónde llega ahora la explanada por abajo
+  rio: { y0: -1230, a: 45, k: 260, f: 200, hw: 50, ori: 18, hondo: 14 },   // el río: y = y0 + a·sen((x + f) / k); medio ancho del agua, orilla, lo hondo que va
+  puertas: [[-598, -506], [322, 414]],            // en la tapia de abajo (las dos donde estaban dos tramos)
+  carretera: 368,                                 // la x de la calle nueva (y de su puente)
+  titi: { x: -575, hw: 12, L: 92, H: 20 },        // el puentecillo: su x, medio ancho del tablero (lo que cuenta), medio largo, alto en medio
+  plash: null, gotas: [], ondas: [], seguro: null, gotea: 0, titiDe: null, titiT: 0, dicho: {}
+};
+function pg3RioY(x) { var R = PG3.rio; return R.y0 + R.a * Math.sin((x + R.f) / R.k); }
+function pg3Titi(x, y) {                                                     // ¿en el puentecillo? t: 0 en la punta de arriba, 1 en la de abajo; z: el alto del tablero
+  var T = PG3.titi, yN = pg3RioY(T.x) + T.L, t = (yN - y) / (2 * T.L), u = x - T.x;
+  if (t < 0 || t > 1 || Math.abs(u) > T.hw + 14) return null;
+  return { t: t, u: u, dentro: Math.abs(u) <= T.hw, z: T.H * Math.pow(Math.sin(Math.PI * t), 0.8) };
+}
+function pg3EnPuente(x, y) {                                                 // el de la carretera
+  var R = PG3.rio; return Math.abs(x - PG3.carretera) < 30 && Math.abs(y - pg3RioY(PG3.carretera)) < R.hw + R.ori + 4;
+}
+function pg3Agua(x, y, m) {                                                  // ¿agua aquí? (m: cuánto hay que haberse metido; negativo: «cerca del agua»)
+  var R = PG3.rio, E = PG.estanque;
+  if (Math.abs(y - pg3RioY(x)) < R.hw - m && !pg3EnPuente(x, y)) { var T = pg3Titi(x, y); if (!(T && T.dentro)) return 'rio'; }
+  if (E && E.rx - m > 0) { var ex = (x - E.x) / (E.rx - m), ey = (y - E.y) / (E.ry - m); if (ex * ex + ey * ey < 1) return 'estanque'; }
+  return null;
+}
+function pg3Orilla(x, y, hacia) {                                            // un punto de la orilla, fuera del agua (del lado de «hacia», si se da)
+  var R = PG3.rio, E = PG.estanque, ry = pg3RioY(x);
+  if (E) { var ex = (x - E.x) / E.rx, ey = (y - E.y) / E.ry, e = Math.sqrt(ex * ex + ey * ey); if (e < 1.3) { var k = 1.25 / Math.max(e, 0.05); return { x: E.x + (x - E.x) * k, y: E.y + (y - E.y) * k }; } }
+  var lado = hacia != null ? hacia : (y >= ry ? 1 : -1);
+  return { x: x, y: ry + lado * (R.hw + R.ori + 22) };
+}
+
+/* ---------- el mapa: la calle nueva y la zona del sur ---------- */
+var pgMapDefPG3 = pgMapDef;
+pgMapDef = function () {
+  var S = pgMapDefPG3(); if (!PG3.vivo) return S;
+  var X = PG3.carretera;
+  S.push({ n: 'Jalan Sawah', w: 28, pts: [[X, -PGD.ry], [X, -1000], [X, -1290], [340, -1390], [230, -1460], [60, -1490]] });
+  ZONES.push({ k: 'lapangan', x0: -PGD.X, x1: PGD.X, y0: PG3.sur, y1: -PGD.Y });
+  return S;
+};
+if (PG3.vivo) {
+  PG_SITIOS.sawah = { ico: '🌾', n: 'el arrozal', sign: 'SAWAH', x: 60, y: -1580, a: Math.PI, rx: 60, ry: -1500 };
+  PG_TAREAS = [
+    { id: 'pollos', de: 'kandang', a: ['pasar', 'warung', 'sawah'] },
+    { id: 'pax', de: ['sekolah', 'pasar', 'warung'], a: ['pura', 'sawah', 'pasar'], q: ['nina', 'abuela', 'turista'] },
+    { id: 'muebles', de: 'kayu', a: ['rumah', 'pasar', 'sekolah'] },
+    { id: 'cerdo', de: 'babi', a: ['sawah', 'rumah', 'warung'] }
+  ];
+}
+
+/* ---------- el decorado del sur ---------- */
+function pg3Genera() {
+  var items = CITY.items, obs = CITY.obs, O = ESN.s.obra, r = mulberry(7311), i, k, X = PGD.X, Y = PGD.Y, SUR = PG3.sur, R = PG3.rio, T = PG3.titi;
+  function deco(s, x, y, a, sc, o) { var d = { k: 'deco', s: s, x: x, y: y, a: a || 0, sc: sc || 1 }, q; if (o) for (q in o) d[q] = o[q]; items.push(d); return d; }
+  function obra(ob, x, y, a, sc) { return deco(O, x, y, a, sc, { ob: ob }); }
+  function cosa(m, x, y, o) { var d = { k: 'pg3', m: m, x: x, y: y }, q; if (o) for (q in o) d[q] = o[q]; items.push(d); return d; }
+  function arbol(s, x, y, sc, solido) { deco(s, x, y, r() * TAU, sc); if (solido) pgCirculo(x, y, solido); }
+  function enPuerta(x0, x1) { return PG3.puertas.some(function (p) { return x1 > p[0] + 1 && x0 < p[1] - 1; }); }
+  /* fuera lo que había detrás de la tapia de abajo (ahora es explanada), los tramos de tapia de las puertas y el árbol del camino */
+  CITY.items = items = items.filter(function (it) {
+    if (it.k === 'wall' && Math.abs(it.y + Y + 4) < 1 && it.uy === 0 && enPuerta(it.x - it.L / 2, it.x + it.L / 2)) return false;
+    if (it.k !== 'wall' && it.y < -Y - 6) return false;
+    if (it.k === 'deco' && Math.abs(it.x + 560) < 2 && Math.abs(it.y + 800) < 2) return false;
+    return true;
+  });
+  PG.sol = PG.sol.filter(function (s) { return !(s.c === 1 && Math.abs(s.x + 560) < 2 && Math.abs(s.y + 800) < 2); });
+  /* la tapia de abajo sigue sin poderse pasar (salvo por las puertas); la tapia nueva, alrededor del sur */
+  var tramos = [[-X, PG3.puertas[0][0]], [PG3.puertas[0][1], PG3.puertas[1][0]], [PG3.puertas[1][1], X]];
+  tramos.forEach(function (q) { pgCaja((q[0] + q[1]) / 2, -Y - 4, 0, (q[1] - q[0]) / 2, 5); });
+  [-1, 1].forEach(function (sd) { obra(blCandi(false), (PG3.puertas[0][0] + PG3.puertas[0][1]) / 2 + sd * 52, -Y - 4, 0, 0.42); obra(blCandi(false), (PG3.puertas[1][0] + PG3.puertas[1][1]) / 2 + sd * 52, -Y - 4, 0, 0.42); });
+  var L = 92, L2 = (-Y + SUR) / -9;                                             // (los lados, en nueve tramos justos)
+  for (k = 0; k < 9; k++) { var yk = -Y - 4 - L2 * (k + 0.5); items.push({ k: 'wall', x: X + 4, y: yk, ux: 0, uy: 1, L: L2, side: 0 }); items.push({ k: 'wall', x: -X - 4, y: yk, ux: 0, uy: 1, L: L2, side: 0 }); }
+  for (k = -X + L / 2; k < X; k += L) items.push({ k: 'wall', x: k, y: SUR - 4, ux: 1, uy: 0, L: L, side: 0 });
+  PG.zonas = [{ x0: -X, x1: X, y0: -Y - 40, y1: Y }, { x0: -X, x1: X, y0: SUR, y1: -Y + 40 }];   // (se solapan a la altura de la tapia: por las puertas se pasa de una a otra; la tapia la ponen sus cajas)
+  /* fuera de la tapia nueva: palmeras y casas entre los arrozales */
+  for (i = 0; i < 34; i++) {
+    var lado = i % 3, t = r(), fx, fy;
+    if (lado === 0) { fx = (t * 2 - 1) * (X + 280); fy = SUR - 70 - r() * 240; } else { fx = (lado === 1 ? 1 : -1) * (X + 70 + r() * 240); fy = -Y - 40 - t * (Y + SUR + 60) * -1; fy = -Y - 40 - t * (-SUR - Y - 40); }
+    if (r() < 0.7) deco(SP.palm[i % SP.palm.length], fx, fy, r() * TAU, 1.5 + r() * 0.5); else deco(SP.canopy[i % SP.canopy.length], fx, fy, r() * TAU, 1.6 + r() * 0.5);
+  }
+  [[-700, SUR - 150, Math.PI], [650, SUR - 160, Math.PI], [X + 160, -1300, Math.PI / 2], [-X - 170, -1150, -Math.PI / 2]].forEach(function (q, j) { obra(blMeten(18, 14.4, j % 4), q[0], q[1], q[2], 1.25); });
+  /* el puente de la carretera: dos barandillas (blandas) */
+  var cx = PG3.carretera, cy = pg3RioY(cx), lp = R.hw + R.ori + 6;
+  [-1, 1].forEach(function (sd) { cosa('baranda', cx + sd * 36, cy, { L: lp, sd: sd }); PG.sol.push({ c: 0, x: cx + sd * 36, y: cy, ux: 1, uy: 0, hl: 2.5, hw: lp, b: 1 }); });
+  /* el puentecillo: su tablero, a tramos (cada uno se ordena con lo demás), y las flores de oro encima */
+  var N = 16, yN = pg3RioY(T.x) + T.L;
+  for (i = 0; i < N; i++) cosa('titi', T.x, yN - (i + 0.5) / N * 2 * T.L, { i: i, n: N });
+  PG3.flores = [];
+  for (i = 0; i < 5; i++) { var tf = 0.26 + i * 0.12, f = cosa('flor3', T.x, yN - tf * 2 * T.L, { t: tf, i: i }); PG3.flores.push(f); }
+  /* el arrozal: la cabaña con el campesino, su cartel y un espantapájaros de banderitas */
+  var S = PG_SITIOS.sawah;
+  obra(blBale(14, 11, 0, true), S.x, S.y, S.a, 1.3); pgCaja(S.x, S.y, S.a, 20, 16);
+  deco(signSprite(S.sign), S.x - 70, S.y + 36, 0, 1.3);
+  /* árboles por las orillas y por el prado (que no tapen los puentes ni los caminos) */
+  [[-980, -95], [-760, 92], [-330, 96], [-120, -100], [180, 100], [560, -96], [760, 98], [980, -92], [-1040, 110], [1050, 104]].forEach(function (q, j) {
+    var x = q[0], y = pg3RioY(x) + q[1];
+    if (j % 3 === 0) arbol(SP.banana[j % SP.banana.length], x, y, 1.25, 8); else if (j % 3 === 1) arbol(SP.palm[j % SP.palm.length], x, y, 1.4, 8); else arbol(SP.canopy[j % SP.canopy.length], x, y, 1.3, 11);
+  });
+  [[-900, -1000], [800, -1000], [-300, -1600], [520, -1600], [-950, -1600], [1000, -1650]].forEach(function (q, j) { arbol(j % 2 ? SP.palm[j % SP.palm.length] : SP.canopy[j % SP.canopy.length], q[0], q[1], 1.35, 10); });
+  /* la gente: el campesino del arrozal y una señora lavando en la orilla */
+  PG.gente.push({ t: 'pgw', k: 'pgw', Q: GE3_Q.campesino, fijo: true, x: S.x + 70, y: S.y + 34, x0: S.x + 70, y0: S.y + 34, a: 0.4, a0: 0.4, v: 0, paso: 0, pose: 'pie', huye: 0, saluda: 0 });
+  var lx = -230, ly = pg3RioY(lx) + R.hw + R.ori + 10;
+  PG.gente.push({ t: 'pgw', k: 'pgw', Q: GE3_Q.lib_sari, fijo: true, x: lx, y: ly, x0: lx, y0: ly, a: Math.PI, a0: Math.PI, v: 0, paso: 0, pose: 'pie', huye: 0, saluda: 0 });
+  /* el estanque de la explanada ya no es una pared: es agua */
+  PG.sol = PG.sol.filter(function (s) { return s.c !== 2; });
+}
+var pgGeneraPG3 = pgGenera;
+pgGenera = function () { pgGeneraPG3(); if (PG3.vivo) pg3Genera(); };
+
+/* ---------- la flecha: si hay que cruzar la tapia o el río, primero a la puerta o al puente (si no, un peque va recto… al agua) ---------- */
+function pg3Puerta(px, py, pIn, tx, ty) {
+  var YW = -PGD.Y - 4, best = null, bc = 1e9;
+  PG3.puertas.forEach(function (q) { var gx = (q[0] + q[1]) / 2 + (q[0] < 0 ? -10 : 0), c = Math.hypot(gx - px, YW - py) + Math.hypot(tx - gx, ty - YW); if (c < bc) { bc = c; best = gx; } });
+  if (Math.abs(px - best) < 50 && Math.abs(py - YW) < 50) return { x: best, y: YW + (pIn ? -60 : 60) };
+  return { x: best, y: YW + (pIn ? 45 : -45) };
+}
+function pg3Puente(px, py, ps, tx, ty) {
+  var R = PG3.rio, T = PG3.titi, P2 = [{ x: PG3.carretera, L: R.hw + R.ori + 30, pena: 0 }, { x: T.x, L: T.L + 24, pena: 220 }], best = null, bc = 1e9;
+  P2.forEach(function (b) {
+    var ry = pg3RioY(b.x), nx = b.x, ny = ry + ps * b.L, fx = b.x, fy = ry - ps * b.L;
+    if (Math.abs(px - b.x) < 40 && Math.abs(py - ry) < b.L) { best = { x: fx, y: fy }; bc = -1; return; }   // ya estás en él: al otro lado
+    var c = Math.hypot(nx - px, ny - py) + 2 * b.L + Math.hypot(tx - fx, ty - fy) + b.pena;
+    if (bc >= 0 && c < bc) { bc = c; best = Math.hypot(nx - px, ny - py) < 30 ? { x: fx, y: fy } : { x: nx, y: ny }; }
+  });
+  return best;
+}
+function pg3Ruta(px, py, tx, ty) {
+  var YW = -PGD.Y - 4, pIn = py > YW, tIn = ty > YW, ps = py > pg3RioY(px) ? 1 : -1, ts = tIn ? 1 : (ty > pg3RioY(tx) ? 1 : -1);
+  if (!pIn && ps !== ts) return pg3Puente(px, py, ps, tx, ty);
+  if (pIn !== tIn) return pg3Puerta(px, py, pIn, tx, ty);
+  return null;
+}
+var pgObjetivoPG3 = pgObjetivo;
+pgObjetivo = function () {
+  var O = pgObjetivoPG3(); if (!O || !PG3.vivo || !pgOn()) return O;
+  var w = pg3Ruta(P.x, P.y, O.x, O.y); if (!w) return O;
+  var d = Math.hypot(w.x - P.x, w.y - P.y);
+  return { x: w.x, y: w.y, d: d + Math.hypot(O.x - w.x, O.y - w.y), suelo: O.suelo, via: true };
+};
+
+/* ---------- conducir: el alto en el puentecillo, el agua y la orilla segura ---------- */
+var pgRidePG3 = pgRide;
+pgRide = function (dt) {
+  if (!PG3.vivo) { pgRidePG3(dt); return; }
+  if (PG3.plash) { pg3PlashUpd(dt); return; }
+  pgRidePG3(dt);
+  if (P.state !== 'ride') return;
+  var T = pg3Titi(P.x, P.y), en = T && T.dentro;
+  P.z = en ? T.z : 0;
+  if (en) {                                                                   // por el puentecillo: ¿lo cruzas entero?
+    if (PG3.titiDe == null) { PG3.titiDe = T.t < 0.5 ? 0 : 1; if (!PG3.dicho.puente) { PG3.dicho.puente = 1; pgDice('puente'); } }
+    PG3.titiT = T.t;
+  } else if (PG3.titiDe != null) {
+    if ((PG3.titiDe === 0 && PG3.titiT > 0.9) || (PG3.titiDe === 1 && PG3.titiT < 0.1)) pg3Cruzado();
+    PG3.titiDe = null;
+  }
+  var ag = pg3Agua(P.x, P.y, 7);
+  if (ag) { pg3Plash(ag); return; }
+  if (!en && !pg3Agua(P.x, P.y, -38)) PG3.seguro = { x: P.x, y: P.y };
+  if (!PG3.dicho.rio && Math.abs(P.y - pg3RioY(P.x)) < PG3.rio.hw + 120) { PG3.dicho.rio = 1; pgDice('rio'); }
+};
+function pg3Cruzado() {
+  G.fl += 5; SFX.tlin(); petals(P.x, P.y + 30, 24); sparkle(P.x, P.y + 20, 14, '#ffe27a');
+  pop('🌉 ¡Sin caerte! +5', P.x, P.y + 48, '#ffe27a', 1.2); pgSalta('feliz'); pgDice('cruzado');
+}
+function pg3Plash(tipo) {                                                    // ¡al agua!
+  var S = PG3.seguro && d2(PG3.seguro.x, PG3.seguro.y, P.x, P.y) < 320 ? PG3.seguro : pg3Orilla(P.x, P.y);
+  PG3.plash = { t: 0, tipo: tipo, x: P.x, y: P.y, h: P.h, v: Math.max(P.speed, 30), sx: S.x, sy: S.y, x1: P.x, y1: P.y, h2: P.h };
+  PG3.titiDe = null;
+  P.inv = 3; P.bounce = 0;
+  SFX.splash(); shake(0.45); pop('¡PLASH!', P.x, P.y + 46, '#bfe9ff', 1.7);
+  pg3Salta(P.x, P.y, 46);
+  pgSalta('susto'); pgDice('plash');
+  if (MIS.cur) pgSuelta(true);                                               // lo que llevas se escapa (y sale a la orilla)
+  PG.plash = (PG.plash || 0) + 1;
+}
+function pg3Salta(x, y, n) {                                                 // el chorro de gotas y las ondas
+  for (var i = 0; i < n; i++) { var a = Math.random() * TAU, v = 20 + Math.random() * 60; PG3.gotas.push({ x: x, y: y, z: -PG3.rio.hondo + 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: 120 + Math.random() * 130, r: 1.4 + Math.random() * 1.8 }); }
+  PG3.ondas.push({ x: x, y: y, t: 0 }, { x: x, y: y, t: -0.25 }, { x: x, y: y, t: -0.5 });
+}
+function pg3PlashUpd(dt) {
+  var S = PG3.plash; S.t += dt; P.speed = 0; P.vx = P.vxSet = 0;
+  if (S.t < 0.3) {                                                           // se hunde
+    var k = S.t / 0.3, v = S.v * (1 - k);
+    P.x += Math.sin(S.h) * v * dt; P.y += Math.cos(S.h) * v * dt; P.z = -16 * k;
+    S.x1 = P.x; S.y1 = P.y; S.h2 = Math.atan2(S.sx - S.x1, S.sy - S.y1);
+  } else if (S.t < 1.0) {                                                     // bajo el agua: burbujas
+    P.z = -24;
+    if (Math.random() < dt * 6) PG3.gotas.push({ x: S.x1 + rr(-6, 6), y: S.y1 + rr(-6, 6), z: -PG3.rio.hondo, vx: 0, vy: 0, vz: 40, r: 1.6 });
+  } else if (S.t < 1.7) {                                                     // ¡y sale despedido a la orilla!
+    var q = (S.t - 1.0) / 0.7;
+    if (!S.sale) { S.sale = true; pg3Salta(S.x1, S.y1, 26); SFX.splash(); }
+    P.x = lerp(S.x1, S.sx, q); P.y = lerp(S.y1, S.sy, q); P.z = Math.sin(q * Math.PI) * 46 - 10 * (1 - q);
+    P.h = adiff(S.h2 + (1 - q) * 6.283, 0);
+    if (Math.random() < dt * 30) PG3.gotas.push({ x: P.x, y: P.y, z: P.z + 10, vx: rr(-10, 10), vy: rr(-10, 10), vz: -10, r: 1.3 });
+  } else {                                                                     // en la orilla, chorreando
+    P.x = S.sx; P.y = S.sy; P.z = 0; P.h = P.ht = S.h2; P.speed = 0; P.inv = 1.4; P.steer = 0;
+    PG3.plash = null; PG3.gotea = 2.2; dust(P.x, P.y, 8);
+    pop('¡Brrr!', P.x, P.y + 40, '#bfe9ff', 1); pgDice('plashFuera', null, 0.6);
+  }
+  P.ht = P.h;
+}
+/* la cámara, durante el ¡PLASH!, no da vueltas con la moto: mira como antes y, mientras sale volando, se va girando hacia la orilla */
+var cityCamPG3 = cityCam;
+cityCam = function (dt) {
+  var S = PG3.vivo && pgOn() ? PG3.plash : null;
+  if (!S) { cityCamPG3(dt); return; }
+  var h0 = P.h, ht0 = P.ht, q = clamp((S.t - 1.0) / 0.7, 0, 1);
+  P.h = P.ht = adiff(S.h + adiff(S.h2, S.h) * q * q * (3 - 2 * q), 0);
+  try { cityCamPG3(dt); } finally { P.h = h0; P.ht = ht0; }
+};
+/* lo que se ha escapado no se queda en el agua: sale a la orilla (y no vuelve a meterse) */
+var cargaUpdPG3 = cargaUpd;
+cargaUpd = function (dt) {
+  cargaUpdPG3(dt);
+  if (!PG3.vivo || !pgOn()) return;
+  for (var i = 0; i < CAIDAS.length; i++) {
+    var c = CAIDAS[i]; if (c.z > 3 || !pg3Agua(c.x, c.y, -6)) continue;
+    var q = pg3Orilla(c.x, c.y); c.x = q.x; c.y = q.y; c.vx = c.vy = 0; c.esc = 0;
+  }
+};
+
+/* ---------- cada fotograma: las gotas, las ondas, las flores del puentecillo y Pitik ---------- */
+var pgCadaPG3 = pgCada;
+pgCada = function (dt) {
+  pgCadaPG3(dt);
+  if (!PG3.vivo || !pgOn()) return;
+  var i, G3 = PG3.gotas;
+  for (i = G3.length - 1; i >= 0; i--) { var o = G3[i]; o.vz -= 340 * dt; o.x += o.vx * dt; o.y += o.vy * dt; o.z += o.vz * dt; if (o.z < -PG3.rio.hondo - 2 || (o.z < 0 && !pg3Agua(o.x, o.y, -4))) G3.splice(i, 1); }
+  for (i = PG3.ondas.length - 1; i >= 0; i--) { PG3.ondas[i].t += dt; if (PG3.ondas[i].t > 1.3) PG3.ondas.splice(i, 1); }
+  if (PG3.gotea > 0) { PG3.gotea -= dt; if (Math.random() < dt * 14) G3.push({ x: P.x + rr(-5, 5), y: P.y + rr(-5, 5), z: 14 + Math.random() * 8, vx: 0, vy: 0, vz: -20, r: 1.2 }); }
+  if (G.state !== 'play' || G.card || P.state !== 'ride' || PG3.plash) return;
+  (PG3.flores || []).forEach(function (f) {                                   // las flores de oro del puentecillo
+    if (f.got) return;
+    var T = pg3Titi(f.x, f.y);
+    if (d2(f.x, f.y, P.x, P.y) < 15 && Math.abs((P.z || 0) - T.z) < 9) { f.got = true; G.fl += 2; ganaDorados && ganaDorados(1); SFX.pick(3 + f.i); sparkle(f.x, f.y, 10, '#ffe27a'); pop('+2', f.x, f.y + 30, '#ffe27a', 1); }
+  });
+};
+var pgEmpiezaPG3 = pgEmpieza;
+pgEmpieza = function () {
+  pgEmpiezaPG3();
+  if (!PG3.vivo) return;
+  PG3.plash = null; PG3.gotas.length = 0; PG3.ondas.length = 0; PG3.seguro = null; PG3.gotea = 0; PG3.titiDe = null; PG3.dicho = {}; P.z = 0;
+  (PG3.flores || []).forEach(function (f) { f.got = false; });
+};
+
+/* ================================================================
+   EL DIBUJO
+   ================================================================ */
+/* el suelo del sur (antes que la carretera): el prado, los caminos, el arrozal y el río en su barranquillo */
+function pg3Banda(g, x0, x1, paso, f0, f1, z0, z1, col) {                    // una franja a lo largo del río: de la distancia f0 a f1 de su centro (en y), a alturas z0 / z1
+  var x, a = [], b = [];
+  for (x = x0; x <= x1 + 0.1; x += paso) { var y = pg3RioY(x); a.push([x, y + f0, z0]); b.push([x, y + f1, z1]); }
+  return a.concat(b.reverse());
+}
+function pg3Sub(g, P4) {                                                     // un polígono del mundo con su z, como trozo de un camino (lo de detrás de la cámara se recorta)
+  var c = [], i, n = P4.length;
+  for (i = 0; i < n; i++) {
+    var p = P4[i], q = P4[(i + 1) % n], fp = fwd(p[0], p[1]), fq = fwd(q[0], q[1]);
+    if (fp >= NEAR) c.push(p);
+    if ((fp >= NEAR) !== (fq >= NEAR)) { var t = (NEAR - fp) / (fq - fp); c.push([lerp(p[0], q[0], t), lerp(p[1], q[1], t), lerp(p[2] || 0, q[2] || 0, t)]); }
+  }
+  if (c.length < 3) return;
+  for (i = 0; i < c.length; i++) { proj(c[i][0], c[i][1], c[i][2] || 0); if (i) g.lineTo(PX, PY); else g.moveTo(PX, PY); } g.closePath();
+}
+function pg3SueloBajo(g) {
+  var X = PGD.X, Y = PGD.Y, SUR = PG3.sur, R = PG3.rio, T = PG3.titi, S = PG_SITIOS.sawah, i;
+  if (fwd(0, (SUR - Y) / 2) < -900 - 900) return;
+  /* el prado (dejando ver los arrozales de detrás de la cabaña) */
+  groundPoly(g, [[-X - 8, -Y - 8], [X + 8, -Y - 8], [X + 8, -1640], [-X - 8, -1640]], '#a5c564');
+  groundPoly(g, [[-X - 8, -1640], [-480, -1640], [-480, SUR - 8], [-X - 8, SUR - 8]], '#a5c564');
+  groundPoly(g, [[700, -1640], [X + 8, -1640], [X + 8, SUR - 8], [700, SUR - 8]], '#a5c564');
+  /* los caminos de tierra: al puentecillo (por la puerta de la izquierda) y de él al arrozal; la tierra de la cabaña */
+  var c1 = [[T.x, -PGD.ry - 30], [T.x, pg3RioY(T.x) + T.L + 6]], c2 = [[T.x, pg3RioY(T.x) - T.L - 6], [T.x + 20, -1420], [-200, -1480], [S.rx - 40, S.ry]];
+  [c1, c2].forEach(function (c) { for (var j = 0; j < c.length - 1; j++) { var a = c[j], b = c[j + 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]), nx = (b[1] - a[1]) / l * 15, ny = -(b[0] - a[0]) / l * 15; groundPoly(g, [[a[0] - nx, a[1] - ny], [a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny]], '#cdb47c'); discPoly(g, b[0], b[1], 15, '#cdb47c'); } });
+  discPoly(g, S.x, S.y + 30, 78, '#d6bf86'); discPoly(g, S.rx, S.ry, 62, '#d6bf86');
+  /* el río: el agua (más abajo), las paredes del barranquillo que se ven y las orillas de barro */
+  var cf = fwd(CAM.x, CAM.y), vis = [], x;
+  for (x = -X - 120; x < X + 120; x += 60) { var fm = fwd(x + 30, pg3RioY(x + 30)), sm = side2(x + 30, pg3RioY(x + 30)); if (fm > NEAR - 80 && fm < CFAR + 120 && Math.abs(sm) < fm * 1.4 + 420) vis.push(x); }
+  if (!vis.length) return;
+  var hz = -R.hondo, cy = CAM.cy;
+  function capa(col, fn) { g.beginPath(); vis.forEach(fn); g.fillStyle = col; g.fill(); }   // (todos los trozos de un color, de una vez)
+  capa('#3f8fb0', function (x0) { pg3Sub(g, pg3Banda(g, x0 - 1, x0 + 61, 20, -R.hw, R.hw, hz, hz)); });
+  capa('#57a6c6', function (x0) { pg3Sub(g, pg3Banda(g, x0 - 1, x0 + 61, 20, -R.hw * 0.55, R.hw * 0.55, hz, hz)); });
+  capa('#7a6242', function (x0) {                                             // la pared del barranquillo que mira hacia la cámara (la de la orilla de enfrente)
+    var sd = cy > 0 ? 1 : -1;
+    pg3Sub(g, pg3Banda(g, x0 - 1, x0 + 61, 20, sd * R.hw, sd * R.hw, 0, hz - 2));
+  });
+  capa('#9c8458', function (x0) { [-1, 1].forEach(function (sd) { pg3Sub(g, pg3Banda(g, x0 - 1, x0 + 61, 20, sd * (R.hw - 2), sd * (R.hw + R.ori), 0, 0)); }); });
+  /* las ondas del agua */
+  g.beginPath();
+  for (i = 0; i < 18; i++) {
+    var xo = -X + ((i * 137 + G.t * 22) % (2 * X)), yo = pg3RioY(xo) + Math.sin(i * 2.1) * R.hw * 0.6, f = fwd(xo, yo);
+    if (f < NEAR + 10 || f > 900) continue;
+    proj(xo, yo, hz); g.moveTo(PX, PY); proj(xo + 18, yo + 1, hz); g.lineTo(PX, PY);
+  }
+  g.strokeStyle = 'rgba(230,248,255,.6)'; g.lineWidth = 1.4; g.stroke();
+}
+var pgEstanqueSueloPG3 = pgEstanqueSuelo;
+pgEstanqueSuelo = function (g) { if (PG3.vivo && MAPA === 'pg') pg3SueloBajo(g); pgEstanqueSueloPG3(g); };
+
+/* lo que va de pie: el tablero del puentecillo, las barandillas del puente y las flores de oro */
+var ciuItemPG3 = ciuItem;
+ciuItem = function (g, it, k, i) {
+  if (k === 'pg3' && MAPA === 'pg') {
+    if (it.m === 'titi') pg3Tablero(g, it); else if (it.m === 'baranda') pg3Baranda(g, it);
+    else if (it.m === 'flor3') { if (!it.got) { var T = pg3Titi(it.x, it.y); fl3Bill(g, true, it.x, it.y, T.z + 6 + Math.sin(G.t * 3 + it.i) * 2, 1.8, it.i * 0.137, Math.sin(G.t * 2 + it.i) * 0.3); } }
+    return true;
+  }
+  return ciuItemPG3(g, it, k, i);
+};
+function pg3Tablero(g, it) {                                                  // un tramo de tablas del puentecillo (en cuesta) y, de vez en cuando, sus postes hasta el agua
+  var dd = proj(it.x, it.y, 0); if (dd < 16 || dd > 900) return;
+  var T = PG3.titi, yN = pg3RioY(T.x) + T.L, t0 = it.i / it.n, t1 = (it.i + 1) / it.n, W = T.hw + 1.5;
+  function zt(t) { return T.H * Math.pow(Math.sin(Math.PI * t), 0.8); }
+  var y0 = yN - t0 * 2 * T.L, y1 = yN - t1 * 2 * T.L, z0 = zt(t0), z1 = zt(t1);
+  scr(g); K3.alfa = 1;
+  k3Abre(T.x, 0, 0, 0, 0, 0, 1);                                              // (en coordenadas del mundo: u = y, v = x)
+  var p = function (x, y, z) { return k3(y, x - T.x, z); };
+  var top = [p(T.x - W, y0, z0), p(T.x + W, y0, z0), p(T.x + W, y1, z1), p(T.x - W, y1, z1)], th = 2.4;
+  k3Poli([p(T.x - W, y0, z0 - th), p(T.x - W, y1, z1 - th), p(T.x - W, y1, z1), p(T.x - W, y0, z0)], '#7a4f28', { borde: 0.6 });
+  k3Poli([p(T.x + W, y0, z0 - th), p(T.x + W, y1, z1 - th), p(T.x + W, y1, z1), p(T.x + W, y0, z0)], '#7a4f28', { borde: 0.6 });
+  k3Poli([p(T.x - W, y0, z0 - th), p(T.x + W, y0, z0 - th), p(T.x + W, y0, z0), p(T.x - W, y0, z0)], '#6d4520', { borde: 0.6 });
+  k3Poli(top, it.i % 2 ? '#c49660' : '#b5874f', { borde: 0.7, pr: -2 });
+  if (it.i % 3 === 1 && it.i > 1 && it.i < it.n - 2) [-1, 1].forEach(function (sd) { k3Tubo(p(T.x + sd * (W - 1), (y0 + y1) / 2, -PG3.rio.hondo - 2), p(T.x + sd * (W - 1), (y0 + y1) / 2, (z0 + z1) / 2 - th), 1.3, 1.3, '#6d4520', { borde: 0.6 }); });
+  k3Pinta(g);
+}
+function pg3Baranda(g, it) {                                                  // la barandilla del puente de la carretera: un murete blanco y rojo con sus pilares
+  var dd = proj(it.x, it.y, 0); if (dd < 16 || dd > 900) return;
+  scr(g); K3.alfa = 1;
+  k3Abre(it.x, it.y, 0, 0, 0, 0, 1);
+  k3Bloque([-it.L, it.L, -2, 2, 0], [-it.L, it.L, -2, 2, 7], '#f2efe6', { top: '#d63031' });
+  for (var j = -1; j <= 1; j++) k3Bloque([j * it.L - 3, j * it.L + 3, -3, 3, 0], [j * it.L - 3, j * it.L + 3, -3, 3, 10], '#e7e1d2', { top: '#c0392b' });
+  k3Pinta(g);
+}
+/* la moto: bajo el agua no se ve; las gotas y las ondas, encima */
+var cityPlayerPG3 = cityPlayer;
+cityPlayer = function (g) {
+  var S = PG3.vivo && pgOn() ? PG3.plash : null;
+  if (!(S && S.t >= 0.3 && S.t < 1.0)) cityPlayerPG3(g);
+  if (PG3.vivo && pgOn()) pg3Gotas(g);
+};
+function pg3Gotas(g) {
+  var i, hz = -PG3.rio.hondo;
+  scr(g);
+  for (i = 0; i < PG3.ondas.length; i++) {                                     // las ondas, en el agua
+    var o = PG3.ondas[i]; if (o.t < 0) continue;
+    var rr2 = 8 + o.t * 46, al = Math.max(0, 1 - o.t / 1.3);
+    g.beginPath();
+    for (var k = 0; k <= 20; k++) { var a = k / 20 * TAU; proj(o.x + Math.cos(a) * rr2, o.y + Math.sin(a) * rr2 * 0.9, hz + 0.3); if (k) g.lineTo(PX, PY); else g.moveTo(PX, PY); }
+    g.strokeStyle = 'rgba(235,250,255,' + (al * 0.85).toFixed(2) + ')'; g.lineWidth = 2.2 * al + 0.6; g.stroke();
+  }
+  if (!PG3.gotas.length) return;
+  g.beginPath();
+  for (i = 0; i < PG3.gotas.length; i++) { var q = PG3.gotas[i], d = proj(q.x, q.y, q.z); if (d < 10) continue; var r = Math.max(0.8, q.r * PS); g.moveTo(PX + r, PY); g.arc(PX, PY, r, 0, TAU); }
+  g.fillStyle = 'rgba(214,242,255,.92)'; g.fill(); g.strokeStyle = 'rgba(40,110,150,.55)'; g.lineWidth = 0.8; g.stroke();
+}
+
+/* ---------- Pitik: lo nuevo ---------- */
+if (PG3.vivo) {
+  PG_DICE.lleva_sawah = [['🌾', 'Ahora, ¡al arrozal! Cruza el río']];
+  PG_DICE.rio = [['🌊', '¡El río! Crúzalo por un puente']];
+  PG_DICE.puente = [['🌉', '¡El puentecillo! Despacito, que no te caigas']];
+  PG_DICE.cruzado = [['🏅', '¡Has cruzado sin caerte! ¡Bravo!']];
+  PG_DICE.plash = [['💦', '¡PLASH! ¡Al agua!'], ['💦', '¡PLASH! ¡Qué fresquito!']];
+  PG_DICE.plashFuera = [['😄', '¡Brrr! ¡Venga, otra vez!']];
+  PG_DICE.bali.push(['🌾', 'Los arrozales de Bali se riegan entre todos: se llama subak']);
+  PG_EST.puente = 'pillo'; PG_EST.cruzado = 'feliz'; PG_EST.plash = 'susto'; PG_EST.plashFuera = 'feliz'; PG_EST.rio = 'feliz';
+  PG_YA.plash = 1; PG_YA.cruzado = 1;
+}
+(function () {
+  var N = {
+    'Ahora, ¡al arrozal! Cruza el río': ['Now, to the rice field! Cross the river', 'Sekarang, ke sawah! Seberangi sungai'],
+    '¡El río! Crúzalo por un puente': ['The river! Cross it on a bridge', 'Sungai! Seberangi lewat jembatan'],
+    '¡El puentecillo! Despacito, que no te caigas': ['The little bridge! Slowly, don\'t fall off', 'Jembatan kecil! Pelan-pelan, jangan jatuh'],
+    '¡Has cruzado sin caerte! ¡Bravo!': ['You crossed without falling! Bravo!', 'Kamu menyeberang tanpa jatuh! Hebat!'],
+    '¡PLASH! ¡Al agua!': ['SPLASH! Into the water!', 'BYUR! Masuk air!'], '¡PLASH! ¡Qué fresquito!': ['SPLASH! Nice and cool!', 'BYUR! Segarnya!'],
+    '¡Brrr! ¡Venga, otra vez!': ['Brrr! Come on, again!', 'Brrr! Ayo, lagi!'],
+    'Los arrozales de Bali se riegan entre todos: se llama subak': ['Bali\'s rice fields are watered together: it\'s called subak', 'Sawah di Bali diairi bersama: namanya subak'],
+    '¡PLASH!': ['SPLASH!', 'BYUR!'], '¡Brrr!': ['Brrr!', 'Brrr!'], '🌉 ¡Sin caerte! +5': ['🌉 No fall! +5', '🌉 Tidak jatuh! +5'], '+2': ['+2', '+2']
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
