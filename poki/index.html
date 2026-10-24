@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v26</title>
+<title>Bali Rush Poki v27</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v26 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v27 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -116573,11 +116573,11 @@ function pgPitikDom() {
   d.innerHTML = '<canvas></canvas><i class="pg-mute">🔊</i><div id="pgBoc"></div>';
   var scr0 = $('scr'); (scr0 && scr0.parentNode ? scr0.parentNode : document.body).insertBefore(d, scr0);
   PGH.el = d; PGH.cv = d.querySelector('canvas'); PGH.boc = d.querySelector('#pgBoc'); PGH.mute = d.querySelector('.pg-mute');
-  d.addEventListener('pointerdown', function (e) {                         // tocar a Pitik: le quitas (o le das) la voz
-    e.preventDefault(); e.stopPropagation(); auInit();
-    SAVE.pgVoz = SAVE.pgVoz === 0 ? 1 : 0; writeSave(); pgCalla();
-    pgSalta('feliz'); PGH.ult.voz0 = PGH.ult.voz1 = -99; pgDice(SAVE.pgVoz === 0 ? 'voz0' : 'voz1');
-  });
+  d.addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); auInit(); pgToca(); });
+}
+function pgToca() {                                                         // tocar a Pitik: le quitas (o le das) la voz (v27, en 686: sin voz, solo salta)
+  SAVE.pgVoz = SAVE.pgVoz === 0 ? 1 : 0; writeSave(); pgCalla();
+  pgSalta('feliz'); PGH.ult.voz0 = PGH.ult.voz1 = -99; pgDice(SAVE.pgVoz === 0 ? 'voz0' : 'voz1');
 }
 function pgCada(dt) {
   var on = pgOn() && G.state === 'play' && !G.card && !G.enMenu && $('scr') && $('scr').classList.contains('hide');
@@ -118047,10 +118047,11 @@ if (PGB.vivo) {
      lejos) o «Ahora no». En sus tarjetas sale «🐥 Volver al
      Playground»: vuelves donde estabas, con tu encargo, tus flores y
      tus cascos.
-   - LA VOZ DE PITIK («pon una voz de pollito graciosa, no esa»): en vez
-     de la voz del móvil, pititos de pollito al ritmo del bocadillo
-     (PGPIO, abajo). Y la ropa de Pitik del taller sale también en la
-     cesta de la moto y en el Pitik de arriba (en 678, con pmrRopa).
+   - LA VOZ DE PITIK: en la v26, pititos de pollito («pon una voz de
+     pollito graciosa, no esa»); en la v27, ninguna («no se le entiende,
+     la gente no sabe pájaro; para eso no pongas voz»): PGPIO, abajo.
+     Y la ropa de Pitik del taller sale también en la cesta de la moto
+     y en el Pitik de arriba (en 678, con pmrRopa).
    PG6.vivo = false (o ?nopg5): el Playground como la v25.
    ================================================================ */
 var PG6 = {
@@ -118299,48 +118300,16 @@ function pg6Cable(g, it) {                                                    //
   if (fwd(xp, yp) > NEAR + 10) { proj(xp, yp, zp); circ(g, PX, PY, Math.max(1.5, 2.4 * PS), '#f1c40f', INK, 0.8); proj(xp, yp, zp - 7); circ(g, PX, PY, Math.max(1.2, 1.6 * PS), '#e2452f', INK, 0.6); }
 }
 
-/* ---------- la voz de Pitik: pititos de pollito (no la voz del móvil) ----------
-   Jose Javier (24-10-2026): «pon una voz de pollito graciosa, no esa». Cada sílaba del bocadillo, un pío corto que sube y baja
-   (como los muñecos que «hablan» en los juegos): más agudo y fuerte con «¡…!», sube al final con «¿…?», alguna vez un pío-pío doble.
-   Va por el sonido del juego (se calla con «sonido: no»); tocando a Pitik, se calla o vuelve (SAVE.pgVoz). */
-var PGPIO = { vivo: PG6.vivo, nodos: [] };
-function pgPio(txt) {
-  auInit(); var c = AU.c; if (!c || !AU.sfx) return;
-  pgCalla();
-  var limpio = String(txt), pal = limpio.split(/\s+/).filter(function (w) { return /[a-záéíóúüñ]/i.test(w); });
-  var t = c.currentTime + 0.03, grita = /!/.test(limpio), pregunta = /\?/.test(limpio), n = 0, base = 1750 + (grita ? 250 : 0), i, j;
-  for (i = 0; i < pal.length && n < 18; i++) {
-    var sil = Math.max(1, Math.min(4, (pal[i].match(/[aeiouáéíóúü]+/gi) || [1]).length));
-    for (j = 0; j < sil && n < 18; j++, n++) {
-      var h = (pal[i].charCodeAt(j % pal[i].length) * 37 + n * 13) % 100 / 100, f0 = base * (0.82 + h * 0.5), d = 0.07 + h * 0.035;
-      var ult = i === pal.length - 1 && j === sil - 1, f1 = f0 * (ult && pregunta ? 1.7 : 1.32), f2 = f0 * (ult && pregunta ? 1.9 : ult ? 0.86 : 1.08);
-      pgPioUno(c, t, d, f0, f1, f2, ult && grita ? 0.26 : 0.19);
-      if (h > 0.86 && !ult) { t += d + 0.02; pgPioUno(c, t, d * 0.7, f0 * 1.15, f1 * 1.15, f2 * 1.1, 0.16); n++; }   // pío-pío
-      t += d + 0.028;
-    }
-    t += 0.05;                                                                 // entre palabra y palabra
-  }
-}
-function pgPioUno(c, t, d, f0, f1, f2, vol) {
-  var o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain(), g2 = c.createGain(), lp = c.createBiquadFilter();
-  o.type = 'triangle'; o2.type = 'sine'; lp.type = 'lowpass'; lp.frequency.value = 5200;
-  o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d * 0.35); o.frequency.exponentialRampToValueAtTime(f2, t + d);
-  o2.frequency.setValueAtTime(f0 * 2, t); o2.frequency.exponentialRampToValueAtTime(f1 * 2, t + d * 0.35); o2.frequency.exponentialRampToValueAtTime(f2 * 2, t + d);
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(vol * 0.6, t + d * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  g2.gain.value = 0.18;
-  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(lp); lp.connect(AU.sfx);
-  o.start(t); o2.start(t); o.stop(t + d + 0.02); o2.stop(t + d + 0.02);
-  PGPIO.nodos.push(o, o2); if (PGPIO.nodos.length > 80) PGPIO.nodos.splice(0, 40);
-}
+/* ---------- Pitik, sin voz (v27) ----------
+   Jose Javier (24-10-2026), con la v26 se le pusieron pititos de pollito («pon una voz de pollito graciosa, no esa»); al oírlos:
+   «pero no se le entiende, la gente no sabe pájaro, jajaja; para eso no pongas voz». Así que Pitik no tiene voz: ni la del
+   móvil (la de la v22) ni pititos. Habla con su bocadillo. Fuera el 🔊 de su esquina; tocarle solo le hace saltar. */
+var PGPIO = { vivo: PG6.vivo };
 if (PGPIO.vivo) {
-  pgVozOn = function () { return SAVE.pgVoz !== 0 && !SAVE.mute; };
-  pgVoz = function (txt) { if (pgVozOn()) { try { pgPio(txt); } catch (e) {} } };
-  var pgCallaPGV = pgCalla;
-  pgCalla = function () {
-    pgCallaPGV();
-    var c = AU.c; if (!c) return; var now = c.currentTime;
-    PGPIO.nodos.forEach(function (o) { try { o.stop(now); } catch (e) {} }); PGPIO.nodos.length = 0;
-  };
+  pgVozOn = function () { return false; };
+  pgVoz = function () {};
+  pgToca = function () { pgSalta('feliz'); };
+  (function () { var st = document.createElement('style'); st.textContent = '#pgPit .pg-mute{display:none!important}'; document.head.appendChild(st); })();
 }
 
 /* ---------- Pitik y los textos ---------- */
@@ -118375,6 +118344,64 @@ if (PG6.vivo) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza nucleo/688_poki_tirolina_suave.js*/
+/* ================================================================
+   POKI V27 · LA TIROLINA, SIN TIRONES
+   Jose Javier (24-10-2026), jugando a la tirolina desde el Playground:
+   «la tirolina se ralentiza» → «el juego va a tirones».
+   Medido (pruebas/tirolina_suave.js): de media, la tirolina cuesta
+   MENOS que el Playground o una carrera, pero es muy desigual: un
+   fotograma sin repintar a nadie, ~12 ms; si toca repintar al guiri
+   (su lienzo aparte, tzgPega), ~19; si además repinta un rival, ~25.
+   De un fotograma al siguiente saltaba 6,5 ms de media (las carreras,
+   2–3). Ese vaivén, en el móvil, son los tirones.
+   Ya había turnos (tzgCada: un rival por fotograma, y no en el del
+   guiri), pero se escapaban: los repintados «forzados» (el muñeco ha
+   girado más de 0,3 o ha cambiado de tamaño más de un 8 %) no miraban
+   el turno, y el guiri tampoco miraba si ya había repintado un rival.
+   Ahora: COMO MUCHO UN MUÑECO REPINTADO POR FOTOGRAMA. Si a otro le
+   toca, espera a un fotograma libre (y los rivales, también al del
+   guiri) y mientras tanto se pega su dibujo de antes, girado y a su
+   tamaño, como ya se hacía entre repintado y repintado (no se nota).
+   Si su dibujo ya no aguanta (muy viejo, o ha cambiado mucho de
+   tamaño o de giro), se repinta igual.
+   PTS.vivo = false (o ?notirsuave): la tirolina como la v26.
+   ================================================================ */
+var PTS = { vivo: POK.vivo && typeof tzgPega === 'function' && typeof TZG !== 'undefined' && !/[?&#]notirsuave/.test(location.search + location.hash),
+  on: true, nf: -1, n: 0, yoVisto: -99, esperas: 0, viejo: [3, 4], ks: 0.3, th: 0.9 };   // viejo: aguanta hasta cada × 3 + 4 fotogramas; ks, th: hasta un 30 % de tamaño y 0,9 de giro
+function ptsPegaViejo(g, Z, x, s, z, th, sc, al) {                          // pegar el dibujo que ya tiene, sin repintarlo (lo mismo que hace tzgPega entre repintado y repintado)
+  var d = tp(x, s, z); if (d < 8) return 0;
+  var cx = TPX, cy = TPY, ks = TPS;
+  TPX = cx - Math.sin(th) * 27 * sc * ks; TPY = cy + Math.cos(th) * 27 * sc * ks; if (tFuera(40 * sc * ks)) return 0;
+  if (al == null) al = 1;
+  var q = ks / Z.ks, c = Math.cos(th) * q, sn = Math.sin(th) * q;
+  tM(g, c, sn, -sn, c, cx, cy);
+  g.globalAlpha = al;
+  g.drawImage(Z.c, 0, 0, Z.w, Z.h, -Z.hw, -Z.up, Z.w / Z.dpr, Z.h / Z.dpr);
+  g.globalAlpha = 1; scr(g);
+  return d;
+}
+if (PTS.vivo) {
+  var tzgPegaPTS = tzgPega;
+  tzgPega = function (g, clave, x, s, z, th, sc, cada, al, pinta, ya, caja) {
+    if (!PTS.on) return tzgPegaPTS.apply(this, arguments);                // (PTS.on = false: para comparar en las pruebas)
+    if (PTS.nf !== TZA.nf) { PTS.nf = TZA.nf; PTS.n = 0; }
+    var Z = TZG.cz[clave], yo = clave === 'yo';
+    if (yo) PTS.yoVisto = TZA.nf;
+    if (Z && Z.c && !ya && !(cada <= 1 && (al == null || al >= 1)) && TZA.nf >= Z.nf) {
+      var turnoYo = !yo && TZA.nf >= TZG.yoSig && TZA.nf - PTS.yoVisto <= 2;
+      if (PTS.n > 0 || turnoYo) {                                              // este fotograma ya está ocupado: ¿le tocaría repintar? ¿aguanta su dibujo?
+        tp(x, s, z); var ks = TPS, edad = TZA.nf - Z.nf;
+        var quiere = edad >= cada || Math.abs(ks - Z.ks) > Z.ks * 0.08 || Math.abs(th - Z.th) > 0.3;
+        var aguanta = edad < cada * PTS.viejo[0] + PTS.viejo[1] && Math.abs(ks - Z.ks) < Z.ks * PTS.ks && Math.abs(th - Z.th) < PTS.th;
+        if (quiere && aguanta) { PTS.esperas++; return ptsPegaViejo(g, Z, x, s, z, th, sc, al); }
+      }
+    }
+    var nf0 = Z ? Z.nf : -1, r = tzgPegaPTS.apply(this, arguments);
+    Z = TZG.cz[clave]; if (Z && Z.nf !== nf0) PTS.n++;
+    return r;
+  };
+}
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
