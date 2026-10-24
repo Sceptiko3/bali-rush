@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush · prueba para Poki</title>
+<title>Bali Rush Poki v22</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v21 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v22 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -115525,6 +115525,1266 @@ drawFlat = function (g, o) {
   if (o._k === 9 && pcnOn() && SP.canangD && SP.canangD.indexOf(o.s) >= 0) { shadow(g, o.x, o.y, 4.4, 3.4, 0); pcnCanang(g, o.x, o.y, clamp(o.sc || 1, 0.85, 1.15), true, o.x * 5.3 + o.y * 2.1); return; }
   return drawFlatPCN(g, o);
 };
+/*#pieza nucleo/678_poki_playground.js*/
+/* ================================================================
+   POKI V22 · PLAYGROUND: LA EXPLANADA PARA LOS PEQUES, CON PITIK
+   Jose Javier (24-10-2026): «quiero hacer una sección niños, más campo
+   abierto, más vidas, Pitik que le diga cosas o salte; que vaya
+   recogiendo cosas y se le escapen y tienes que recogerlas». Y luego:
+   «es con los elementos de Bali Rush, que esté abierto y haya
+   pasajeros que recoger, muebles, cerdos y gallinas; las gallinas,
+   cuando te chocas, se escapan y tienes que pasar por encima para
+   recogerlas… la idea es que haya carretera, pero si la atraviesas
+   tampoco pasa nada, te indica fuera de carretera; cuando se choca,
+   que se caiga cuando sea algo más fuerte; aunque haya algunos sitios
+   que no se puedan pasar, todo más concepto explanada con los
+   elementos típicos: cocos, perros, gente pasando, motos, coches,
+   camiones». Y: «playground, y el pollo interactúe más o te hable».
+   Lo que hay (con el motor de la ciudad: G.mode 'city', G.sub 'pg',
+   su propio mapa 'pg'):
+   - LA EXPLANADA: el lapangan de un pueblo, con su tapia alrededor.
+     Una carretera hace un anillo (motos, coches, camiones y algún
+     surfista, no; por la izquierda, como en Bali). Por dentro, la
+     hierba con el baniano; por fuera, el warung, el gallinero, el
+     templo, la carpintería, la pocilga, la casa de Komang, la escuela
+     y el estanque. Fuera de la tapia, los arrozales.
+   - LA MOTO VA POR DONDE QUIERAS: salirte de la carretera no hace
+     nada (lo dice: «🌱 Fuera de carretera»). No se pasa por la tapia,
+     los edificios, los árboles, el estanque ni las palmeras.
+   - LOS ENCARGOS, de uno en uno (cuatro por ronda): gallinas, un
+     pasajero, muebles y el cerdo. Aro azul: recoger; aro amarillo:
+     llevar. Si te golpeas (un bache, un coche, un perro, una pared, un
+     coco), SE ESCAPAN: las gallinas corretean, el cerdo se tira, cae
+     una silla… y hay que pasar por encima para cogerlas (a cualquier
+     velocidad). Hasta que no las tengas todas, no se entrega.
+   - MÁS VIDAS Y CAÍDAS SOLO FUERTES: cinco cascos; contra el tráfico
+     hace falta un golpe bastante más fuerte que en la ciudad para
+     caerse; contra una pared, ir casi a tope de frente; perros,
+     piedras y baches solo te sacuden.
+   - PITIK HABLA Y SALTA: arriba a la izquierda, Pitik en 3D con su
+     bocadillo (y su voz, si el móvil la tiene; se le quita tocándole).
+     Dice lo que toca, avisa de lo que se escapa, se alegra, se asusta
+     y, de vez en cuando, cuenta algo de Bali. En la moto da saltos en
+     la cesta; cuando la parrilla va ocupada, va sentado en la cabeza
+     del guiri.
+   PGD.vivo = false (o ?nopg en la dirección): sin Playground (como la v21).
+   ================================================================ */
+var PGD = {
+  vivo: !/[?&#]nopg/.test(location.search + location.hash),
+  X: 1150, Y: 900,                  // la tapia: medio ancho y medio fondo
+  rx: 820, ry: 560, rr: 240, w: 34, // la carretera: un anillo (centro, radio de las esquinas, medio ancho)
+  vidas: 5,
+  choque: 1.55,                     // contra el tráfico, hace falta un 55 % más para caerse que en la ciudad
+  pared: 0.9,                       // contra una pared, un árbol…: de frente a más del 90 % de lo que corre la moto (con carga, menos), te caes
+  roce: 55,                         // de esto a «pared»: golpe (se escapa algo), sin caerse
+  recoge: 24,                       // lo que se ha escapado se coge pasando a menos de esto (a cualquier velocidad)
+  aro: 58,                          // los aros de recoger y de entregar
+  huye: 120,                        // las gallinas solo huyen si pasas a más de esto
+  ronda: 4,                         // encargos por ronda
+  pollos: 6,                        // gallinas por encargo (en el reparto, 9)
+  edif: 1.5,                        // lo grandes que son los edificios de los sitios (en la ciudad, 1)
+  lejos: 620                        // la gente, las gallinas de casa y el balón: hasta esta distancia (antes de la niebla)
+};
+var PG = { sol: [], gente: [], balon: null, tarea: null, espera: 0, n: 0, caidas: 0, escapes: 0, banked: 0, bankT: 3, offT: 0, fuera: false, salto: -1, est: null, estT: 0 };
+function pgOn() { return PGD.vivo && G.mode === 'city' && !!MIS && MIS.modo === 'pg'; }
+
+/* ---------- el mapa: el anillo de carretera ---------- */
+function pgMapDef() {
+  var X = PGD.rx, Y = PGD.ry, R = PGD.rr, n = 5, cx = X - R, cy = Y - R;
+  function arco(ox, oy, a0, out) { for (var i = 0; i <= n; i++) { var a = (a0 + 45 * i / n) * Math.PI / 180; out.push([ox + R * Math.cos(a), oy + R * Math.sin(a)]); } return out; }
+  function lado(c1, a1, c2, a2) { var p = []; arco(c1[0], c1[1], a1, p); arco(c2[0], c2[1], a2, p); return p; }
+  ZONES = [{ k: 'lapangan', x0: -PGD.X, x1: PGD.X, y0: -PGD.Y, y1: PGD.Y }];
+  VILL = [];
+  return [
+    { n: 'Jalan Lapangan', w: PGD.w, main: true, pts: lado([cx, cy], 45, [-cx, cy], 90) },      // la de arriba (y +), de este a oeste
+    { n: 'Jalan Pura', w: PGD.w, pts: lado([-cx, cy], 135, [-cx, -cy], 180) },                    // la de la izquierda
+    { n: 'Jalan Sekolah', w: PGD.w, main: true, pts: lado([-cx, -cy], 225, [cx, -cy], 270) },    // la de abajo
+    { n: 'Jalan Pasar', w: PGD.w, pts: lado([cx, -cy], 315, [cx, cy], 0) }                        // la de la derecha
+  ];
+}
+ZCOL.lapangan = '#86c255';
+var mapDefPG = mapDef;
+mapDef = function () { return MAPA === 'pg' ? pgMapDef() : mapDefPG(); };
+var usaMapaPG = usaMapa;
+usaMapa = function (m) {
+  if (PGD.vivo && G.mode === 'city' && G.sub === 'pg') m = 'pg';
+  if (m !== 'pg') { usaMapaPG(m); return; }
+  if (MAPA === 'pg' && CITY) return;
+  if (typeof lgRestaura === 'function') lgRestaura();
+  if (CITY) MAPAS[MAPA] = { c: CITY, z: ZONES, v: VILL };
+  MAPA = 'pg';
+  if (MAPAS.pg) { CITY = MAPAS.pg.c; ZONES = MAPAS.pg.z; VILL = MAPAS.pg.v; return; }
+  CITY = null; PLACE_DEF = []; buildCity();
+};
+
+/* ---------- los sitios ---------- */
+var PG_SITIOS = {
+  warung: { ico: '🍜', n: 'el warung', sign: 'WARUNG MADE', x: 300, y: 800, a: 0, rx: 300, ry: 684 },
+  kandang: { ico: '🐔', n: 'el gallinero', sign: 'KANDANG AYAM', x: 930, y: 790, a: 0, rx: 890, ry: 684 },
+  pura: { ico: '🛕', n: 'el templo', sign: 'PURA DESA', x: -850, y: 800, a: 0, rx: -850, ry: 684 },
+  kayu: { ico: '🪚', n: 'la carpintería', sign: 'TUKANG KAYU', x: -160, y: -800, a: Math.PI, rx: -160, ry: -684 },
+  babi: { ico: '🐖', n: 'la pocilga', sign: 'KANDANG BABI', x: 930, y: -790, a: Math.PI, rx: 890, ry: -684 },
+  rumah: { ico: '🏠', n: 'la casa de Komang', sign: 'RUMAH KOMANG', x: 1045, y: 60, a: Math.PI / 2, rx: 950, ry: 60 },
+  sekolah: { ico: '🏫', n: 'la escuela', sign: 'SEKOLAH', x: -1045, y: -60, a: -Math.PI / 2, rx: -950, ry: -60 }
+};
+/* (con giro a, lo de delante de un plano de 528 mira hacia (-sen a, -cos a): giro 0, hacia abajo, hacia la carretera de arriba) */
+function pgFrente(S) { return [-Math.sin(S.a), -Math.cos(S.a)]; }
+
+/* ---------- lo que no se atraviesa ---------- */
+function pgCirculo(x, y, r) { PG.sol.push({ c: 1, x: x, y: y, r: r }); }
+function pgCaja(x, y, a, hu, hv) { PG.sol.push({ c: 0, x: x, y: y, ux: Math.cos(a), uy: -Math.sin(a), hl: hu, hw: hv }); }   // (como los planos: u a lo largo con giro a)
+function pgElipse(x, y, rx, ry) { PG.sol.push({ c: 2, x: x, y: y, rx: rx, ry: ry }); }
+
+/* ---------- el decorado: todo lo de la explanada ---------- */
+function pgGenera() {
+  var items = [], obs = [], O = ESN.s.obra, r = mulberry(5150), i, k, S;
+  PG.sol = [];
+  function deco(s, x, y, a, sc, o) { var d = { k: 'deco', s: s, x: x, y: y, a: a || 0, sc: sc || 1 }, q; if (o) for (q in o) d[q] = o[q]; items.push(d); return d; }
+  function obra(ob, x, y, a, sc) { return deco(O, x, y, a, sc, { ob: ob }); }
+  function arbol(s, x, y, sc, solido) { deco(s, x, y, r() * TAU, sc); if (solido) pgCirculo(x, y, solido); }
+  /* la tapia de fuera, con la puerta partida arriba y abajo (cerrada por detrás: es de adorno) */
+  var X = PGD.X, Y = PGD.Y, L = 92;
+  for (k = -X + L / 2; k < X; k += L) {
+    items.push({ k: 'wall', x: k, y: Y + 4, ux: 1, uy: 0, L: L, side: 0 });
+    items.push({ k: 'wall', x: k, y: -Y - 4, ux: 1, uy: 0, L: L, side: 0 });
+  }
+  for (k = -Y + L / 2; k < Y; k += L) {
+    items.push({ k: 'wall', x: X + 4, y: k, ux: 0, uy: 1, L: L, side: 0 });
+    items.push({ k: 'wall', x: -X - 4, y: k, ux: 0, uy: 1, L: L, side: 0 });
+  }
+  /* fuera de la tapia: palmeras y casas entre los arrozales (no se llega: solo se ven) */
+  for (i = 0; i < 46; i++) {
+    var lado = i % 4, t = r() * 2 - 1, fx = lado === 0 ? t * (X + 300) : lado === 1 ? t * (X + 300) : (lado === 2 ? 1 : -1) * (X + 60 + r() * 260);
+    var fy = lado === 0 ? Y + 60 + r() * 260 : lado === 1 ? -Y - 60 - r() * 260 : t * (Y + 300);
+    if (r() < 0.7) deco(SP.palm[i % SP.palm.length], fx, fy, r() * TAU, 1.5 + r() * 0.5);
+    else deco(SP.canopy[i % SP.canopy.length], fx, fy, r() * TAU, 1.6 + r() * 0.5);
+  }
+  [[-600, Y + 140, 0], [500, Y + 170, 0], [-700, -Y - 150, Math.PI], [650, -Y - 160, Math.PI], [X + 160, 300, Math.PI / 2], [-X - 170, 380, -Math.PI / 2]].forEach(function (q, j) { obra(blMeten(18, 14.4, j % 4), q[0], q[1], q[2], 1.25); });
+  /* el baniano sagrado en medio del lapangan, con su tela de cuadros */
+  deco(ESN.s.banyan, 0, 130, 0.6, 1.5); pgCirculo(0, 130, 26);
+  /* los sitios */
+  S = PG_SITIOS;
+  var KE = PGD.edif;                                                       // (los edificios de los sitios, algo más grandes que en la ciudad: se ven de lejos)
+  function sitio(id, hacer) { var s = S[id], f = pgFrente(s); hacer(s, f); deco(signSprite(s.sign), s.x + f[0] * 44 + (s.a === 0 || s.a === Math.PI ? 60 : 0), s.y + f[1] * 44 + (s.a === 0 || s.a === Math.PI ? 0 : 60), 0, 1.3); }
+  sitio('warung', function (s) {                                                      // el warung: el pabellón de paja con su mostrador y sus banquetas
+    obra(blBale(17, 13, 1, true), s.x, s.y, s.a, 1.2 * KE); pgCaja(s.x, s.y, s.a, 21 * KE, 16.5 * KE);
+    items.push({ k: 'pgm', m: 'warung', x: s.x, y: s.y - 22, a: s.a });
+    arbol(SP.frang, s.x - 84, s.y + 10, 1.1, 9); arbol(SP.banana[0], s.x + 88, s.y + 24, 1.2, 8);
+  });
+  sitio('kandang', function (s) {                                                     // el gallinero: el granero sobre pilotes, con sus gallinas picoteando delante
+    obra(blJineng(), s.x, s.y, s.a, 1.05 * KE); pgCaja(s.x, s.y, s.a, 16 * KE, 14 * KE);
+    for (k = 0; k < 4; k++) PG.gente.push({ t: 'pgg', k: 'pgg', x: s.x - 40 + k * 26, y: s.y - 44 - (k % 2) * 12, x0: s.x, y0: s.y - 50, a: r() * TAU, tg: r(), col: k % 3 });
+    arbol(SP.banana[1 % SP.banana.length], s.x + 78, s.y + 20, 1.2, 8);
+  });
+  sitio('pura', function (s) {                                                        // el templo del pueblo: su tapia, la puerta partida y dos meru
+    var hw = 74, hd = 64, cx = s.x, cy = s.y + 18;
+    [[0, hd, hw * 2, 1], [-hw, 0, hd * 2, 0], [hw, 0, hd * 2, 0]].forEach(function (w) { items.push({ k: 'wall', x: cx + w[0], y: cy + w[1], ux: w[3], uy: 1 - w[3], L: w[2], side: 0 }); });
+    [-1, 1].forEach(function (sd) { items.push({ k: 'wall', x: cx + sd * (hw + 18) / 2, y: cy - hd, ux: 1, uy: 0, L: hw - 18, side: 0 }); });
+    obra(blCandi(false), cx - 13, cy - hd, Math.PI, 0.42); obra(blCandi(false), cx + 13, cy - hd, 0, 0.42);
+    obra(blMeru(5), cx - 30, cy + 20, 0, 1.25); obra(blMeru(3), cx + 34, cy + 26, 0, 0.9); obra(blPadma(), cx + 2, cy + 40, 0, 0.7);
+    arbol(SP.frang, cx - 52, cy - 34, 1, 0); arbol(SP.frang, cx + 54, cy - 30, 1, 0);
+    pgCaja(cx, cy, 0, hw + 3, hd + 3);
+    for (k = -2; k <= 2; k += 2) deco(null, cx + k * 24, cy - hd - 22, 0, 1, { pj: 1, nx: 0, ny: -1 });
+  });
+  sitio('kayu', function (s) {                                                        // la carpintería: un bale abierto con tablones y un tronco
+    obra(blBale(16, 12, 0, true), s.x, s.y, s.a, 1.2 * KE); pgCaja(s.x, s.y, s.a, 19.5 * KE, 15 * KE);
+    items.push({ k: 'pgm', m: 'kayu', x: s.x + 70, y: s.y + 6, a: s.a });
+    pgCaja(s.x + 70, s.y + 6, 0, 18, 11);
+    arbol(SP.canopy[0], s.x - 90, s.y - 20, 1.3, 11);
+  });
+  sitio('babi', function (s) {                                                        // la pocilga: su murete, el tejadillo y el cerdo de la casa
+    obra(blBale(12, 10, 2, true), s.x + 22, s.y - 6, s.a, 1.05 * KE); pgCaja(s.x + 4, s.y, 0, 36, 26);
+    items.push({ k: 'pgm', m: 'babi', x: s.x, y: s.y, a: s.a });
+    arbol(SP.banana[0], s.x - 66, s.y - 20, 1.2, 8);
+  });
+  sitio('rumah', function (s) {                                                       // la casa de Komang: el meten con su porche
+    obra(blMeten(18, 14.4, 1), s.x, s.y, s.a, 1.2 * KE); pgCaja(s.x, s.y, s.a, 22 * KE, 17.5 * KE);
+    arbol(SP.frang, s.x - 10, s.y + 84, 1.1, 9); arbol(SP.palm[0], s.x + 10, s.y - 96, 1.6, 8);
+  });
+  sitio('sekolah', function (s) {                                                     // la escuela: un meten largo y el mástil con la bandera
+    obra(blMeten(24, 14.4, 0), s.x, s.y, s.a, 1.2 * KE); pgCaja(s.x, s.y, s.a, 29 * KE, 17.5 * KE);
+    items.push({ k: 'pgm', m: 'bandera', x: s.x + 58, y: s.y + 90, a: 0 }); pgCirculo(s.x + 58, s.y + 90, 5);
+    arbol(SP.canopy[1 % SP.canopy.length], s.x - 6, s.y - 110, 1.3, 11);
+  });
+  /* el estanque (no se pasa) */
+  PG.estanque = { x: -880, y: -720, rx: 150, ry: 95 }; pgElipse(-880, -720, 150, 95);
+  arbol(SP.banana[0], -1040, -620, 1.2, 8); arbol(SP.frang, -700, -820, 1, 8);
+  /* más árboles por los bordes (con su tronco, que no se atraviesa) */
+  [[-560, 790], [600, 800], [-560, -800], [480, -800], [1060, 420], [1050, -380], [-1050, 420], [-1050, -440], [-420, -330], [430, 300], [-470, 290]].forEach(function (q, j) {
+    if (j < 8) arbol(j % 2 ? SP.palm[j % SP.palm.length] : SP.canopy[j % SP.canopy.length], q[0], q[1], 1.3 + (j % 3) * 0.15, 10);
+    else arbol(SP.frang, q[0], q[1], 1.05, 8);
+  });
+  /* las palmeras de los cocos, asomadas a la carretera (como en la ciudad: al pasar debajo, cae un coco) */
+  [[-420, 624, 0, 1], [-60, 626, 0, 1], [640, 628, 0, 1], [-300, 494, 0, -1], [420, 494, 0, -1], [-540, -626, 0, -1], [300, -628, 0, -1], [60, -494, 0, 1], [884, -60, 1, 0], [-886, 140, -1, 0]].forEach(function (q) {
+    obs.push({ t: 'palma', x: q[0], y: q[1], side: 1, nx: q[2], ny: q[3], v: Math.floor(r() * 2) }); pgCirculo(q[0], q[1], 7);
+  });
+  /* perros dormidos (al pitarles se despiertan y se van) */
+  [[-120, 560, 0, 1], [320, -180, 1, 0], [140, 700, 1, 0], [-640, -300, 0, 1]].forEach(function (q) { obs.push({ t: 'perro', x: q[0], y: q[1], side: -1, nx: q[2], ny: q[3], st: 'sleep', a: r() * TAU }); });
+  /* baches en la carretera */
+  [[-200, 548], [560, 572], [-300, -566], [834, 200], [-810, -120]].forEach(function (q, j) { obs.push({ t: 'bache', x: q[0], y: q[1], r: 11, v: j % 3 }); });
+  /* la gente que pasa */
+  pgPonGente(r);
+  CITY.items = items; CITY.obs = obs; CITY.busy = []; CITY.jams = []; CITY.templos = [{ x: S.pura.x, y: S.pura.y }];
+}
+var genCityPG = genCity;
+genCity = function () { if (MAPA === 'pg') { pgGenera(); return; } return genCityPG.apply(this, arguments); };
+
+/* ---------- la gente: de un sitio a otro andando, y los niños jugando al balón ---------- */
+GE3_Q.pg_nino = { piel: '#c7783e', pelo: '#2a1a12', torso: '#e2452f', muslo: '#1f5a8a', corto: true, pies: '#c7783e', hombre: true, k: 0.7 };
+GE3_Q.pg_nino2 = { piel: '#b97c50', pelo: '#2a1a12', torso: '#f2c230', muslo: '#2b2b2f', corto: true, pies: '#b97c50', hombre: true, k: 0.68 };
+function pgPonGente(r) {
+  var S = PG_SITIOS, G2 = PG.gente;
+  function camina(Q, ruta, v, extra) { var p0 = ruta[0]; G2.push({ t: 'pgw', k: 'pgw', Q: Q, ruta: ruta, i: 1, x: p0[0], y: p0[1], v: v, a: 0, paso: r() * 3, extra: extra || null, pose: 'anda', huye: 0, saluda: 0 }); }
+  camina(GE3_Q.pax_abuela, [[S.pura.x + 30, S.pura.ry + 20], [-300, 470], [200, 470], [S.warung.x - 40, S.warung.ry + 20], [200, 470], [-300, 470]], 26);
+  camina(GE3_Q.duena, [[S.sekolah.rx, S.sekolah.ry - 40], [-640, -200], [-200, -420], [300, -420], [640, -200], [640, 200], [-640, 200]], 28);
+  camina(GE3_Q.proc_h, [[S.babi.rx - 60, S.babi.ry], [700, -420], [700, 380], [S.kandang.rx - 40, S.kandang.ry - 10], [700, 380], [700, -420]], 30);
+  camina(GE3_Q.bakso, [[-500, -60], [-200, -300], [300, -300], [520, -40], [300, 280], [-200, 300]], 22, 'bakso');
+  /* los niños del balón, en la mitad de abajo del campo */
+  PG.balon = { x: -260, y: -170, vx: 0, vy: 0, z: 0, vz: 0, rot: 0 };
+  [GE3_Q.pg_nino, GE3_Q.pax_nina, GE3_Q.pg_nino2].forEach(function (Q, j) { G2.push({ t: 'pgw', k: 'pgw', Q: Q, juega: true, x: -320 + j * 60, y: -120 - j * 40, v: 60 + j * 8, a: 0, paso: j, pose: 'corre', huye: 0, saluda: 0, tg: j * 0.5 }); });
+}
+function pgGenteUpd(dt) {
+  var i, w, B = PG.balon, fx = Math.sin(P.h), fy = Math.cos(P.h), ride = P.state === 'ride';
+  for (i = 0; i < PG.gente.length; i++) {
+    w = PG.gente[i];
+    var dx = w.x - P.x, dy = w.y - P.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
+    if (w.t === 'pgg') {                                                     // las gallinas de casa, picoteando junto al gallinero
+      w.tg -= dt;
+      if (ride && d < 46 && P.speed > 30) { w.vx = dx / d * 70; w.vy = dy / d * 70; w.tg = 0.5; if (!w.cac || G.t - w.cac > 1.5) { w.cac = G.t; SFX.cluck(); } }
+      else if (w.tg <= 0) { var an = Math.random() * TAU, vv = Math.random() < 0.4 ? 0 : 14; w.tg = 0.6 + Math.random() * 1.4; w.vx = Math.cos(an) * vv; w.vy = Math.sin(an) * vv; if (Math.hypot(w.x - w.x0, w.y - w.y0) > 46) { w.vx = (w.x0 - w.x) * 0.4; w.vy = (w.y0 - w.y) * 0.4; } }
+      w.x += (w.vx || 0) * dt; w.y += (w.vy || 0) * dt; if (w.vx || w.vy) w.a = Math.atan2(w.vx || 0.01, w.vy || 0);
+      pgDentro(w, 5); continue;
+    }
+    w.paso += dt * (w.pose === 'corre' ? 2.4 : 1.6);
+    if (w.saluda > 0) { w.saluda -= dt; w.a = Math.atan2(P.x - w.x, P.y - w.y); pgDentro(w, 7); continue; }
+    if (ride && d < 30 && P.speed > 25 && !(w.huye > 0)) {                    // ¡que te pillo!: se aparta de un salto
+      w.huye = 0.9; w.hx = -fy * sgn(dx * -fy + dy * fx); w.hy = fx * sgn(dx * -fy + dy * fx);
+      pop(pickM(['¡Eh!', '¡Uy!', '¡Cuidado!']), w.x, w.y + 34, '#ffffff', 0.85);
+      if (G.t - (PG.genteT || 0) > 4) { PG.genteT = G.t; pgDice('gente'); }
+    }
+    if (w.huye > 0) { w.huye -= dt; w.x += w.hx * 120 * dt; w.y += w.hy * 120 * dt; w.a = Math.atan2(w.hx, w.hy); w.pose = 'corre'; pgDentro(w, 7); continue; }
+    if (w.juega) {                                                            // a por el balón (si no, se le va)
+      var bx = B.x - w.x, by = B.y - w.y, bd = Math.hypot(bx, by) || 1;
+      w.tg -= dt;
+      if (bd > 18) { var vq = Math.min(w.v, bd * 1.6); w.x += bx / bd * vq * dt; w.y += by / bd * vq * dt; w.a = Math.atan2(bx, by); w.pose = vq > 20 ? 'corre' : 'pie'; }
+      else if (w.tg <= 0 && B.z < 1) {                                        // le da una patada hacia otro sitio del campo
+        w.tg = 0.8 + Math.random(); var tx = -480 + Math.random() * 440 - B.x, ty = -380 + Math.random() * 360 - B.y, tl = Math.hypot(tx, ty) || 1;
+        B.vx = tx / tl * (110 + Math.random() * 60); B.vy = ty / tl * (110 + Math.random() * 60); B.vz = 30 + Math.random() * 40;
+      } else w.pose = 'pie';
+    } else {                                                                  // de un punto a otro de su ruta
+      var q = w.ruta[w.i], qx = q[0] - w.x, qy = q[1] - w.y, ql = Math.hypot(qx, qy) || 1;
+      if (ql < 8) w.i = (w.i + 1) % w.ruta.length;
+      else { w.x += qx / ql * w.v * dt; w.y += qy / ql * w.v * dt; w.a = Math.atan2(qx, qy); w.pose = 'anda'; }
+    }
+    pgDentro(w, 7);
+  }
+  if (B) {                                                                    // el balón: rueda, bota y se para; si le das con la moto, sale disparado
+    B.vz -= 300 * dt; B.z += B.vz * dt; if (B.z < 0) { B.z = 0; B.vz = Math.abs(B.vz) > 30 ? -B.vz * 0.45 : 0; }
+    B.x += B.vx * dt; B.y += B.vy * dt; var fr = 1 - dt * (B.z > 0 ? 0.2 : 1.3); B.vx *= fr; B.vy *= fr; B.rot += Math.hypot(B.vx, B.vy) * dt * 0.25;
+    var db = d2(B.x, B.y, P.x, P.y);
+    if (ride && db < 14 && P.speed > 20 && G.t - (B.t || 0) > 0.4) { B.t = G.t; B.vx = fx * P.speed * 1.3 + (B.x - P.x) * 3; B.vy = fy * P.speed * 1.3 + (B.y - P.y) * 3; B.vz = 70; SFX.clonk(); pop(pickM(['¡Toma!', '¡Golazo!', '¡Bien!']), B.x, B.y + 24, '#ffe27a', 0.95); }
+    var bo = pgDentroB(B); if (bo) { B.vx *= -0.5; B.vy *= -0.5; }
+  }
+}
+function pgHonk() {                                                          // al pitar, la gente de delante saluda y se aparta
+  var fx = Math.sin(P.h), fy = Math.cos(P.h);
+  PG.gente.forEach(function (w) {
+    if (w.t !== 'pgw') return;
+    var dx = w.x - P.x, dy = w.y - P.y, ah = dx * fx + dy * fy;
+    if (ah > -10 && ah < 260 && Math.abs(-dx * fy + dy * fx) < 90) { w.saluda = 1.3; if (Math.random() < 0.5) pop(pickM(['¡Hola!', '¡Om swastiastu!', '👋']), w.x, w.y + 36, '#ffffff', 0.85); }
+  });
+}
+
+/* ---------- que nada se meta en lo que no se pasa ---------- */
+function pgEmpuja(o, rM) {                                                    // devuelve hacia dónde le ha empujado (null si nada)
+  var S = PG.sol, i, s, out = null;
+  for (i = 0; i < S.length; i++) {
+    s = S[i];
+    var dx = o.x - s.x, dy = o.y - s.y;
+    if (s.c === 1) {
+      var m = s.r + rM; if (dx > m || dx < -m || dy > m || dy < -m) continue;
+      var d = Math.sqrt(dx * dx + dy * dy); if (d >= m) continue;
+      if (d < 0.01) { dx = 1; d = 1; }
+      o.x = s.x + dx / d * m; o.y = s.y + dy / d * m; out = [dx / d, dy / d, m - d];
+    } else if (s.c === 0) {
+      var lu = dx * s.ux + dy * s.uy, lv = dx * -s.uy + dy * s.ux, pu = s.hl + rM - Math.abs(lu), pv = s.hw + rM - Math.abs(lv);
+      if (pu <= 0 || pv <= 0) continue;
+      if (pu < pv) { var su = sgn(lu); o.x += s.ux * su * pu; o.y += s.uy * su * pu; out = [s.ux * su, s.uy * su, pu]; }
+      else { var sv = sgn(lv); o.x += -s.uy * sv * pv; o.y += s.ux * sv * pv; out = [-s.uy * sv, s.ux * sv, pv]; }
+    } else {
+      var ex = dx / (s.rx + rM), ey = dy / (s.ry + rM), e = ex * ex + ey * ey; if (e >= 1) continue;
+      var k = 1 / Math.sqrt(Math.max(e, 1e-4)), nx = dx / ((s.rx + rM) * (s.rx + rM)), ny = dy / ((s.ry + rM) * (s.ry + rM)), nl = Math.hypot(nx, ny) || 1;
+      o.x = s.x + dx * k; o.y = s.y + dy * k; out = [nx / nl, ny / nl, 1];
+    }
+  }
+  var X = PGD.X - rM, Y = PGD.Y - rM;
+  if (o.x > X) { o.x = X; out = [-1, 0, 1]; } else if (o.x < -X) { o.x = -X; out = [1, 0, 1]; }
+  if (o.y > Y) { o.y = Y; out = [0, -1, 1]; } else if (o.y < -Y) { o.y = -Y; out = [0, 1, 1]; }
+  return out;
+}
+function pgDentro(o, rM) { return pgEmpuja(o, rM); }
+function pgDentroB(o) { var x0 = o.x, y0 = o.y, r = pgEmpuja(o, 4); return r && (x0 !== o.x || y0 !== o.y); }
+
+/* ---------- conducir: como en la ciudad, pero sin bordillo ---------- */
+function pgRide(dt) {
+  var ana = manAna(), sIn = ana != null ? ana : (IN.right ? 1 : 0) - (IN.left ? 1 : 0), CK = cargaK();
+  if (!P.libre) { P.libre = true; P.steer = 0; P.lean = 0; P.vx = P.vxSet = 0; P.intent = 0; P.tapGiro = 0; P.blend = null; P.odo = P.odo || 0; }
+  if (P.ciego > 0) P.ciego -= dt;
+  if (P.vx !== P.vxSet) P.h += clamp((P.vx - P.vxSet) / Math.max(P.speed, 80), -0.4, 0.4);   // un empujón de fuera
+  var st = manMueve(P, sIn, dt, clamp(CK.resp / 15, CNL.cargaMan, 1.3), 0, ana) + CK.tir * 0.5;
+  if (TOUCH && !SAVE.h.joy && typeof joyPuesto === 'function' && joyPuesto()) { if (ana != null && Math.abs(ana) > 0.3) hintDone('joy'); else if (!HINT.key && P.speed > 70) hintShow('joy'); }
+  if (P.dizzy > 0) { P.dizzy -= dt; st += Math.sin(G.t * 7.3) * 0.9; }
+  if (P.wob > 0) { P.wob -= dt; st += Math.sin(G.t * 26) * 0.6 * Math.min(1, P.wob * 2); }
+  if (IN.gas) P.speed += ACC * CK.acc * dt * (1 - 0.6 * P.speed / CK.vmax);
+  if (IN.brake) P.speed -= BRK * CK.brk * dt;
+  manMotor(P, IN.gas, IN.brake, dt);
+  P.speed = clamp(P.speed - DRAG * dt, 0, Math.max(CK.vmax, P.speed - 60 * dt));
+  if (P.speed < 5 && IN.brake && P.utT >= 0) {                                 // media vuelta: parado y con el freno pulsado
+    P.utT += dt;
+    if (P.utT > 0.45) { P.h = adiff(P.h + Math.PI, 0); P.utT = -1; P.steer = 0; pop('¡Media vuelta!', P.x, P.y + 30, '#ffffff', 0.9); hintDone('vuelta'); }
+  } else if (!IN.brake) P.utT = 0;
+  var w = manOmega(st, P.speed) * CK.lat;
+  P.h = adiff(P.h + w * dt, 0); P.giroV = w;
+  var derr = manRoce(P, st, w, dt, CNL.derrapa);
+  if (derr > 0.55 && P.speed > 120) { if (Math.random() < dt * 30) FX.mk.push({ x: P.x - Math.sin(P.h) * 8, y: P.y - Math.cos(P.h) * 8, t: 0 }); if (Math.random() < dt * 12) dust(P.x, P.y - 4, 1); }
+  P.slipA = (P.pasaE || 0) > 0.25 ? P.pasaE * clamp((P.speed - 40) / 60, 0, 1) * 0.8 : 0;
+  manPista(P, ana, dt);
+  manInclina(P, w, dt, 0.42, sIn);
+  var paso = P.speed * dt;
+  P.x += Math.sin(P.h) * paso; P.y += Math.cos(P.h) * paso; P.odo += paso;
+  var o = pgEmpuja(P, 9); if (o) pgGolpe(-o[0], -o[1], dt); else P.pgPega = 0;
+  /* la carretera: ¿estás en ella? (y lo que el resto del juego necesita saber de tu calle) */
+  var c = cnlCalle(P.x, P.y, P.h, P.si), n = c.n, a = c.a, sa = CITY.streets[a.si];
+  var enC = n.d < n.w + 3;
+  if (enC !== !PG.fuera) {
+    PG.fuera = !enC; PG.offT = G.t;
+    if (PG.fuera && G.t - (PG.hierbaT || -9) > 14 && P.speed > 40) { PG.hierbaT = G.t; pgDice('hierba'); }
+  }
+  if (PG.fuera && P.speed > 50 && Math.random() < dt * 9) part({ k: 'dust', x: P.x - Math.sin(P.h) * 9 + rr(-3, 3), y: P.y - Math.cos(P.h) * 9 + rr(-3, 3), vx: rr(-14, 14), vy: rr(-14, 14), t: 0, m: rr(0.3, 0.6), s: rr(1.5, 3), c: '120,170,70' });
+  var cosA = Math.cos(adiff(P.h, a.ang));
+  if (P.si !== a.si || !P.dir) P.dir = cosA >= 0 ? 1 : -1; else if (Math.abs(cosA) > 0.34) P.dir = cosA >= 0 ? 1 : -1;
+  P.si = a.si; P.s = clamp(a.s, 0.5, sa.len - 0.5);
+  var ta = P.dir > 0 ? a.ang : a.ang + Math.PI;
+  P.ht = enC ? adiff(ta, 0) : P.h;                                            // fuera de la carretera, la cámara sigue a la moto
+  P.u = (P.x - a.qx) * Math.cos(ta) - (P.y - a.qy) * Math.sin(ta);
+  P.vx = P.vxSet = P.speed * Math.sin(adiff(P.h, P.ht));
+  if (P.bounce > 0) P.bounce -= dt;
+  if (P.inv > 0) P.inv -= dt;
+  P.intent = 0; P.tapGiro = 0;
+  MIS.street = { ang: P.ht };
+}
+/* contra algo que no se pasa (nx, ny: hacia la pared, desde la moto): de refilón te pone a lo largo; de frente frena; muy fuerte, te caes */
+function pgGolpe(nx, ny, dt) {
+  var fx = Math.sin(P.h), fy = Math.cos(P.h), vn = fx * nx + fy * ny;
+  if (vn <= 0) return;
+  var imp = vn * P.speed;
+  if (imp > PGD.pared * cargaK().vmax && P.inv <= 0 && P.state === 'ride') { P.pgPared = true; cityCrash('pared', pickM(['¡CATAPLÁN!', '¡PATAPAM!', '¡CRASH!'])); return; }
+  var tx = fx - nx * vn, ty = fy - ny * vn, tl = Math.sqrt(tx * tx + ty * ty);
+  if (tl > 0.06) P.h = adiff(P.h + adiff(Math.atan2(tx, ty), P.h) * expo(9, dt), 0);
+  P.speed -= P.speed * vn * 1.6 * dt;
+  if (imp > PGD.roce && G.t - (P.pgGolT || 0) > 0.6) {
+    P.pgGolT = G.t; P.speed *= clamp(1 - vn * 0.55, 0.35, 0.9); P.bounce = 0.24; shake(0.18 + vn * 0.2); SFX.thud();
+    pop(pickM(['¡PUM!', '¡TOC!', '¡Uy!']), P.x + nx * 8, P.y + ny * 8 + 18, '#ffffff', 0.9);
+  }
+  if (vn > 0.75) {                                                            // de frente contra algo y dando gas: al rato la moto se va girando sola hacia un lado (si no, un peque se queda ahí atascado)
+    P.pgPega = (P.pgPega || 0) + dt;
+    if (P.pgPega > 0.4) {
+      var ana = manAna(), lado = ana != null && Math.abs(ana) > 0.2 ? sgn(ana) : (IN.right ? 1 : 0) - (IN.left ? 1 : 0);
+      if (!lado) { var O = pgObjetivo(); lado = O ? sgn(adiff(Math.atan2(O.x - P.x, O.y - P.y), P.h)) : 1; }
+      P.h = adiff(P.h + lado * 2.4 * dt, 0);
+    }
+  }
+}
+var cityRidePG = cityRide;
+cityRide = function (dt) { if (pgOn()) { pgRide(dt); return; } cityRidePG(dt); };
+var placePPG = placeP;
+placeP = function (dt) {
+  if (!pgOn()) { placePPG(dt); return; }
+  if (P.state === 'finish') { P.x += Math.sin(P.h) * P.speed * (dt || 0); P.y += Math.cos(P.h) * P.speed * (dt || 0); pgEmpuja(P, 9); }
+};
+var cityCamPG = cityCam;
+cityCam = function (dt) {
+  if (!pgOn() || P.rider || G.vista) { cityCamPG(dt); return; }
+  camCiudad();
+  manCamara(P.h, dt, P.state === 'ride' ? P.ht : null, MCAM.ciudad); CAM.yaw = CAM.yawM = adiff(CAM.yaw, 0);
+  var fx = P.x - Math.sin(CAM.yaw) * 30, fy = P.y - Math.cos(CAM.yaw) * 30;
+  V.camX += (fx - V.camX) * expo(16, dt); V.camY += (fy - V.camY) * expo(16, dt);
+  CAM.gz = 0; camPlace();
+  V.trauma = Math.max(0, V.trauma - dt * 1.6);
+  var sh = V.trauma * V.trauma * 9; V.shx = (Math.random() * 2 - 1) * sh; V.shy = (Math.random() * 2 - 1) * sh;
+};
+/* golpes más fuertes para caerse: el tráfico (choque), y perros, piedras y hoyos solo sacuden */
+var MKPG = MK;
+MK = function () {
+  var m = MKPG(); if (!pgOn()) return m;
+  var q = {}, k; for (k in m) q[k] = m[k];
+  q.choque = m.choque * PGD.choque; q.golpe = 9999; q.hoyo = 9999;
+  return q;
+};
+
+/* ---------- la caída: más cascos, y te levantas donde caíste (no te lleva a la carretera) ---------- */
+var cityCrashPG = cityCrash;
+cityCrash = function (kind, txt) {
+  if (!pgOn()) { cityCrashPG(kind, txt); return; }
+  if (P.state !== 'ride') return;
+  var fx = Math.sin(P.h), fy = Math.cos(P.h);
+  PG.vuelve = { x: P.x - fx * 16, y: P.y - fy * 16, h: P.pgPared ? adiff(P.h + Math.PI, 0) : P.h };
+  P.pgPared = false;
+  cityCrashPG(kind, txt);
+  PG.caidas++;
+  pgDice('caida');
+};
+var cityCrashUpdPG = cityCrashUpd;
+cityCrashUpd = function (dt) {
+  if (!pgOn()) { cityCrashUpdPG(dt); return; }
+  P.crashT += dt;
+  var r = P.rider, b = P.bike, h = P.hen, f = 1 - dt * 2.6;
+  b.x += b.vx * dt; b.y += b.vy * dt; b.a += b.va * dt; b.vx *= f; b.vy *= f; b.va *= f; pgEmpuja(b, 8);
+  if (!r.landed) { r.x += r.vx * dt; r.y += r.vy * dt; r.z += r.vz * dt; r.vz -= 380 * dt; r.rot += r.vr * dt; if (r.z <= 0) { r.z = 0; r.landed = true; r.vx *= 0.25; r.vy *= 0.25; dust(r.x, r.y, 12); SFX.thud(); shake(0.3); } }
+  else { r.x += r.vx * dt; r.y += r.vy * dt; r.vx *= 1 - dt * 4; r.vy *= 1 - dt * 4; }
+  pgEmpuja(r, 6);
+  h.t += dt; h.x += h.vx * dt; h.y += h.vy * dt; h.z = Math.max(0, h.z + h.vz * dt); h.vz -= 300 * dt; if (h.z <= 0) pitikVuelve(h, b);
+  if (P.crashT > 1.8) {
+    if (P.hp <= 0) { P.state = 'ko'; SFX.fail(); setTimeout(function () { showCityEnd('ko'); }, 700); return; }
+    var V0 = PG.vuelve || { x: b.x, y: b.y, h: P.h };
+    P.x = V0.x; P.y = V0.y; P.h = V0.h; pgEmpuja(P, 12);
+    P.state = 'ride'; P.inv = 2.2; P.speed = 0; P.rider = P.bike = P.hen = null; P.blend = null; P.libre = true; P.steer = 0;
+    pop('¡Venga, otra vez!', P.x, P.y + 18, '#ffe27a');
+    pgDice('arriba', P.hp);
+  }
+};
+
+/* ---------- empezar ---------- */
+var spawnNextPaxPG = spawnNextPax;
+spawnNextPax = function (x, y) { if (MIS && MIS.modo === 'pg') { pgEmpieza(); return; } return spawnNextPaxPG.apply(this, arguments); };
+function pgEmpieza() {
+  MIS.wait = []; MIS.cur = null; MIS.left = 999; MIS.route = null; MIS.turn = null;
+  P.x = -140; P.y = -330; P.h = 0.35; P.ht = P.h; P.libre = false; P.speed = 0; P.vx = P.vxSet = 0; P.hp = PGD.vidas; P.state = 'ride';
+  PG.n = 0; PG.caidas = 0; PG.escapes = 0; PG.espera = 0; PG.tarea = null; PG.banked = 0; PG.bankT = 3; PG.fuera = false; PG.hierbaT = -9; PG.salto = -1; PG.vuelve = null;
+  PG.orden = pgOrden(MIS.round || 1); PGH.prog.length = 0; PGH.cola.length = 0; PGH.cur = null;
+  PG.gente.forEach(function (w) { if (w.ruta) { w.x = w.ruta[0][0]; w.y = w.ruta[0][1]; w.i = 1; } w.huye = 0; w.saluda = 0; });
+  if (PG.balon) { PG.balon.x = -260; PG.balon.y = -170; PG.balon.vx = PG.balon.vy = 0; }
+  pgPonFlores(MIS.round || 1);
+  pgSiguiente(true);
+}
+/* qué encargos tocan en cada ronda: los cuatro, empezando por las gallinas, y cada ronda con otros sitios */
+var PG_TAREAS = [
+  { id: 'pollos', de: 'kandang', a: ['warung', 'rumah', 'pura'] },
+  { id: 'pax', de: ['sekolah', 'pura', 'warung'], a: ['pura', 'warung', 'sekolah'], q: ['nina', 'abuela', 'turista'] },
+  { id: 'muebles', de: 'kayu', a: ['rumah', 'warung', 'sekolah'] },
+  { id: 'cerdo', de: 'babi', a: ['pura', 'rumah', 'warung'] }
+];
+function pgOrden(round) {
+  var r = (round - 1) % 3, L = [];
+  PG_TAREAS.forEach(function (T, j) {
+    var de = typeof T.de === 'string' ? T.de : T.de[r], a = T.a[r];
+    L.push({ id: T.id, de: de, a: a, q: T.q ? T.q[r] : null });
+  });
+  if (round > 1) L.push(L.splice(1, 1)[0]);                                  // (las gallinas siempre primero; lo demás, algo cambiado)
+  return L;
+}
+function pgTipo(id) {                                                       // la carga del reparto, con lo de los peques
+  var src = CARGAS.filter(function (c) { return c.id === id; })[0], t = {}, k;
+  for (k in src) t[k] = src[k];
+  if (id === 'pollos') t.cnt = PGD.pollos;
+  return t;
+}
+function pgSiguiente(primera) {
+  var T = PG.orden[PG.n % PG.orden.length], S0 = PG_SITIOS[T.de], f = pgFrente(S0);
+  PG.tarea = T;
+  var pl = { x: S0.rx, y: S0.ry, sx: S0.x + f[0] * 26, sy: S0.y + f[1] * 26, n: S0.n };
+  if (T.id === 'pax') {
+    var px = PAX.filter(function (p) { return p.id === T.q; })[0] || PAX[0];
+    MIS.wait = [{ pl: pl, type: px, t0: 0, v3: PG.n % 3, g3: 1 }];
+  } else MIS.wait = [{ pl: pl, type: pgTipo(T.id), t0: 0 }];
+  MIS.cur = null; MIS.target = pl;
+  if (primera) PG.saludo = true; else pgDice('tarea_' + T.id);
+}
+function pgCoge(w) {                                                        // en el aro azul: se carga
+  var T = PG.tarea, S1 = PG_SITIOS[T.a], len = d2(w.pl.x, w.pl.y, S1.rx, S1.ry);
+  MIS.wait = [];
+  MIS.cur = { type: w.type, from: w.pl, dest: { x: S1.rx, y: S1.ry, n: S1.n }, pay: 6 + Math.round(len / 300), len: len, v3: w.v3 };
+  if (w.type.carga) cargaCoger(w);
+  MIS.cur.pay = 6 + Math.round(len / 300);
+  MIS.target = MIS.cur.dest; MIS.cur.escapes = 0;
+  SFX.pick(4); P.speed *= 0.45; P.bounce = 0;
+  pop(w.type.carga ? '¡Cargado!' : '¡Sube!', P.x, P.y + 40, '#ffe27a', 1);
+  pgSalta('feliz');
+  pgDice(T.id === 'pax' ? 'sube' : 'carga_' + T.id);
+  pgDice('lleva_' + T.a, null, 2.8);
+}
+function pgFalta() {                                                         // cuánto falta por recoger de lo que llevas
+  var M = MIS.cur; if (!M) return 0;
+  if (!M.type.carga) return M.suelo ? 1 : 0;
+  return M.n0 - M.n;
+}
+function pgEntrega() {
+  var M = MIS.cur, pay = M.pay + (M.escapes ? 0 : 3);
+  G.fl += pay; MIS.done++; PG.n++;
+  SFX.win(); petals(P.x, P.y + 30, 22); P.speed *= 0.4;
+  pop('¡Terima kasih! +' + pay, P.x, P.y + 40, '#ffe27a', 1.2);
+  if (!M.escapes) pop('¡Sin escaparse ninguno! +3', P.x, P.y + 64, '#8ff29a', 0.95);
+  MIS.cur = null; CAIDAS.length = 0; MIS.target = null;
+  pgSalta('feliz');
+  if (MIS.done >= PGD.ronda) { pgDice('ronda'); PG.espera = 0; PG.finT = 1.6; P.state = 'finish'; return; }
+  pgDice('entrega'); pgDice('bali', null, 2.6);
+  PG.espera = 2.2;
+}
+function pgRondaFin() { G.fl0 = G.fl; G.tb = 0; showCityEnd('ok'); }
+
+/* ---------- cada fotograma ---------- */
+var cityMissionPG = cityMission;
+cityMission = function (dt) { if (pgOn()) { pgMision(dt); return; } cityMissionPG(dt); };
+function pgMision(dt) {
+  MIS.left = 999; MIS.route = null; MIS.turn = null;
+  PG.bankT -= dt;
+  if (PG.bankT <= 0) { PG.bankT = 3; if (G.fl > PG.banked) { guardaFlores(G.fl - PG.banked); PG.banked = G.fl; } }   // las flores, al bolsillo cada poco
+  if (PG.espera > 0) { PG.espera -= dt; if (PG.espera <= 0) pgSiguiente(false); return; }
+  var i, w;
+  if (!MIS.cur && MIS.wait.length) {
+    w = MIS.wait[0]; w.t0 += dt;
+    var d = d2(P.x, P.y, w.pl.x, w.pl.y);
+    if (d < PGD.aro && P.state === 'ride') pgCoge(w);
+    else if (d < 260 && !PG.cercaT) { PG.cercaT = 1; pgDice('cerca'); }
+    else if (d > 400) PG.cercaT = 0;
+  } else if (MIS.cur && P.state === 'ride') {
+    var M = MIS.cur, dd = d2(P.x, P.y, M.dest.x, M.dest.y), falta = pgFalta();
+    if (dd < PGD.aro) {
+      if (falta > 0) { if (G.t - (PG.faltaT || -9) > 4) { PG.faltaT = G.t; pgDice(M.type.id === 'pollos' ? 'faltan' : M.type.carga ? 'falta' : 'faltaPax', falta); } }
+      else pgEntrega();
+    } else if (dd < 260 && !falta && !PG.llegaT) { PG.llegaT = 1; pgDice('casi'); }
+    else if (dd > 400) PG.llegaT = 0;
+  }
+  /* avisos de lo que tienes delante */
+  var fx = Math.sin(P.h), fy = Math.cos(P.h);
+  if (P.state === 'ride' && P.speed > 40 && G.t - (PG.avisoT || -9) > 7) {
+    for (i = 0; i < CITY.obs.length; i++) {
+      var o = CITY.obs[i]; if (o.t !== 'perro' || o.st !== 'sleep') continue;
+      var dx = o.x - P.x, dy = o.y - P.y, ah = dx * fx + dy * fy;
+      if (ah > 60 && ah < 230 && Math.abs(-dx * fy + dy * fx) < 40) { PG.avisoT = G.t; pgDice('perro'); break; }
+    }
+    if (G.t - (PG.avisoT || -9) > 7) for (i = 0; i < TRAF.length; i++) {
+      var e = TRAF[i]; if (e.kind !== 'camion') continue;
+      var ex = e.x - P.x, ey = e.y - P.y, eh = ex * fx + ey * fy;
+      if (eh > 40 && eh < 200 && Math.abs(-ex * fy + ey * fx) < 60) { PG.avisoT = G.t; pgDice('camion'); break; }
+    }
+  }
+  if (P.state === 'ride' && P.speed < 4 && !IN.gas) { PG.quieto = (PG.quieto || 0) + dt; if (PG.quieto > 9) { PG.quieto = 0; pgDice('quieto'); } } else PG.quieto = 0;
+  if (P.dizzy > 1.6 && !PG.cocoD) { PG.cocoD = 1; pgDice('coco'); } else if (P.dizzy <= 0) PG.cocoD = 0;
+}
+var cityHonkPG = cityHonk;
+cityHonk = function () { cityHonkPG(); if (pgOn() && P.state === 'ride') pgHonk(); };
+
+/* ---------- la carga: lo que se escapa con los golpes y se coge pasando por encima ---------- */
+var cargaUpdPG = cargaUpd;
+cargaUpd = function (dt) { if (pgOn()) { pgCarga(dt); return; } cargaUpdPG(dt); };
+function pgCarga(dt) {
+  var i, C = cargaCur(), M = MIS.cur;
+  for (i = CAIDAS.length - 1; i >= 0; i--) {
+    var c = CAIDAS[i]; c.t += dt;
+    if (!c.suelo) {                                                          // por el aire
+      c.vz -= 380 * dt; c.z += c.vz * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.rot += dt * 9;
+      if (c.z <= 0) {
+        c.z = 0;
+        if (c.vivo || c.id === 'pax') { c.suelo = true; c.vz = 0; c.rot = 0; if (c.vivo) c.esc = c.vivo === 1 ? 1.6 : 2.2; if (c.vivo === 1) feathers(c.x, c.y, 5, ['#fbf6ea', '#c9772e']); }
+        else if (Math.abs(c.vz) > 60) { c.vz = -c.vz * 0.35; c.z = 0.1; SFX.clonk(); } else { c.suelo = true; c.vz = 0; }
+        c.vx *= 0.5; c.vy *= 0.5;
+      }
+    } else if (c.vivo) {                                                     // gallinas y cerdo: corretean; si pasas muy rápido cerca, huyen
+      c.tg = (c.tg || 0) - dt;
+      var dpx = c.x - P.x, dpy = c.y - P.y, dp = Math.hypot(dpx, dpy) || 1, vv = c.vivo === 1 ? 40 : 26;
+      if (c.esc > 0) { c.esc -= dt; c.vx = dpx / dp * vv * 1.5; c.vy = dpy / dp * vv * 1.5; c.tg = 0.3; }   // recién escapadas: corren lejos de la moto
+      else if (dp < 60 && P.speed > PGD.huye) { c.vx = dpx / dp * vv * 1.3; c.vy = dpy / dp * vv * 1.3; c.tg = 0.5; }
+      else if (c.tg <= 0) { var an = Math.random() * TAU; c.tg = 0.6 + Math.random() * 1.2; c.vx = Math.cos(an) * vv * Math.random(); c.vy = Math.sin(an) * vv * Math.random(); }
+      c.x += c.vx * dt; c.y += c.vy * dt; c.flip = c.vx < 0;
+      if (Math.random() < dt * 0.6) { if (c.vivo === 1) SFX.cluck(); else SFX.oink(); }
+    } else if (c.id === 'pax') { c.vx = c.vy = 0; }
+    else { c.x += c.vx * dt; c.y += c.vy * dt; var fr = 1 - dt * (c.rueda ? 1.2 : 4); c.vx *= fr; c.vy *= fr; c.rot += Math.hypot(c.vx, c.vy) * dt * 0.25; }
+    if (c.z < 4) { var b = pgEmpuja(c, c.id === 'cerdo' ? 9 : 5); if (b && c.vivo) { c.vx = b[0] * 20; c.vy = b[1] * 20; c.tg = 0.4; } }
+    if (M && P.state === 'ride' && c.t > (c.vivo ? 1.3 : 0.8) && d2(c.x, c.y, P.x, P.y) < PGD.recoge + (c.id === 'cerdo' || c.id === 'pax' ? 6 : 0)) {   // ¡pillado! (a cualquier velocidad)
+      if (c.id === 'pax' && M.suelo) {
+        M.suelo = false; CAIDAS.splice(i, 1); SFX.pick(4); P.speed *= 0.5;
+        pop('¡Sube otra vez!', P.x, P.y + 44, '#8ff29a', 0.95); pgSalta('feliz'); pgDice('paxVuelve'); continue;
+      }
+      if (C && c.id === C.type.id && C.n < C.n0) {
+        C.n++; CAIDAS.splice(i, 1); SFX.pick(3); sparkle(P.x, P.y + 10, 8, '#ffe27a');
+        pop(c.vivo === 1 ? '¡Te pillé, gallina!' : (c.vivo === 2 ? '¡Al cesto, cerdito!' : '¡Recuperado!'), P.x, P.y + 44, '#8ff29a', 0.95);
+        pgSalta('feliz');
+        if (C.n >= C.n0) pgDice('todas'); else if (c.vivo === 1) pgDice('pillada');
+        continue;
+      }
+    }
+  }
+  if (!M) return;
+  /* los golpes: un bache, un coche, un perro, un coco, una pared… */
+  var golpe = (P.bounce > 0 && !(M.pgB > 0)) || (P.wob > 0 && !(M.pgW > 0)) || (P.dizzy > 0 && !(M.pgD > 0));
+  M.pgB = P.bounce; M.pgW = P.wob; M.pgD = P.dizzy;
+  if (P.state === 'crash') { if (!M.spill) { M.spill = true; pgSuelta(true); } return; }
+  M.spill = false;
+  if (P.state !== 'ride') return;
+  if (golpe && G.t - (M.golT || -9) > 1.5) { M.golT = G.t; pgSuelta(false); }
+  if (C && C.n > 0) {                                                        // lo vivo de la parrilla: cacarea, patalea
+    if (C.type.id === 'cerdo' && (C.pat = (C.pat || 2.5) - dt) <= 0) { C.pat = 2 + Math.random() * 3; SFX.oink(); pop(pickM(['¡OINC!', '¡OINC OINC!']), P.x, P.y + 50, '#ffd2c8', 0.85); }
+    if (C.type.id === 'pollos' && Math.random() < dt * 0.35) SFX.cluck();
+  }
+  C && (C.bal = 0, C.vb = 0);                                                // aquí la carga no se cae por los meneos: solo con los golpes
+}
+function pgSuelta(fuerte) {                                                  // se escapa algo (fuerte: te has caído)
+  var M = MIS.cur, C = cargaCur(); if (!M) return;
+  if (!C) {                                                                  // el pasajero: si te caes, se baja; con un golpe, se queja
+    if (fuerte && !M.suelo) {
+      M.suelo = true;
+      CAIDAS.push({ k: 'caida', id: 'pax', x: P.x, y: P.y, z: 14, vx: Math.sin(P.h) * 40 + rr(-30, 30), vy: Math.cos(P.h) * 40 + rr(-30, 30), vz: 90, t: 0, rot: 0, suelo: false, vivo: 0, Q: exvPaxQ(M.type.id, M.v3) });
+      M.escapes++; PG.escapes++;
+      pgDice('paxCae');
+    } else if (!fuerte) { pop(pickM(['¡Ay!', '¡Despacio!', '¡Uy, uy!']), P.x, P.y + 50, '#ffd2c8', 0.9); pgDice('paxQueja'); }
+    return;
+  }
+  if (C.n <= 0) return;
+  var id = C.type.id, n;
+  if (id === 'pollos') n = fuerte ? Math.ceil(C.n * 0.6) : Math.min(C.n, Math.random() < 0.5 ? 1 : 2);
+  else if (id === 'cerdo') n = fuerte || Math.random() < 0.7 ? 1 : 0;
+  else n = fuerte ? Math.ceil(C.n / 2) : (Math.random() < 0.6 ? 1 : 0);
+  if (!n) { pgDice('meneo'); return; }
+  var lado = Math.random() < 0.5 ? -1 : 1, n0 = CAIDAS.length, j;
+  soltar(C, lado, Math.ceil(n / 2)); if (n > 1) soltar(C, -lado, Math.floor(n / 2));
+  for (j = n0; j < CAIDAS.length; j++) {                                     // que salgan despedidas, lejos de la moto (si no, al estar parado se volvían a coger solas)
+    var c = CAIDAS[j], vx = c.vx - Math.sin(P.h) * P.speed * 0.55, vy = c.vy - Math.cos(P.h) * P.speed * 0.55, vl = Math.hypot(vx, vy) || 1, sp = 75 + Math.random() * 45;
+    c.vx = vx / vl * sp + Math.sin(P.h) * P.speed * 0.3; c.vy = vy / vl * sp + Math.cos(P.h) * P.speed * 0.3; c.vz = 70 + Math.random() * 40;
+  }
+  M.escapes++; PG.escapes++;
+  pgSalta('susto');
+  pgDice(id === 'pollos' ? 'escapan' : id === 'cerdo' ? 'cerdoEscapa' : 'mueblesCae');
+  pgDice('pasa', null, 2.4);
+}
+var avisoCaidaPG = avisoCaida;
+avisoCaida = function (id) { if (pgOn()) return; avisoCaidaPG(id); };     // (lo dice Pitik, y sin «despacio»)
+var recogiblePG = recogible;
+recogible = function (c) { if (pgOn() && c.id === 'pax') return !!(MIS.cur && MIS.cur.suelo); return recogiblePG(c); };
+var vidaCaidaPG = vidaCaida;
+vidaCaida = function (c) { return pgOn() ? 99 : vidaCaidaPG(c); };        // aquí no se van: siguen esperando a que pases
+var cargaCaidaPG = cargaCaida;
+cargaCaida = function (g, c) {
+  if (pgOn() && c.id === 'pax') { if (c.Q) cigPersona(g, c.x, c.y, cigHaciaP(c.x, c.y), c.Q, { pose: c.suelo ? 'pie' : 'pie', t: G.t, brazos: 'saluda' }); return; }
+  cargaCaidaPG(g, c);
+};
+
+/* ---------- las flores: unas tiras por la hierba (sin segundos: aquí no hay reloj) ---------- */
+function pgPonFlores(round) {
+  var r = mulberry(round * 977 + 3), T = [[-500, -220, 0.3], [380, -260, -0.5], [-420, 300, 1.2], [460, 220, 2.2], [-60, -420, 1.57], [80, 360, -1.57]];
+  FLORES = [];
+  T.forEach(function (q, j) {
+    var t = { n: 5, got: 0, done: false }, a = q[2] + (r() - 0.5) * 0.6, oro = r() < 0.3;
+    for (var k = 0; k < 5; k++) FLORES.push({ k: 'flor', x: q[0] + Math.sin(a) * k * 30 + Math.sin(k * 1.1) * 12, y: q[1] + Math.cos(a) * k * 30, got: false, tira: t, i: j * 7 + k, oro: oro && k === 4 });
+  });
+}
+var floresUpdPG = floresUpd;
+floresUpd = function (dt) {
+  if (!pgOn()) { floresUpdPG(dt); return; }
+  if (P.state !== 'ride') return;
+  for (var i = 0; i < FLORES.length; i++) {
+    var f = FLORES[i];
+    if (f.got || Math.abs(f.x - P.x) > 20 || Math.abs(f.y - P.y) > 20 || d2(f.x, f.y, P.x, P.y) > 18) continue;
+    f.got = true; var t = f.tira; t.got++;
+    if (f.oro) { G.fl += 3; ganaDorados(1); SFX.heal(); sparkle(f.x, f.y, 12, '#ffe27a'); pop('¡Frangipani de oro!', P.x, P.y + 44, '#ffe27a', 1.1); }
+    else { G.fl += 1; SFX.pick(t.got); sparkle(f.x, f.y, 5, '#fffaf0'); }
+    if (!t.done && t.got >= t.n) { t.done = true; G.fl += 2; SFX.tlin(); pop('¡Tira completa! +2', P.x, P.y + 62, '#8ff29a', 1.05); }
+  }
+};
+
+/* ---------- sin niebla: en la explanada se ve todo de lejos (palmeras, coches, perros…) y, con niebla, cada uno se pintaba aparte para
+   transparentarlo y luego se pegaba: con muchos a la vista a la vez daba tirones. Aquí el cielo está limpio. ---------- */
+var fogKPG = fogK;
+fogK = function (d) { return MAPA === 'pg' && G.mode === 'city' && PGD.vivo ? 0 : fogKPG(d); };
+/* ---------- el tráfico: sin surfistas (aquí no hay playa) ---------- */
+var spawnTrafficPG = spawnTraffic;
+spawnTraffic = function () {
+  spawnTrafficPG.apply(this, arguments);
+  if (MAPA === 'pg') TRAF.forEach(function (e, j) { if (e.kind === 'surf') e.kind = j % 2 ? 'moto' : 'familia'; });
+};
+
+/* ================================================================
+   EL DIBUJO: el suelo, los aros, lo que lleva cada sitio y la gente
+   ================================================================ */
+function pgLimY(x, hx, hy, rc) {                                            // medio alto de un rectángulo de esquinas redondas en la x dada
+  var ax = Math.abs(x); if (ax > hx) return 0;
+  if (ax <= hx - rc) return hy;
+  var q = ax - (hx - rc); return hy - rc + Math.sqrt(Math.max(0, rc * rc - q * q));
+}
+function pgRedondo(hx, hy, rc, n) {                                          // los puntos de ese rectángulo
+  var P0 = [], i, c = [[hx - rc, hy - rc, 0], [-hx + rc, hy - rc, 90], [-hx + rc, -hy + rc, 180], [hx - rc, -hy + rc, 270]];
+  c.forEach(function (q) { for (i = 0; i <= n; i++) { var a = (q[2] + 90 * i / n) * Math.PI / 180; P0.push([q[0] + rc * Math.cos(a), q[1] + rc * Math.sin(a)]); } });
+  return P0;
+}
+function pgSuelo(g) {
+  var hy = CAM.H2 - CAM.F * Math.tan(CAM.pitch) + V.shy, X = PGD.X, Y = PGD.Y, i, k;
+  g.fillStyle = '#8cc152'; g.fillRect(0, Math.max(0, hy), V.w, V.h);
+  riceCells(g);                                                              // fuera de la tapia, los arrozales
+  groundPoly(g, [[-X - 8, -Y - 8], [X + 8, -Y - 8], [X + 8, Y + 8], [-X - 8, Y + 8]], '#a5c564');   // la explanada
+  var ix = PGD.rx - PGD.w - 4, iy = PGD.ry - PGD.w - 4, rc = PGD.rr - PGD.w - 4;
+  groundPoly(g, pgRedondo(ix, iy, rc, 6), '#79b947');                        // el lapangan: la hierba cortada, a franjas
+  for (k = -ix; k < ix; k += 120) {
+    if (Math.round((k + ix) / 120) % 2) continue;
+    var x0 = k, x1 = Math.min(ix, k + 120), y0 = Math.min(pgLimY(x0, ix, iy, rc), pgLimY(x1, ix, iy, rc));
+    if (y0 > 0) groundPoly(g, [[x0, -y0], [x1, -y0], [x1, y0], [x0, y0]], '#84c352');
+  }
+  var S = PG_SITIOS, id;                                                    // la tierra pisada delante de cada sitio, y el camino a la carretera
+  for (id in S) {
+    var s = S[id], f = pgFrente(s), ex = s.rx - f[0] * 50, ey = s.ry - f[1] * 50, px = f[1], py = -f[0];
+    groundPoly(g, [[s.rx + px * 26, s.ry + py * 26], [ex + px * 20, ey + py * 20], [ex - px * 20, ey - py * 20], [s.rx - px * 26, s.ry - py * 26]], '#cdb47c');
+    discPoly(g, s.rx, s.ry, 64, '#d6bf86');
+  }
+  pgEstanqueSuelo(g);
+  var B = S.babi; discPoly(g, B.x - 10, B.y + 6, 30, '#7a5a3a');           // el barro de la pocilga
+  /* la carretera: el arcén de tierra, el asfalto y la raya */
+  var SG = CITY.segs, vis = [], s2;
+  for (i = 0; i < SG.length; i++) if (segVisible(SG[i].a, SG[i].b, 80)) vis.push(SG[i]);
+  for (i = 0; i < vis.length; i++) segQuad(g, vis[i], vis[i].w + 9, '#c3ab78');
+  CITY.streets.forEach(function (st) { for (var q = 1; q < st.pts.length - 1; q++) { var f2 = fwd(st.pts[q][0], st.pts[q][1]); if (f2 > NEAR && f2 < CFAR) discPoly(g, st.pts[q][0], st.pts[q][1], st.w + 9, '#c3ab78'); } });
+  CITY.nodes.forEach(function (n) { var f2 = fwd(n.x, n.y); if (f2 > NEAR && f2 < CFAR) discPoly(g, n.x, n.y, PGD.w + 9, '#c3ab78'); });
+  for (i = 0; i < vis.length; i++) segQuad(g, vis[i], vis[i].w, '#606369');
+  CITY.streets.forEach(function (st) { for (var q = 1; q < st.pts.length - 1; q++) { var f2 = fwd(st.pts[q][0], st.pts[q][1]); if (f2 > NEAR && f2 < CFAR) discPoly(g, st.pts[q][0], st.pts[q][1], st.w, '#606369'); } });
+  CITY.nodes.forEach(function (n) { var f2 = fwd(n.x, n.y); if (f2 > NEAR && f2 < CFAR) discPoly(g, n.x, n.y, PGD.w, '#606369'); });
+  for (i = 0; i < vis.length; i++) {
+    s2 = vis[i];
+    var a = s2.a, b = s2.b, L = d2(a[0], a[1], b[0], b[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
+    for (var q2 = 8; q2 < L - 10; q2 += 46) {
+      var x0b = a[0] + ux * q2, y0b = a[1] + uy * q2, x1b = x0b + ux * 18, y1b = y0b + uy * 18, f0 = fwd(x0b, y0b);
+      if (f0 < NEAR || f0 > CFAR * 0.7) continue;
+      groundPoly(g, [[x0b - uy * 1.2, y0b + ux * 1.2], [x0b + uy * 1.2, y0b - ux * 1.2], [x1b + uy * 1.2, y1b - ux * 1.2], [x1b - uy * 1.2, y1b + ux * 1.2]], 'rgba(240,232,206,.62)');
+    }
+  }
+}
+function pgEstanqueSuelo(g) {                                                // el estanque: el agua, el borde de piedra y los nenúfares
+  var E = PG.estanque; if (!E) return;
+  function elip(rx, ry, n) { var p = []; for (var i = 0; i < n; i++) { var a = i / n * TAU; p.push([E.x + Math.cos(a) * rx, E.y + Math.sin(a) * ry]); } return p; }
+  if (fwd(E.x, E.y) < -E.rx - 60 || fwd(E.x, E.y) > CFAR + 200) return;
+  groundPoly(g, elip(E.rx + 12, E.ry + 12, 28), '#9c968a');
+  groundPoly(g, elip(E.rx, E.ry, 28), '#3f8fb0');
+  groundPoly(g, elip(E.rx * 0.82, E.ry * 0.78, 24), '#4fa3c3');
+  var r = mulberry(31);
+  for (var i = 0; i < 9; i++) {
+    var a = r() * TAU, q = 0.25 + r() * 0.5, x = E.x + Math.cos(a) * E.rx * q, y = E.y + Math.sin(a) * E.ry * q;
+    discPoly(g, x, y, 9 + r() * 5, '#4f9a3a');
+    if (i % 3 === 0) discPoly(g, x + 2, y + 2, 3.4, '#ff8fb8');
+  }
+  g.beginPath();
+  for (var w = 0; w < 6; w++) {                                              // olitas
+    var t = G.t * 0.6 + w, ox = E.x + Math.sin(t * 0.7 + w) * E.rx * 0.5, oy = E.y + Math.cos(t * 0.5 + w * 2) * E.ry * 0.4, f = fwd(ox, oy);
+    if (f < 30 || f > 800) continue;
+    proj(ox, oy, 0.3); g.moveTo(PX, PY); proj(ox + 14, oy + 2, 0.3); g.lineTo(PX, PY);
+  }
+  g.strokeStyle = 'rgba(230,248,255,.65)'; g.lineWidth = 1.4; g.stroke();
+}
+var cityGroundPG = cityGround;
+cityGround = function (g) { if (MAPA === 'pg' && PGD.vivo) { pgSuelo(g); return; } cityGroundPG(g); };
+
+/* los aros: grandes y claros (azul: recoger; amarillo: llevar) */
+var ringPG = ring;
+ring = function (g, x, y, col, t) {
+  if (!pgOn() || (col !== '#4fc3f7' && col !== '#ffc93c')) { ringPG(g, x, y, col, t); return; }
+  var d = plane(g, x, y, 0.4, 0, 1); if (d < PLN.min) return;
+  var r = PGD.aro * 0.86 + Math.sin(t * 4) * 2.5;
+  g.globalAlpha = 0.24; g.fillStyle = col; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill();
+  g.globalAlpha = 0.95; g.strokeStyle = '#ffffff'; g.lineWidth = 7; g.setLineDash([16, 10]); g.lineDashOffset = -t * 30; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.stroke();
+  g.strokeStyle = col; g.lineWidth = 4.5; g.stroke(); g.setLineDash([]);
+  g.globalAlpha = 1;
+};
+/* encima de lo que hay que recoger o de adonde hay que llevarlo: un globo con su dibujo, que bota */
+var PG_ICOS = {};
+function pgIcoSpr(ico) {
+  if (PG_ICOS[ico]) return PG_ICOS[ico];
+  var c = document.createElement('canvas'); c.width = c.height = 96;
+  var g = c.getContext('2d');
+  g.translate(48, 44);
+  g.beginPath(); g.arc(0, 0, 36, 0, TAU); g.fillStyle = '#ffffff'; g.fill(); g.lineWidth = 6; g.strokeStyle = '#2a1a0c'; g.stroke();
+  g.beginPath(); g.moveTo(-10, 32); g.lineTo(0, 50); g.lineTo(10, 32); g.closePath(); g.fillStyle = '#ffffff'; g.fill(); g.stroke();
+  g.beginPath(); g.arc(0, 0, 33, 0, TAU); g.fillStyle = '#ffffff'; g.fill();
+  g.font = '44px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ico, 0, 3);
+  return (PG_ICOS[ico] = c);
+}
+var pinPG = pin;
+pin = function (g, x, y, col, t) {
+  if (!pgOn()) { pinPG(g, x, y, col, t); return; }
+  var ico = pgIcoPara(x, y); if (!ico) return;
+  var dd = proj(x, y, 74 + Math.abs(Math.sin(t * 3)) * 9); if (dd < 10) return;
+  scr(g);
+  var k = clamp(PS * 1.25, 0.55, 1.35) * 46, c = pgIcoSpr(ico);
+  g.globalAlpha = 1 - fogK(dd) * 0.5; g.drawImage(c, PX - k / 2, PY - k * 0.92, k, k); g.globalAlpha = 1;
+};
+function pgIcoPara(x, y) {
+  var T = PG.tarea; if (!T) return null;
+  if (MIS.cur && Math.abs(MIS.cur.dest.x - x) < 1 && Math.abs(MIS.cur.dest.y - y) < 1) return PG_SITIOS[T.a].ico;
+  if (MIS.wait[0] && Math.abs(MIS.wait[0].pl.x - x) < 1 && Math.abs(MIS.wait[0].pl.y - y) < 1) return T.id === 'pax' ? '🙋' : (PKR_CARGA[T.id] || '📦');
+  return null;
+}
+
+/* lo de cada sitio que no es un pabellón (el mostrador del warung, los tablones, la pocilga, la bandera), la gente y el balón */
+var ciuItemPG = ciuItem;
+ciuItem = function (g, it, k, i) {
+  if (MAPA === 'pg' && PGD.vivo) {
+    if (k === 'pgm') { pgCosa(g, it); return true; }
+    if (k === 'pgw') { pgPersona(g, it); return true; }
+    if (k === 'pgg') { var dd = proj(it.x, it.y, 0); if (dd > 16 && dd < PGD.lejos) { shadow(g, it.x, it.y, 4, 2.6, 0); scr(g); gallina3D(g, it.x, it.y, 0, it.a, { k: MG3.k * 1.1, t: G.t + it.x * 0.01, col: CA3_POLLO[it.col % 3] }); } return true; }
+    if (k === 'pgb') { pgBalon(g, it); return true; }
+  }
+  return ciuItemPG(g, it, k, i);
+};
+function pgPersona(g, w) {
+  var d0 = proj(w.x, w.y, 0); if (d0 > PGD.lejos) return;                 // de lejos, nada (con la niebla, cada muñeco se pintaba aparte y se pegaba: daba tirones)
+  var o = { t: G.t + w.x * 0.003, pose: w.pose, paso: w.paso };
+  if (w.saluda > 0) { o.pose = 'pie'; o.brazos = 'saluda'; }
+  if (w.extra === 'bakso') {                                                // el carrito de bakso, empujado
+    var dd = proj(w.x, w.y, 0); if (dd < 16) return;
+    var fx = Math.sin(w.a), fy = Math.cos(w.a);
+    shadow(g, w.x + fx * 16, w.y + fy * 16, 12, 6, w.a); scr(g); K3.alfa = 1;
+    try { bakso3D(g, w.x + fx * 16, w.y + fy * 16, w.a + Math.PI / 2, G.t, MG3.k * 1.05); } finally { K3.alfa = 1; }
+    o.pose = w.saluda > 0 ? 'pie' : 'anda';
+  }
+  cigPersona(g, w.x, w.y, w.a, w.Q, o);
+}
+function pgBalon(g, B) {
+  var dd = proj(B.x, B.y, 0); if (dd < 16 || dd > PGD.lejos) return;
+  shadow(g, B.x, B.y, 4, 3, 0); scr(g);
+  k3Abre(B.x, B.y, B.z || 0, B.rot || 0, 0, 0, MG3.k);
+  k3Bola(k3(0, 0, 3.6), 3.6, '#fbfbf7', { luz: 'rgba(255,255,255,.5)', borde: 0.9 });
+  k3Bola(k3(1.6, 0.4, 5.6), 1.2, '#d63031', { borde: 0.6, vol: 0, pr: -1 }); k3Bola(k3(-1.4, -1, 4.6), 1.1, '#2f6fd0', { borde: 0.6, vol: 0, pr: -1 });
+  k3Pinta(g);
+}
+function pgCosa(g, it) {
+  var dd = proj(it.x, it.y, 0); if (dd < 16 || dd > PGD.lejos + 150) return;
+  scr(g); K3.alfa = 1;
+  try {
+    if (it.m === 'warung') {                                                 // el mostrador con los botes de galletas, y dos banquetas
+      k3Abre(it.x, it.y, 0, it.a, 0, 0, MG3.k * 1.1);
+      k3Bloque([-16, 16, -5, 5, 0], [-16, 16, -5, 5, 13], '#8a5a2b', { top: '#b98a52' });
+      for (var j = -1; j <= 1; j++) { k3Tubo(k3(j * 10, 0, 13), k3(j * 10, 0, 19), 2.6, 2.6, 'rgba(210,235,245,.85)', { borde: 0.8, luz: 'rgba(255,255,255,.6)' }); k3Bola(k3(j * 10, 0, 16), 1.8, ['#e2a33a', '#d6452f', '#f2d27a'][j + 1], { borde: 0.5, vol: 0.3 }); }
+      [-1, 1].forEach(function (sd) { k3Bloque([sd * 10 - 6, sd * 10 + 6, -15, -11, 5.4], [sd * 10 - 6, sd * 10 + 6, -15, -11, 7], '#9c6a38', { top: '#b98a52' }); k3Tubo(k3(sd * 10 - 5, -13, 0), k3(sd * 10 - 5, -13, 5.4), 0.6, 0.6, '#6d4520', { borde: 0.6 }); k3Tubo(k3(sd * 10 + 5, -13, 0), k3(sd * 10 + 5, -13, 5.4), 0.6, 0.6, '#6d4520', { borde: 0.6 }); });
+      k3Pinta(g);
+    } else if (it.m === 'kayu') {                                            // los tablones apilados y un tronco
+      k3Abre(it.x, it.y, 0, it.a, 0, 0, MG3.k * 1.15);
+      for (var q = 0; q < 5; q++) k3Bloque([-14, 14, -8 + (q % 2) * 2, 8 + (q % 2) * 2, q * 2.4], [-14, 14, -8 + (q % 2) * 2, 8 + (q % 2) * 2, q * 2.4 + 2.2], q % 2 ? '#c9a06a' : '#b88a52', { top: '#dcbc8a' });
+      k3Tubo(k3(-12, 14, 4), k3(12, 14, 4), 4, 4, '#7a5a3a', { borde: 0.8, luz: 'rgba(255,255,255,.25)' });
+      k3Pinta(g);
+    } else if (it.m === 'babi') {                                            // el murete de la pocilga y el cerdo de la casa, dormitando
+      k3Abre(it.x, it.y, 0, 0, 0, 0, MG3.k * 1.1);
+      var hw = 30, hd = 22;
+      k3Bloque([-hw, hw, hd - 2, hd + 2, 0], [-hw, hw, hd - 2, hd + 2, 9], '#9c968a', { top: '#b9b3a6' });
+      k3Bloque([-hw - 2, -hw + 2, -hd, hd, 0], [-hw - 2, -hw + 2, -hd, hd, 9], '#9c968a', { top: '#b9b3a6' });
+      k3Bloque([hw - 2, hw + 2, -hd, hd, 0], [hw - 2, hw + 2, -hd, hd, 9], '#9c968a', { top: '#b9b3a6' });
+      k3Bloque([-hw, -8, -hd - 2, -hd + 2, 0], [-hw, -8, -hd - 2, -hd + 2, 9], '#9c968a', { top: '#b9b3a6' });
+      k3Bloque([8, hw, -hd - 2, -hd + 2, 0], [8, hw, -hd - 2, -hd + 2, 9], '#9c968a', { top: '#b9b3a6' });
+      k3Pinta(g);
+      if (!(MIS.cur && MIS.cur.type && MIS.cur.type.id === 'cerdo')) cerdo3D(g, it.x - 8, it.y + 6, 0, 0.8 + Math.sin(G.t * 0.3) * 0.2, { k: MG3.k * 1.15, t: G.t * 0.15 });
+    } else if (it.m === 'bandera') {                                         // el mástil de la escuela con la bandera roja y blanca
+      k3Abre(it.x, it.y, 0, 0, 0, 0, MG3.k * 1.2);
+      k3Tubo(k3(0, 0, 0), k3(0, 0, 70), 0.9, 0.7, '#d9d4ca', { borde: 0.7, luz: 'rgba(255,255,255,.5)' });
+      var ond = function (u, w) { return k3(u, Math.sin(G.t * 4 + u * 0.3) * 1.6 * (u / 20), w); };
+      k3Poli([ond(0, 69), ond(22, 69), ond(22, 62), ond(0, 62)], '#d63031', { borde: 0.6 });
+      k3Poli([ond(0, 62), ond(22, 62), ond(22, 55), ond(0, 55)], '#fbfbf7', { borde: 0.6 });
+      k3Pinta(g);
+    }
+  } finally { K3.alfa = 1; }
+}
+/* la gente, las gallinas de casa y el balón van con lo demás de la calle (se ordenan por distancia) */
+var cityRenderPG = cityRender;
+cityRender = function () {
+  if (MAPA === 'pg' && PGD.vivo && CITY && CITY.obs) {
+    var O = CITY.obs, n0 = O.length, i;
+    for (i = 0; i < PG.gente.length; i++) O.push(PG.gente[i]);
+    if (PG.balon) { PG.balon.k = 'pgb'; PG.balon.t = PG.balon.t || 0; O.push(PG.balon); }
+    try { cityRenderPG(); } finally { O.length = n0; }
+    return;
+  }
+  cityRenderPG();
+};
+
+/* ---------- la moto: Pitik salta en la cesta y, con la parrilla ocupada, va en la cabeza del guiri ---------- */
+function pgSalta(est) { PG.salto = 0; if (est) { PG.est = est; PG.estT = 1.6; } if (SFX.pio) SFX.pio(est === 'susto' ? 3 : 2); }
+var cityPlayerPG = cityPlayer;
+cityPlayer = function (g) {
+  if (!pgOn() || !CIU3.vivo || !MOTO3D) { cityPlayerPG(g); return; }
+  var bump = P.bounce > 0 ? Math.sin(P.bounce / 0.24 * Math.PI) : 0, v = clamp(P.speed / MAXV, 0, 1);
+  var lean = clamp(P.lean || 0, -0.42, 0.42), look = (Math.floor(G.t * 0.8) % 2) ? 1 : -1;
+  var C3 = cargaCur(), c3 = !!C3 && CA3.vivo, M = MIS.cur;
+  var pas = M && !C3 && !M.suelo ? exvPaxQ(M.type.id, M.v3) || null : null, cabeza = !!(c3 || pas);
+  var sal = PG.salto >= 0 && PG.salto < 1 ? PG.salto : -1;
+  shadow(g, P.x, P.y, 11, 17.5, P.h);
+  tuboFuego(g, lean);
+  scr(g);
+  var o = {
+    incl: lean, giro: clamp((P.stV != null ? P.stV : P.steer || 0) * 0.42 * (1 - 0.55 * v), -0.45, 0.45), bote: bump, rot: -(P.odo || 0) / (6.2 * MG3.k),
+    ojea: (function () { var q = G.t * 0.21, f = q % 1; return f < 0.24 && P.speed < 60 ? clamp(Math.sin(f / 0.24 * Math.PI) * 2.6, -1, 1) * 2.35 * (Math.floor(q) % 2 ? 1 : -1) : 0; })(),
+    t: G.t, v: v, mira: look, frena: !!IN.brake && P.speed > 4, gas: !!IN.gas, salto: cabeza ? -1 : sal, cesta: cabeza ? 'no' : 'pitik', pasajero: pas, sobre: c3 ? function (zb) { cargaParrilla3D(C3, zb); } : null
+  };
+  if (PG.est) o.pitikEst = PG.est;
+  motoGuiri3D(g, P.x, P.y, P.z || 0, P.h, o);
+  if (cabeza) pgPitikCabeza(g, lean, bump, sal);
+  if (P.dizzy > 0) stars3D(g, P.x, P.y, 56);
+};
+function pgPitikCabeza(g, inc, bump, sal) {                                  // sentado en la cabeza del guiri, mirando hacia atrás (a la cámara)
+  var kk = MG3.k, real = typeof ER3 !== 'undefined' && ER3.real, u = 2.6, w = (real ? 49.2 : 53) + bump * 1.2, v = -8.8 * inc;
+  var cr = Math.cos(inc), sr = Math.sin(inc), v2 = v * cr + w * sr, w2 = w * cr - v * sr;
+  var fx = Math.sin(P.h), fy = Math.cos(P.h), rx = Math.cos(P.h), ry = -Math.sin(P.h);
+  var x = P.x + fx * u * kk + rx * v2 * kk, y = P.y + fy * u * kk + ry * v2 * kk, z = (P.z || 0) + w2 * kk + (sal >= 0 ? Math.sin(sal * Math.PI) * 12 : 0);
+  var est = PG.est || (sal >= 0 ? 'feliz' : 'normal');
+  scr(g);
+  pitikRedondo3D(g, x, y, z, P.h + Math.PI + Math.sin(G.t * 0.9) * 0.35, { k: PRM.k * kk * 1.05 / PT3.k, t: G.t, sentado: sal < 0, gestoSentado: true, est: est, salto: sal >= 0 ? 0.6 : 0, mira: Math.sin(G.t * 0.7) * 0.6, incl: inc * 0.4 });
+}
+
+/* ================================================================
+   PITIK HABLA: arriba a la izquierda, en 3D, con su bocadillo y su voz
+   ================================================================ */
+var PG_DICE = {
+  hola: [['🐥', '¡Hola! Soy Pitik. ¡Vamos a ayudar al pueblo!']],
+  tarea_pollos: [['🐔', '¡Las gallinas de Made! Están en el gallinero']],
+  tarea_pax: [['🙋', '¡Alguien te espera! Ve a buscarle']],
+  tarea_muebles: [['🪑', '¡Muebles nuevos! Están en la carpintería']],
+  tarea_cerdo: [['🐖', '¡Un cerdito! Está en la pocilga']],
+  cerca: [['🔵', '¡Entra en el aro azul!']],
+  carga_pollos: [['🐔', '¡Seis gallinas! Que no se escapen']],
+  carga_muebles: [['🪑', '¡Con cuidado, que se caen!']],
+  carga_cerdo: [['🐖', '¡Agárralo bien, que patalea!']],
+  sube: [['🙋', '¡Sube! ¡Agárrate fuerte!']],
+  lleva_warung: [['🍜', 'Ahora, ¡al warung!']],
+  lleva_rumah: [['🏠', 'Ahora, ¡a la casa de Komang!']],
+  lleva_pura: [['🛕', 'Ahora, ¡al templo!']],
+  lleva_sekolah: [['🏫', 'Ahora, ¡a la escuela!']],
+  casi: [['🟡', '¡Ya casi! ¡Al aro amarillo!']],
+  escapan: [['🐔', '¡Se escapan las gallinas!'], ['🐔', '¡Ay, mis gallinas!']],
+  cerdoEscapa: [['🐖', '¡El cerdo se ha tirado! ¡A por él!']],
+  mueblesCae: [['🪑', '¡Se ha caído un mueble!']],
+  pasa: [['⬇️', '¡Pasa por encima para cogerlo!']],
+  pillada: [['✨', '¡Te pillé!'], ['✨', '¡Una menos!'], ['✨', '¡Bien!']],
+  todas: [['🎉', '¡Ya están todas! ¡Vamos!']],
+  faltan: [['🔎', '¡Faltan # gallinas! ¡Búscalas!']],
+  falta: [['🔎', '¡Falta algo! ¡Búscalo!']],
+  faltaPax: [['🔎', '¡Se ha bajado! ¡Vuelve a por él!']],
+  paxCae: [['🙋', '¡Se ha caído! ¡Pasa a recogerle!']],
+  paxVuelve: [['🙋', '¡Otra vez arriba!']],
+  paxQueja: [['😵', '¡Ay! ¡Más despacito!']],
+  meneo: [['😬', '¡Uf, casi se cae!']],
+  caida: [['😵', '¡Ay! ¿Estás bien?'], ['😵', '¡CATAPLÁN!']],
+  arriba: [['💪', '¡Arriba! Te quedan # cascos']],
+  hierba: [['🌱', '¡Fuera de carretera! Por la hierba también se puede'], ['🌱', '¡Por la hierba! Brrr']],
+  perro: [['🐕', '¡Un perro dormido! Toca TIN TIN']],
+  camion: [['🚚', '¡Ojo, un camión!']],
+  coco: [['🥥', '¡Un coco! ¡Cuidado con las palmeras!']],
+  gente: [['🙋', '¡Cuidado con la gente! Toca TIN TIN']],
+  entrega: [['🎉', '¡Bravo! ¡Terima kasih!'], ['🎉', '¡Lo has conseguido!']],
+  ronda: [['🏆', '¡Ronda completa! ¡Eres genial!']],
+  quieto: [['▶️', '¿Vamos? ¡Dale al gas!']],
+  bali: [['🛵', 'En Bali se conduce por la izquierda'], ['🌳', 'El baniano es sagrado: lleva una tela de cuadros'], ['🍜', 'Un warung es un restaurante pequeñito'], ['🛕', 'Pura quiere decir templo'],
+    ['🌸', 'Las ofrendas de flores se llaman canang'], ['👋', 'En Bali se saluda así: ¡Om swastiastu!'], ['🏳️', 'La bandera de Indonesia es roja y blanca']],
+  voz0: [['🔇', 'Vale, ya no hablo. ¡Pío!']],
+  voz1: [['🔊', '¡Ya puedo hablar otra vez!']]
+};
+var PG_EST = { hola: 'feliz', escapan: 'susto', cerdoEscapa: 'susto', mueblesCae: 'susto', caida: 'susto', paxCae: 'susto', paxQueja: 'susto', meneo: 'susto', pillada: 'feliz', todas: 'feliz', entrega: 'feliz', ronda: 'feliz',
+  faltan: 'pillo', falta: 'pillo', faltaPax: 'pillo', perro: 'pillo', camion: 'susto', coco: 'susto', arriba: 'feliz', sube: 'feliz', paxVuelve: 'feliz', bali: 'feliz', hierba: 'feliz', voz1: 'feliz', voz0: 'pillo', casi: 'feliz' };
+var PG_YA = { escapan: 1, cerdoEscapa: 1, mueblesCae: 1, caida: 1, paxCae: 1, entrega: 1, ronda: 1, todas: 1, arriba: 1, pillada: 1 };   // estos cortan lo que esté diciendo
+var PG_ESPERA = { pillada: 1.1, perro: 7, camion: 7, gente: 4, quieto: 9, meneo: 3, paxQueja: 3, hierba: 12, coco: 5, pasa: 6 };
+var PGH = { el: null, cv: null, boc: null, cola: [], prog: [], cur: null, ult: {}, vis: false, dibT: 0, pico: 0 };
+function pgDice(clave, n, retraso) {
+  if (!clave || !PG_DICE[clave]) return;
+  if (retraso) { PGH.prog.push({ t: G.t + retraso, k: clave, n: n }); return; }   // (en tiempo de juego: con la pausa, espera)
+  var esp = PG_ESPERA[clave] || 0, ahora = G.t;
+  if (esp && ahora - (PGH.ult[clave] == null ? -99 : PGH.ult[clave]) < esp) return;
+  PGH.ult[clave] = ahora;
+  var L = PG_DICE[clave], q = clave === 'bali' ? L[(PG.n + (MIS.round || 1) * 3) % L.length] : pickM(L);
+  var txt = TT(q[1]); if (n != null) txt = txt.replace('#', n);
+  var it = { k: clave, ico: q[0], txt: txt, est: PG_EST[clave] || 'normal' };
+  if (PG_YA[clave]) { PGH.cola.length = 0; pgDiAhora(it); return; }
+  if (!PGH.cur) { pgDiAhora(it); return; }
+  if (PGH.cola.length < 2 && !PGH.cola.some(function (o) { return o.k === clave; })) PGH.cola.push(it);
+}
+function pgDiAhora(it) {
+  PGH.cur = it; it.t0 = G.t; it.dur = clamp(1.5 + it.txt.length * 0.062, 2.3, 5.2);
+  PG.est = it.est === 'normal' ? null : it.est; PG.estT = it.dur;
+  pgPitikDom();                                                              // (la primera vez, el bocadillo todavía no existía)
+  if (PGH.boc) { PGH.boc.innerHTML = '<i>' + it.ico + '</i><span>' + it.txt + '</span>'; PGH.boc.classList.remove('pg-va'); void PGH.boc.offsetWidth; PGH.boc.classList.add('pg-va'); }
+  if (SFX.pio) SFX.pio(1);
+  pgVoz(it.txt);
+}
+/* su voz: la del móvil, aguda, en el idioma del juego */
+function pgVozOn() { return SAVE.pgVoz !== 0 && typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined'; }
+function pgVoz(txt) {
+  if (!pgVozOn()) return;
+  try {
+    var S = speechSynthesis, lg = LANG === 'en' ? 'en' : LANG === 'id' ? 'id' : 'es';
+    S.cancel();
+    var u = new SpeechSynthesisUtterance(txt.replace(/[¡¿]/g, '').replace(/TIN TIN/g, 'tin tin'));
+    var vs = S.getVoices ? S.getVoices() : [], v = null, i;
+    for (i = 0; i < vs.length && !v; i++) if (vs[i].lang && vs[i].lang.toLowerCase().indexOf(lg) === 0 && /female|mujer|monica|paulina|helena|laura|lucia|sabina|damayanti|samantha|karen|google/i.test(vs[i].name)) v = vs[i];
+    for (i = 0; i < vs.length && !v; i++) if (vs[i].lang && vs[i].lang.toLowerCase().indexOf(lg) === 0) v = vs[i];
+    u.lang = lg === 'en' ? 'en-US' : lg === 'id' ? 'id-ID' : 'es-ES'; if (v) u.voice = v;
+    u.pitch = 1.85; u.rate = 1.08; u.volume = 0.95;
+    S.speak(u);
+  } catch (e) {}
+}
+function pgCalla() { try { if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel(); } catch (e) {} }
+/* la cara: Pitik en su lienzo, con la cámara del banco de modelos */
+function pgPitikLienzo(cv, w, h, o) {
+  var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  var g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
+  var K0 = {}, k; for (k in K3) K0[k] = K3[k];
+  try {
+    bancoCam(w, h, 14, 30, dpr, function () {
+      var p = 0.22, ps = h * 0.82 / 32, dz = CAM.F / ps;                   // mira al centro de Pitik (a 14 de alto), que quepa entero con sus saltos
+      CAM.pitch = p; CAM.s = Math.sin(p); CAM.c = Math.cos(p); CAM.W2 = w / 2; CAM.H2 = h * 0.56;
+      CAM.y = -dz * Math.cos(p); CAM.z = 14 + dz * Math.sin(p); CAM.x = 0;
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      K3.q = []; K3.alfa = 1;
+      pitikRedondo3D(g, 0, 0, 0, Math.PI + (o.giro || 0), { k: 1 / PT3.k, t: o.t, est: o.est, pico: o.pico || 0, salto: o.salto || 0, mira: o.mira || 0, sentado: false });
+    });
+  } catch (e) { } finally { for (k in K0) K3[k] = K0[k]; }
+}
+function pgPitikDom() {
+  if (PGH.el) return;
+  var css = document.createElement('style');
+  css.textContent =
+    '#pgPit{position:absolute;left:6px;top:calc(env(safe-area-inset-top,0px) + 46px);width:86px;height:86px;z-index:6;pointer-events:auto;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}' +
+    '#pgPit.hide{display:none}#pgPit canvas{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 3px 0 rgba(36,23,12,.35))}' +
+    '#pgPit .pg-mute{position:absolute;right:0;bottom:2px;font:16px/1 system-ui;background:#fff;border:2px solid #2a1a0c;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-style:normal}' +
+    '#pgBoc{position:absolute;left:84px;top:8px;width:max-content;max-width:min(230px,calc(100vw - 230px));background:#fffdf4;color:#2a1a0c;border:3px solid #2a1a0c;border-radius:16px;padding:7px 10px 7px 8px;' +
+    'font:900 14px/1.22 "Arial Rounded MT Bold","Varela Round","Nunito",system-ui,sans-serif;box-shadow:0 4px 0 rgba(36,23,12,.35);display:flex;gap:6px;align-items:flex-start;opacity:0;transform:scale(.6);transform-origin:0 50%;transition:opacity .18s,transform .18s;pointer-events:none}' +
+    '#pgBoc:before{content:"";position:absolute;left:-12px;top:18px;border:7px solid transparent;border-right:9px solid #2a1a0c}' +
+    '#pgBoc:after{content:"";position:absolute;left:-6px;top:20px;border:5px solid transparent;border-right:7px solid #fffdf4}' +
+    '#pgBoc i{font-style:normal;font-size:20px;line-height:1}#pgBoc.pg-va{opacity:1;transform:scale(1)}#pgBoc.pg-fin{opacity:0;transform:scale(.85)}' +
+    '@media (max-width:360px){#pgBoc{font-size:12.5px;max-width:calc(100vw - 210px)}}' +
+    'body.cartel #pgPit{visibility:hidden}';
+  document.head.appendChild(css);
+  var d = document.createElement('div'); d.id = 'pgPit'; d.className = 'hide'; d.setAttribute('aria-label', 'Pitik');
+  d.innerHTML = '<canvas></canvas><i class="pg-mute">🔊</i><div id="pgBoc"></div>';
+  var scr0 = $('scr'); (scr0 && scr0.parentNode ? scr0.parentNode : document.body).insertBefore(d, scr0);
+  PGH.el = d; PGH.cv = d.querySelector('canvas'); PGH.boc = d.querySelector('#pgBoc'); PGH.mute = d.querySelector('.pg-mute');
+  d.addEventListener('pointerdown', function (e) {                         // tocar a Pitik: le quitas (o le das) la voz
+    e.preventDefault(); e.stopPropagation(); auInit();
+    SAVE.pgVoz = SAVE.pgVoz === 0 ? 1 : 0; writeSave(); pgCalla();
+    pgSalta('feliz'); PGH.ult.voz0 = PGH.ult.voz1 = -99; pgDice(SAVE.pgVoz === 0 ? 'voz0' : 'voz1');
+  });
+}
+function pgCada(dt) {
+  var on = pgOn() && G.state === 'play' && !G.card && !G.enMenu && $('scr') && $('scr').classList.contains('hide');
+  if (PG.salto >= 0) { PG.salto += dt / 0.75; if (PG.salto >= 1) PG.salto = -1; }
+  if (PG.est && (PG.estT -= dt) <= 0) PG.est = null;
+  if (pgOn() && G.state === 'play' && !G.card) {
+    if (PG.saludo) { PG.saludo = false; pgDice('hola'); pgDice('tarea_' + PG.tarea.id, null, 2.8); }   // (si se empezó sin la tarjeta: «Otra vez», «Otra ronda»)
+    pgGenteUpd(dt);
+    if (PG.finT > 0) { PG.finT -= dt; if (PG.finT <= 0) pgRondaFin(); }
+  }
+  if (!on) {
+    if (PGH.vis) { PGH.vis = false; PGH.el.classList.add('hide'); pgCalla(); }
+    return;
+  }
+  pgPitikDom();
+  if (!PGH.vis) { PGH.vis = true; PGH.el.classList.remove('hide'); }
+  for (var q = PGH.prog.length - 1; q >= 0; q--) if (G.t >= PGH.prog[q].t) { var pr = PGH.prog.splice(q, 1)[0]; pgDice(pr.k, pr.n); }
+  var C = PGH.cur, now = G.t;
+  if (C && now - C.t0 > C.dur) {
+    PGH.cur = null; C = null; PGH.boc.classList.remove('pg-va');
+    if (PGH.cola.length) pgDiAhora(PGH.cola.shift());
+  }
+  PGH.mute.textContent = pgVozOn() ? '🔊' : '🔇';
+  PGH.dibT -= dt; if (PGH.dibT > 0) return;                                 // la cara, a unos 25 fotogramas por segundo
+  PGH.dibT = 0.04;
+  var habla = C && now - C.t0 < Math.min(C.dur - 0.3, 0.38 + C.txt.length * 0.055), t = G.t;
+  pgPitikLienzo(PGH.cv, 86, 86, { t: t, est: PG.est || 'normal', pico: habla ? 0.5 + 0.5 * Math.sin(t * 19) : 0, salto: PG.salto >= 0 ? Math.sin(PG.salto * Math.PI) : 0, mira: Math.sin(t * 0.8) * 0.5, giro: Math.sin(t * 0.6) * 0.3 });
+}
+var updatePG = update;
+update = function (dt) { updatePG(dt); if (PGD.vivo) pgCada(dt); };
+
+/* ================================================================
+   EL MARCADOR: cascos, flores, el encargo con su flecha, «fuera de carretera» y el mapita
+   ================================================================ */
+var cityHUDPG = cityHUD;
+cityHUD = function (g) { if (pgOn()) { pgHUD(g); return; } cityHUDPG(g); };
+var cargaHUDPG = cargaHUD, caidasHUDPG = caidasHUD;
+cargaHUD = function (g) { if (pgOn()) return; cargaHUDPG(g); };
+caidasHUD = function (g) { if (pgOn()) return; caidasHUDPG(g); };
+function pgEmoji(g, ico, x, y, sz) { g.font = sz + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ico, x, y); }
+function pgObjetivo() {                                                       // adónde apunta la flecha: lo escapado más cercano; si no, el aro que toca
+  var best = null, bd = 1e9, i;
+  for (i = 0; i < CAIDAS.length; i++) { var c = CAIDAS[i]; if (!recogible(c)) continue; var d = d2(c.x, c.y, P.x, P.y); if (d < bd) { bd = d; best = c; } }
+  if (best) return { x: best.x, y: best.y, d: bd, suelo: true };
+  if (MIS.cur) return { x: MIS.cur.dest.x, y: MIS.cur.dest.y, d: d2(MIS.cur.dest.x, MIS.cur.dest.y, P.x, P.y) };
+  if (MIS.wait[0]) return { x: MIS.wait[0].pl.x, y: MIS.wait[0].pl.y, d: d2(MIS.wait[0].pl.x, MIS.wait[0].pl.y, P.x, P.y) };
+  return null;
+}
+function pgHUD(g) {
+  var x = 10, y = 9, i, T = PG.tarea, der = V.w - 114;                    // (arriba a la derecha van los botones de la pausa y de los mandos)
+  for (i = 0; i < PGD.vidas; i++) g.drawImage((i < P.hp ? SP.helm : SP.helmX).c, x + i * 19, y, 17, 12.5);
+  g.textAlign = 'left'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.strokeStyle = INK;
+  g.save(); g.translate(x + 7, y + 25); g.scale(1.35, 1.35); g.drawImage(SP.flor.c, -5, -5, 10, 10); g.restore();
+  g.font = '900 15px ' + FONT; g.lineWidth = 3.5; g.strokeText('' + G.fl, x + 17, y + 26); g.fillStyle = '#fff7df'; g.fillText('' + G.fl, x + 17, y + 26);
+  /* el encargo: lo que hay que recoger ➜ adónde (o lo que se ha escapado) y las estrellas de la ronda */
+  var bx = 110, bw = clamp(der - bx, 150, 210), by = 7, bh = 38, falta = pgFalta(), mid = by + bh / 2 + 1;
+  rrect(g, bx, by, bw, bh, 10, 'rgba(255,253,244,.96)', INK, 2.6);
+  if (T) {
+    var icoDe = T.id === 'pax' ? '🙋' : (PKR_CARGA[T.id] || '📦'), icoA = PG_SITIOS[T.a].ico, cx = bx + 8;
+    if (falta > 0 && MIS.cur) {
+      g.fillStyle = Math.sin(G.t * 9) > -0.3 ? '#ff8a3c' : '#ffd23f'; rrect(g, bx + 4, by + 4, 84, bh - 8, 8, g.fillStyle);
+      pgEmoji(g, icoDe, cx + 16, mid, 21);
+      g.font = '900 16px ' + FONT; g.textAlign = 'left'; g.fillStyle = INK; g.fillText('×' + falta + ' ⬇', cx + 31, mid);
+    } else {
+      g.globalAlpha = MIS.cur ? 0.4 : 1; pgEmoji(g, icoDe, cx + 15, mid, 23); g.globalAlpha = 1;
+      g.font = '900 17px ' + FONT; g.textAlign = 'center'; g.fillStyle = INK; g.fillText('➜', cx + 41, mid);
+      g.globalAlpha = MIS.cur ? 1 : 0.4; pgEmoji(g, icoA, cx + 67, mid, 23); g.globalAlpha = 1;
+    }
+    var sx = bx + 104, sw = Math.min(15, (bx + bw - 10 - sx) / PGD.ronda);
+    for (i = 0; i < PGD.ronda; i++) { g.font = '900 ' + Math.round(sw + 1) + 'px ' + FONT; g.textAlign = 'center'; g.fillStyle = i < MIS.done ? '#f2b705' : 'rgba(42,26,12,.25)'; g.fillText('★', sx + i * sw + sw / 2, mid); }
+  }
+  /* la flecha: arriba, en medio, hacia lo que toca (o lo escapado más cercano) */
+  var O = pgObjetivo();
+  if (O && P.state === 'ride' && O.d > 60) {
+    var ax = V.w > V.h ? V.w * 0.6 : V.w / 2, ay = Math.min(210, V.h * 0.25),   // (apaisado: algo a la derecha, que no la tape el bocadillo)
+        col = O.suelo ? '#ff8a3c' : (MIS.cur ? '#f2b705' : '#2f9ed8'), bote = Math.sin(G.t * 5) * 2;
+    circ(g, ax, ay + bote, 23, 'rgba(255,253,244,.94)', INK, 2.6);
+    g.save(); g.translate(ax, ay + bote); g.rotate(Math.atan2(O.x - P.x, O.y - P.y) - CAM.yaw);
+    poly(g, [0, -16, 12, 2, 4.6, 2, 4.6, 14, -4.6, 14, -4.6, 2, -12, 2], col, INK, 2.2); g.restore();
+    g.font = '900 13px ' + FONT; g.textAlign = 'center'; g.lineWidth = 3.5; g.strokeStyle = INK;
+    var mt = Math.max(0, Math.round(O.d / 20)) + ' m'; g.strokeText(mt, ax, ay + bote + 35); g.fillStyle = '#ffffff'; g.fillText(mt, ax, ay + bote + 35);
+  }
+  if (PG.fuera && P.state === 'ride') {                                      // fuera de la carretera: el aviso, pequeño, debajo de Pitik
+    var ft = '🌱 ' + TT('Fuera de carretera'); g.font = '900 12px ' + FONT;
+    var fw = g.measureText(ft).width + 18, fyy = 142;
+    rrect(g, 8, fyy, fw, 21, 10.5, 'rgba(84,140,52,.93)', INK, 2);
+    g.textAlign = 'center'; g.fillStyle = '#ffffff'; g.fillText(ft, 8 + fw / 2, fyy + 11);
+  }
+  g.textAlign = 'left';
+  drawMinimap(g);
+}
+
+/* ================================================================
+   LAS TARJETAS: antes de empezar y al acabar (cortas, con dibujos)
+   ================================================================ */
+function pgIcosFila(hechos) {
+  return '<div class="pkr-icos pg-icos">' + ['🐔', '🙋', '🪑', '🐖'].map(function (c, i) { return '<span class="' + (hechos && i < hechos ? 'si' : '') + '">' + c + '</span>'; }).join('') + '</div>';
+}
+function pgPitikTarjeta(est) {                                                // Pitik dibujado en la tarjeta (cuando ya está puesta)
+  setTimeout(function () { var cv = document.querySelector('#scr canvas.pg-tpit'); if (cv) pgPitikLienzo(cv, 110, 110, { t: 1.3, est: est || 'feliz', salto: 0.4, mira: 0.2 }); }, 30);
+}
+function pgCalienta() {                                                    // los dibujos de letra (emoji) que salen jugando, una vez antes: la primera vez que se usa una letra nueva el móvil la carga, y eso daba un tirón
+  if (PG.caliente) return; PG.caliente = 1;
+  try {
+    var c = document.createElement('canvas'); c.width = c.height = 40; var g = c.getContext('2d');
+    var L = ['🐔', '🙋', '🪑', '🐖', '🍜', '🛕', '🪚', '🏠', '🏫', '🌱', '➜', '★', '⬇', '×'];
+    L.forEach(function (e) { g.font = '20px ' + FONT; g.fillText(e, 10, 20); pgEmoji(g, e, 20, 20, 20); });
+    for (var k in PG_SITIOS) pgIcoSpr(PG_SITIOS[k].ico);
+    ['🐔', '🙋', '🪑', '🐖'].forEach(pgIcoSpr);
+  } catch (e) {}
+}
+var showReadyCityPG = showReadyCity;
+showReadyCity = function () {
+  if (!pgOn()) { showReadyCityPG(); return; }
+  pgCalienta();
+  card('<div class="logo"><span>PLAYGROUND</span><span>LAPANGAN</span></div>' +
+    '<div class="pg-cab"><canvas class="pg-tpit" width="110" height="110"></canvas><p class="pkr-lin">' + TT('¡Hola! Soy Pitik. ¡Vamos a ayudar al pueblo!') + '</p></div>' +
+    pgIcosFila(0) +
+    '<div class="pkt-meta"><span><b>🔵</b><small>' + TT('recoge') + '</small></span><span><b>🟡</b><small>' + TT('llévalo') + '</small></span><span><b>🐔💨</b><small>' + TT('si se escapan, pasa por encima') + '</small></span></div>' +
+    '<div class="acc clara"><button class="b1" data-act="go">' + TT('¡A jugar!') + '</button>' + pkrPie() + '</div>', 'ready pkr-ready pg-ready');
+  pgPitikTarjeta('feliz');
+};
+var showCityEndPG = showCityEnd;
+showCityEnd = function (why) {
+  if (!pgOn()) { showCityEndPG(why); return; }
+  if (G.card) return; G.card = true; pokiStop(); pgCalla();
+  if (G.fl > PG.banked) { guardaFlores(G.fl - PG.banked); PG.banked = G.fl; }
+  var ok = why === 'ok', est = Math.max(1, 3 - Math.min(2, PG.caidas)), e = '', k;
+  for (k = 0; k < 3; k++) e += k < est ? '★' : '☆';
+  card('<h2 class="stk' + (ok ? '' : ' ko') + '">' + TT(ok ? '¡Ronda completa!' : '¡Ay, sin cascos!') + '</h2>' +
+    '<div class="pg-cab"><canvas class="pg-tpit" width="110" height="110"></canvas>' + (ok ? '<p class="pg-est">' + e + '</p>' : '<p class="pkr-lin">' + TT('¡Otra vez! Yo te ayudo') + '</p>') + '</div>' +
+    pgIcosFila(MIS.done) +
+    '<div class="res">' +
+      '<p><span>' + TT('Encargos') + '</span><b>' + MIS.done + ' / ' + PGD.ronda + '</b></p>' +
+      '<p>' + FLOR_SVG + '<span>' + TT('Frangipanis') + '</span><b>' + G.fl + '</b></p>' +
+      '<p><span>' + TT('Flores al bolsillo') + '</span><b class="bla">❀ ' + bolsillo() + '</b></p>' +
+    '</div>' +
+    '<div class="acc clara"><button class="b1" data-act="' + (ok ? 'cityNext' : 'city') + '">▶ ' + TT(ok ? 'Otra ronda' : 'Otra vez') + '</button>' + pkrPie() + '</div>', 'end pkr-ready pg-fin');
+  pgPitikTarjeta(ok ? 'feliz' : 'pena');
+};
+
+/* ================================================================
+   LA ENTRADA: en la portada, «Con la moto» → 🐥 Playground (abierto desde el principio)
+   ================================================================ */
+if (PGD.vivo) {
+  POK_ACT.playground = ['🐥', 'Playground', 'Para los peques: la explanada con Pitik'];
+  POK.moto.unshift('playground');
+}
+var menuActPGD = menuAct;
+menuAct = function (a) {
+  if (PGD.vivo && a === 'modo:playground') {
+    G.enMenu = false; showPad(TOUCH); G.primo = false; G.sub = 'pg'; G.started = false; startCity(1); showReadyCity(); return true;
+  }
+  if (PGD.vivo && G.sub === 'pg' && G.mode === 'city' && (a === 'menu' || a.indexOf('modo:') === 0 || a.indexOf('nivel:') === 0)) pgCalla();
+  return menuActPGD(a);
+};
+var actPGD = act;
+act = function (a) {                                                       // «¡A jugar!»: Pitik saluda dentro del toque (así el móvil le deja hablar)
+  var hola = PGD.vivo && a === 'go' && pgOn() && PG.saludo && G.state === 'ready', r = actPGD(a);
+  if (hola && G.state === 'play') { PG.saludo = false; pgDice('hola'); pgDice('tarea_' + PG.tarea.id, null, 2.8); }
+  return r;
+};
+(function () {
+  var css =
+    '.pk-gr.n3{grid-template-columns:1fr 1fr}.pk-gr.n3 .po-m.playground{grid-column:1/-1;min-height:128px}' +
+    '.po-m.playground{background:linear-gradient(170deg,#fff6c9 0%,#ffe066 45%,#9fd86a 100%)}' +
+    '.pg-cab{display:flex;align-items:center;gap:8px;justify-content:center;margin:2px 0 6px}.pg-cab canvas{width:110px;height:110px;flex:0 0 auto}.pg-cab .pkr-lin{margin:0;text-align:left;max-width:200px}' +
+    '.pg-est{font:900 34px/1 system-ui,sans-serif;color:#f2b705;-webkit-text-stroke:2px #2a1a0c;letter-spacing:.06em;margin:0}' +
+    '.pg-fin .pkr-lin{color:#2a1a0c;text-shadow:none}.pg-icos span{font-size:26px}.pg-ready .logo span{font-size:36px}@media (max-height:700px){.pg-ready .logo span{font-size:30px}}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  var N = {
+    'Playground': ['Playground', 'Taman bermain'], 'Para los peques: la explanada con Pitik': ['For little ones: the village field with Pitik', 'Untuk si kecil: lapangan bersama Pitik'],
+    'recoge': ['pick up', 'ambil'], 'llévalo': ['take it', 'antar'], 'si se escapan, pasa por encima': ['if they escape, drive over them', 'kalau kabur, lewati saja'], '¡A jugar!': ['Let\'s play!', 'Ayo main!'],
+    '¡Ronda completa!': ['Round complete!', 'Ronde selesai!'], '¡Ay, sin cascos!': ['Oops, no helmets left!', 'Aduh, helm habis!'], '¡Otra vez! Yo te ayudo': ['Again! I\'ll help you', 'Lagi! Aku bantu'],
+    'Encargos': ['Jobs', 'Tugas'], 'Otra ronda': ['Another round', 'Ronde lagi'], 'Otra vez': ['Again', 'Lagi'], 'Fuera de carretera': ['Off the road', 'Keluar jalan'],
+    '¡Sube otra vez!': ['Hop on again!', 'Naik lagi!'], '¡Al cesto, cerdito!': ['Into the basket, piggy!', 'Masuk keranjang, babi kecil!'], '¡Sin escaparse ninguno! +3': ['None escaped! +3', 'Tak ada yang kabur! +3'],
+    '¡Tira completa! +2': ['Full row! +2', 'Satu baris penuh! +2'], '¡Frangipani de oro!': ['Golden frangipani!', 'Kamboja emas!'], '¡Cargado!': ['Loaded!', 'Sudah dimuat!'], '¡Sube!': ['Hop on!', 'Naik!'],
+    '¡Toma!': ['Take that!', 'Rasakan!'], '¡Golazo!': ['Goal!', 'Gol!'], '¡Bien!': ['Nice!', 'Bagus!'], '¡Eh!': ['Hey!', 'Hei!'], '¡Uy!': ['Whoa!', 'Eh!'], '¡Cuidado!': ['Careful!', 'Hati-hati!'], '¡Hola!': ['Hi!', 'Halo!'],
+    '¡PUM!': ['BUMP!', 'BUK!'], '¡TOC!': ['THUD!', 'TOK!'], '¡Despacio!': ['Slow down!', 'Pelan-pelan!'], '¡Uy, uy!': ['Whoa, whoa!', 'Aduh, aduh!'],
+    '¡Hola! Soy Pitik. ¡Vamos a ayudar al pueblo!': ['Hi! I\'m Pitik. Let\'s help the village!', 'Halo! Aku Pitik. Ayo bantu desa!'],
+    '¡Las gallinas de Made! Están en el gallinero': ['Made\'s chickens! They\'re in the coop', 'Ayam-ayam Made! Ada di kandang'],
+    '¡Alguien te espera! Ve a buscarle': ['Someone is waiting! Go pick them up', 'Ada yang menunggu! Jemput dia'],
+    '¡Muebles nuevos! Están en la carpintería': ['New furniture! It\'s at the carpenter\'s', 'Perabot baru! Ada di tukang kayu'],
+    '¡Un cerdito! Está en la pocilga': ['A piglet! It\'s in the pigsty', 'Anak babi! Ada di kandang babi'],
+    '¡Entra en el aro azul!': ['Ride into the blue ring!', 'Masuk ke lingkaran biru!'],
+    '¡Seis gallinas! Que no se escapen': ['Six chickens! Don\'t let them escape', 'Enam ayam! Jangan sampai kabur'],
+    '¡Con cuidado, que se caen!': ['Careful, they can fall!', 'Hati-hati, bisa jatuh!'],
+    '¡Agárralo bien, que patalea!': ['Hold on tight, it kicks!', 'Pegang erat, dia menendang!'],
+    '¡Sube! ¡Agárrate fuerte!': ['Hop on! Hold on tight!', 'Naik! Pegangan yang kuat!'],
+    'Ahora, ¡al warung!': ['Now, to the warung!', 'Sekarang, ke warung!'], 'Ahora, ¡a la casa de Komang!': ['Now, to Komang\'s house!', 'Sekarang, ke rumah Komang!'],
+    'Ahora, ¡al templo!': ['Now, to the temple!', 'Sekarang, ke pura!'], 'Ahora, ¡a la escuela!': ['Now, to the school!', 'Sekarang, ke sekolah!'],
+    '¡Ya casi! ¡Al aro amarillo!': ['Almost there! Into the yellow ring!', 'Hampir sampai! Ke lingkaran kuning!'],
+    '¡Se escapan las gallinas!': ['The chickens are escaping!', 'Ayamnya kabur!'], '¡Ay, mis gallinas!': ['Oh no, my chickens!', 'Aduh, ayamku!'],
+    '¡El cerdo se ha tirado! ¡A por él!': ['The pig jumped off! Get it!', 'Babinya melompat! Kejar!'],
+    '¡Se ha caído un mueble!': ['A piece of furniture fell!', 'Ada perabot yang jatuh!'],
+    '¡Pasa por encima para cogerlo!': ['Drive over it to pick it up!', 'Lewati untuk mengambilnya!'],
+    '¡Te pillé!': ['Got you!', 'Tertangkap!'], '¡Una menos!': ['One less!', 'Kurang satu!'],
+    '¡Ya están todas! ¡Vamos!': ['All of them! Let\'s go!', 'Sudah semua! Ayo!'],
+    '¡Faltan # gallinas! ¡Búscalas!': ['# chickens missing! Find them!', 'Kurang # ayam! Cari mereka!'],
+    '¡Falta algo! ¡Búscalo!': ['Something\'s missing! Find it!', 'Ada yang kurang! Cari!'],
+    '¡Se ha bajado! ¡Vuelve a por él!': ['They got off! Go back for them!', 'Dia turun! Jemput lagi!'],
+    '¡Se ha caído! ¡Pasa a recogerle!': ['They fell! Go pick them up!', 'Dia jatuh! Jemput dia!'],
+    '¡Otra vez arriba!': ['Back on board!', 'Naik lagi!'], '¡Ay! ¡Más despacito!': ['Ouch! Slower, please!', 'Aduh! Pelan-pelan!'],
+    '¡Uf, casi se cae!': ['Phew, it almost fell!', 'Fiuh, hampir jatuh!'], '¡Ay! ¿Estás bien?': ['Ouch! Are you OK?', 'Aduh! Kamu tidak apa-apa?'],
+    '¡Arriba! Te quedan # cascos': ['Up you get! # helmets left', 'Bangun! Sisa # helm'],
+    '¡Fuera de carretera! Por la hierba también se puede': ['Off the road! You can ride on the grass too', 'Keluar jalan! Lewat rumput juga boleh'],
+    '¡Por la hierba! Brrr': ['On the grass! Brrr', 'Lewat rumput! Brrr'], '¡Un perro dormido! Toca TIN TIN': ['A sleeping dog! Press TIN TIN', 'Ada anjing tidur! Tekan TIN TIN'],
+    '¡Ojo, un camión!': ['Watch out, a truck!', 'Awas, truk!'], '¡Un coco! ¡Cuidado con las palmeras!': ['A coconut! Watch the palm trees!', 'Kelapa! Hati-hati dengan pohon kelapa!'],
+    '¡Cuidado con la gente! Toca TIN TIN': ['Mind the people! Press TIN TIN', 'Awas orang! Tekan TIN TIN'],
+    '¡Bravo! ¡Terima kasih!': ['Bravo! Terima kasih!', 'Hebat! Terima kasih!'], '¡Lo has conseguido!': ['You did it!', 'Kamu berhasil!'],
+    '¡Ronda completa! ¡Eres genial!': ['Round complete! You\'re awesome!', 'Ronde selesai! Kamu hebat!'], '¿Vamos? ¡Dale al gas!': ['Shall we? Hit the gas!', 'Ayo? Tekan gas!'],
+    'En Bali se conduce por la izquierda': ['In Bali people drive on the left', 'Di Bali orang berkendara di kiri'],
+    'El baniano es sagrado: lleva una tela de cuadros': ['The banyan is sacred: it wears a checkered cloth', 'Pohon beringin itu suci: memakai kain poleng'],
+    'Un warung es un restaurante pequeñito': ['A warung is a tiny restaurant', 'Warung itu rumah makan kecil'], 'Pura quiere decir templo': ['Pura means temple', 'Pura artinya tempat ibadah'],
+    'Las ofrendas de flores se llaman canang': ['Flower offerings are called canang', 'Sesajen bunga disebut canang'],
+    'En Bali se saluda así: ¡Om swastiastu!': ['In Bali we say hello like this: Om swastiastu!', 'Di Bali kita menyapa: Om swastiastu!'],
+    'La bandera de Indonesia es roja y blanca': ['Indonesia\'s flag is red and white', 'Bendera Indonesia merah putih'],
+    'Vale, ya no hablo. ¡Pío!': ['OK, I\'ll be quiet. Cheep!', 'Oke, aku diam. Ciap!'], '¡Ya puedo hablar otra vez!': ['I can talk again!', 'Aku bisa bicara lagi!'],
+    '¡Om swastiastu!': ['Om swastiastu!', 'Om swastiastu!']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
