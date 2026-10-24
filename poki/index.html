@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v27</title>
+<title>Bali Rush Poki v28</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v27 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v28 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -118402,6 +118402,509 @@ if (PTS.vivo) {
     return r;
   };
 }
+/*#pieza nucleo/690_poki_playground_carrera.js*/
+/* ================================================================
+   POKI V28 · PLAYGROUND: LA MINICARRERA EN EL CIRCUITO Y EL QUAD
+   Jose Javier (24-10-2026), con la v26: «ponle además echar una
+   minicarrera en el circuito a 3 vueltas, que haya participantes,
+   quizás poder cambiar a un quad, no sé, lo que se te ocurra para un
+   niño más pequeño».
+   - LA SALIDA: junto a la recta del arco SIRKUIT, en la hierba de
+     fuera, un aro verde con la bandera 🏁 y su cartel (BALAP: carrera).
+     Entrando, una tarjeta: «La minicarrera · 3 vueltas al circuito
+     contra Made, Komang y Ketut», con dos botones para elegir en qué
+     vas (🛵 la moto o el quad: se queda elegido también para el resto
+     del Playground) y «▶ ¡A correr!» o «Ahora no».
+   - LA CARRERA: los cuatro en la parrilla, detrás de la línea (tú, en
+     la segunda fila: así adelantas); el semáforo (tres rojas y ¡YA!),
+     3 vueltas. Arriba, la vuelta y tu puesto; a la derecha, el puesto
+     en grande; en el plano, los rivales. Por el circuito no hay
+     tráfico mientras dura (y vuelve al acabar). Los encargos esperan.
+   - LOS RIVALES (Made, Komang y Ketut, con el modelo y las motos de
+     las carreras, o en quad si vas en quad) van por la pista, cada uno
+     por su carril, frenando antes de las curvas, adelantándose, y se
+     apartan si les tocas (sin caídas). Son para niños: los de delante
+     esperan si te quedas atrás y los de detrás aprietan un poco, así
+     que siempre hay carrera.
+   - LA META: confeti, tu puesto y una tarjeta con el podio y las
+     flores (1.º 12, 2.º 8, 3.º 5, 4.º 3). «🔁 Otra carrera» o «🐥 Seguir
+     jugando» (sigues donde estás, con tu encargo).
+   - EL QUAD (para el más pequeño): el de la carrera de la selva, con
+     Pitik en la cabeza del guiri. NO SE CAE: lo que con la moto sería
+     una caída es un golpe (¡PUM!) y sigues. Va algo más despacio. Y en
+     la minicarrera, EL GAS VA SOLO: solo hay que girar (FRENO, para
+     frenar).
+   PGC.vivo = false (o ?nopg6): el Playground como la v27.
+   ================================================================ */
+var PGC = {
+  vivo: PG6.vivo && PG2.vivo && !/[?&#]nopg6/.test(location.search + location.hash),
+  vueltas: 3,
+  aro: { x: -300, y: -488 },                                                 // el aro de la salida (en la hierba de fuera, junto a la recta del arco)
+  cartel: { x: -340, y: -508 },
+  riv: [                                                                     // los rivales: nombre, color de moto (de COL_MOTO), camisa, udeng, kamben, piel, lo rápidos que son (de tu punta)
+    { nom: 'Made', motos: [1, 2, 4], camisa: '#2f7fd8', udeng: '#ffffff', kamben: '#7a4a2a', piel: 1, k: 0.84 },
+    { nom: 'Komang', motos: [2, 3, 1], camisa: '#27ae60', udeng: '#f2c230', kamben: '#2a2a3a', piel: 2, k: 0.78 },
+    { nom: 'Ketut', motos: [3, 7, 4], camisa: '#ff8a2a', udeng: '#e2452f', kamben: '#5a3a8a', piel: 0, k: 0.72 }
+  ],
+  parrilla: [[-30, -13], [-30, 13], [-62, 13]],                              // dónde salen (a lo largo de la pista, a un lado): los tres rivales; tú, en [-62, -13]
+  yo0: [-62, -13],
+  premio: [12, 8, 5, 3],
+  aLat: 140,                                                                 // lo que aprietan en las curvas (la velocidad de curva: √(aLat / curvatura))
+  acel: 115, frena: 260,
+  quadV: 0.88, quadRiv: 0.88, cruK: 1.12, cruFuera: 85,                    // (cruK, cruFuera: el gas solo del quad: lo que aprieta en las curvas, y fuera de la pista)
+                                                 // el quad: su punta (de la de tu moto) y lo que corren los rivales cuando vas en quad
+  cerca: 270, max3: 1, nombre: 360,                                          // los rivales en 3D (el más cercano en el móvil, dos en el ordenador: medido, con tres en 3D la carrera costaba un 40 % más que el Playground; así, lo mismo) y su nombre encima
+  car: null, abierto: false, fuera: false, dicho: 0, yoDib: false, cestaPitik: false, golT: -9, kap: null
+};
+function pgcQuad() { return PGC.vivo && SAVE.pgQuad === 1; }
+function pgcEnCarrera() { return !!(PGC.car && pgOn()); }
+
+/* ---------- la pista: la curvatura de cada punto (para que los rivales frenen antes de las curvas) ---------- */
+function pgcCurvas() {
+  if (PGC.kap) return;
+  pg2Prepara();
+  var L = PG2.loop, A = PG2.acc, n = L.length, K = [], i;
+  function h(i) { var a = L[(i + n) % n], b = L[(i + 1 + n) % n]; return Math.atan2(b[0] - a[0], b[1] - a[1]); }
+  for (i = 0; i < n; i++) {
+    var prev = i ? A[i - 1] : A[n - 1] - PG2.L, dh = Math.abs(adiff(h(i + 1), h(i - 1)));
+    K.push(dh / Math.max(20, A[i + 1] - prev));
+  }
+  PGC.kap = K;
+  PGC.vCurva = K.map(function (k) { return Math.sqrt(PGC.aLat / Math.max(k, 1e-5)); });
+}
+function pgcIdx(s) {                                                         // el punto de la pista de antes de s (s en [0, L))
+  var A = PG2.acc, lo = 0, hi = PG2.loop.length - 1;
+  while (lo < hi) { var m = (lo + hi + 1) >> 1; if (A[m] <= s) lo = m; else hi = m - 1; }
+  return lo;
+}
+function pgcEn(prog, u) {                                                    // de lo recorrido desde la salida (y a un lado) al mundo
+  var q = pg2Punto(PG2.sIni + prog);
+  return { x: q.x + Math.cos(q.h) * u, y: q.y - Math.sin(q.h) * u, h: q.h };
+}
+function pgcProy(x, y, i0, win, atras) {                                     // dónde cae (x, y) en la pista, buscando cerca del punto i0 (atras: hasta cuántos puntos hacia atrás; si no, como hacia delante)
+  var L = PG2.loop, A = PG2.acc, n = L.length, best = null, k;
+  for (k = -(atras == null ? win : atras); k <= win; k++) {
+    var i = ((i0 + k) % n + n) % n, a = L[i], b = L[(i + 1) % n], r = segDist(x, y, a[0], a[1], b[0], b[1]);
+    if (!best || r.d < best.d) best = { i: i, d: r.d, s: A[i] + r.t * (A[i + 1] - A[i]), qx: r.qx, qy: r.qy, h: Math.atan2(b[0] - a[0], b[1] - a[1]) };
+  }
+  best.u = (x - best.qx) * Math.cos(best.h) - (y - best.qy) * Math.sin(best.h);
+  return best;
+}
+
+/* ---------- el aro de la salida y su cartel ---------- */
+var pgGeneraPGC = pgGenera;
+pgGenera = function () {
+  pgGeneraPGC();
+  if (!PGC.vivo || MAPA !== 'pg') return;
+  CITY.items.push({ k: 'pgc', m: 'aro', x: PGC.aro.x, y: PGC.aro.y, ico: '🏁', j: 2 });
+  CITY.items.push({ k: 'deco', s: signSprite('BALAP 🏁'), x: PGC.cartel.x, y: PGC.cartel.y, a: 0, sc: 1.2 });
+};
+var ciuItemPGC = ciuItem;
+ciuItem = function (g, it, k, i) {
+  if (k === 'pgc' && MAPA === 'pg') { pg6Aro(g, it, '#27ae60', '#8fe3a8'); return true; }
+  if (k === 'pgcR' && MAPA === 'pg') { pgcDibuja(g, it.R); return true; }
+  return ciuItemPGC(g, it, k, i);
+};
+
+/* ---------- la tarjeta de la salida ---------- */
+function pgcIcoQuad() {                                                      // el quad, dibujado (para el botón)
+  if (PGC.icoQ) return PGC.icoQ;
+  var LK = lookGet(), q = {}, k; for (k in LK) q[k] = LK[k]; q.quad = 1;
+  try { PGC.icoQ = icon(k3Carton(70, 76, 3, function (g) { motoGuiri3D(g, 0, 0, 0, Math.PI * 0.78, { look: q, k: 0.9, t: 0.6, v: 0.2, cesta: 'no', salto: -1 }); }, 8), 40); } catch (e) { PGC.icoQ = '🏎️'; }
+  return PGC.icoQ;
+}
+function pgcPregunta() {
+  PGC.abierto = true; pokiStop(); G.state = 'pause'; IN.gas = IN.brake = IN.left = IN.right = 0; P.speed = 0;
+  var q = pgcQuad(), nom = PGC.riv.map(function (r) { return r.nom; });
+  card('<div class="pg6-ico">🏁</div><h2 class="stk">' + TT('La minicarrera') + '</h2>' +
+    '<p class="pkr-lin">' + TT('3 vueltas al circuito contra') + ' ' + nom[0] + ', ' + nom[1] + ' ' + TT('y') + ' ' + nom[2] + '</p>' +
+    '<div class="pgc-veh"><button class="b3' + (q ? '' : ' on') + '" data-act="pgc:moto"><span class="pgc-e">🛵</span>' + TT('Moto') + '</button>' +
+      '<button class="b3' + (q ? ' on' : '') + '" data-act="pgc:quad">' + pgcIcoQuad() + TT('Quad') + '</button></div>' +
+    '<p class="pkr-lin pgc-nota">' + TT(q ? 'Con el quad no te caes y el gas va solo: ¡solo hay que girar!' : 'Con la moto: gas, freno y ¡a girar!') + '</p>' +
+    '<div class="acc clara"><button class="b1" data-act="pgc:go">▶ ' + TT('¡A correr!') + '</button><button class="b3" data-act="pgc:no">' + TT('Ahora no') + '</button></div>', 'ready pkr-ready pg6 pgc');
+}
+function pgcSigue() {                                                        // de vuelta en la moto (o el quad), fuera del aro
+  hideScr(); G.state = 'play'; G.card = false; PGC.abierto = false; pokiStart(); PGC.fuera = true;
+}
+
+/* ---------- empezar y acabar ---------- */
+function pgcColores() {                                                      // las motos de los rivales: ninguna del color de la tuya
+  var yo = lookGet().moto || 0, usados = { }, out = []; usados[yo] = 1;
+  PGC.riv.forEach(function (r) { var c = r.motos.filter(function (m) { return !usados[m]; })[0]; if (c == null) c = (yo + out.length + 1) % COL_MOTO.length; usados[c] = 1; out.push(c); });
+  return out;
+}
+function pgcTrafFuera(C) {                                                   // fuera el tráfico del circuito y de las calles que llegan a él (se guarda y vuelve al acabar)
+  if (!PGC.calles) {
+    PGC.calles = {};
+    CITY.streets.forEach(function (st, i) {
+      if (pg2EsCir(i)) { PGC.calles[i] = 1; return; }
+      var p0 = st.pts[0], p1 = st.pts[st.pts.length - 1];
+      [p0, p1].forEach(function (p) { var x = p[0] != null ? p[0] : p.x, y = p[1] != null ? p[1] : p.y, r = pgcProy(x, y, 0, PG2.loop.length); if (r.d < 45) PGC.calles[i] = 1; });
+    });
+  }
+  for (var i = TRAF.length - 1; i >= 0; i--) if (PGC.calles[TRAF[i].si]) { C.traf.push(TRAF[i]); TRAF.splice(i, 1); }
+}
+function pgcEmpieza() {
+  pgcLimpia();
+  SFX.pick(2);
+  pgcCurvas();
+  var q = pgcQuad(), cols = pgcColores(), vYo = MK().vmax;
+  var C = PGC.car = { fase: 'parrilla', t: 0, tYa: 0, cuenta: 3.4, quad: q, R: [], traf: [], fin: [], yo: { prog: PGC.yo0[0], i: null, s: null, fin: null, puesto: 4, mal: 0 }, vuelta: 1, puestoAnt: 0, finT: 0, ord: [] };
+  PGC.riv.forEach(function (D, j) {
+    var pr = PGC.parrilla[j], piel = PAL.skin[D.piel % PAL.skin.length], w = pgcEn(pr[0], pr[1]);
+    var R = { i: j, nom: D.nom, prog: pr[0], u: pr[1], uT: pr[1], v: 0, vmax: vYo * D.k * (q ? PGC.quadRiv : 1), x: w.x, y: w.y, h: w.h, lean: 0, rod: 0, giro: 0, bote: 0, fin: null, toc: -9, reac: 0.15 + j * 0.12,
+      col: COL_MOTO[cols[j]], look: { moto: cols[j], tubo: 0, cabeza: 0, cinta: 0, camisa: 0 }, vest: { camisa: D.camisa, udeng: D.udeng, kamben: D.kamben }, piel: piel, nuca: darken(piel, 0.88), pas: null, cart: {}, m3: false };
+    if (q) R.look.quad = 1;
+    R.it = { k: 'pgcR', R: R, x: R.x, y: R.y };
+    C.R.push(R); VILLA_IT.push(R.it);
+  });
+  pgcTrafFuera(C);
+  var w0 = pgcEn(PGC.yo0[0], PGC.yo0[1]);
+  P.x = w0.x; P.y = w0.y; P.h = P.ht = w0.h; P.speed = 0; P.z = 0; P.si = null; P.steer = 0; P.lean = 0; P.state = 'ride';
+  CAM.yaw = P.h; V.camX = P.x - Math.sin(P.h) * 30; V.camY = P.y - Math.cos(P.h) * 30;
+  C.yo.i = pgcProy(P.x, P.y, 0, PG2.loop.length).i;
+  hideScr(); G.state = 'play'; G.card = false; PGC.abierto = false; pokiStart();
+  PGH.cola.length = 0; PGH.prog.length = 0;
+  pgDice('car_hola');
+  if (C.quad) pgDice('car_quad', null, 1.2);
+}
+function pgcLimpia(sinTraf) {                                                // fuera los rivales (y vuelve el tráfico; sinTraf: al empezar otra ronda o irse, el tráfico ya es otro)
+  var C = PGC.car; if (!C) return;
+  C.R.forEach(function (R) { var k = VILLA_IT.indexOf(R.it); if (k >= 0) VILLA_IT.splice(k, 1); });
+  if (!sinTraf) C.traf.forEach(function (e) { TRAF.push(e); try { trRecolocar(e); } catch (er) {} });
+  PGC.car = null;
+}
+function pgcMeta() {                                                         // has cruzado la meta (la 3.ª vuelta)
+  var C = PGC.car, yo = C.yo;
+  yo.fin = C.t; C.fase = 'meta'; C.finT = 0;
+  yo.puesto = 1 + C.R.filter(function (R) { return R.fin != null; }).length;
+  SFX.win(); petals(P.x, P.y + 30, 40); sparkle(P.x, P.y + 20, 24, '#ffe27a');
+  pop('🏁 ' + pgcOrd(yo.puesto) + '!', P.x, P.y + 56, '#ffe27a', 1.6);
+  pgSalta('feliz'); PGH.cola.length = 0; pgDice(yo.puesto === 1 ? 'car_gana' : yo.puesto <= 3 ? 'car_podio' : 'car_otra');
+}
+function pgcOrd(n) { var k = L3(); return k === 1 ? n + (['th', 'st', 'nd', 'rd'][n] || 'th') : k === 2 ? 'ke-' + n : n + '.º'; }
+function pgcFinTarjeta() {
+  var C = PGC.car, yo = C.yo, L = [], prem = PGC.premio[yo.puesto - 1] || 3;
+  G.fl += prem; PGC.ultimo = { puesto: yo.puesto, premio: prem };
+  pokiStop(); G.state = 'pause'; IN.gas = IN.brake = IN.left = IN.right = 0;
+  /* el orden: los que han llegado (por cuándo), tú en tu sitio, y los demás por lo que llevan */
+  var todos = C.R.map(function (R) { return { nom: R.nom, col: R.col, fin: R.fin, prog: R.prog }; });
+  todos.push({ nom: TT('Tú'), col: COL_MOTO[lookGet().moto || 0], fin: yo.fin, prog: 1e9, yo: true });
+  todos.sort(function (a, b) { if (a.fin != null && b.fin != null) return a.fin - b.fin; if (a.fin != null) return -1; if (b.fin != null) return 1; return b.prog - a.prog; });
+  todos.forEach(function (q, k) { L.push('<p class="' + (q.yo ? 'pgc-yo' : '') + '"><span><b>' + pgcOrd(k + 1) + '</b> <i class="pgc-pt" style="background:' + q.col + '"></i> ' + q.nom + '</span><b>' + (k < 3 ? ['🥇', '🥈', '🥉'][k] : '') + '</b></p>'); });
+  var tit = yo.puesto === 1 ? '¡Has ganado!' : yo.puesto === 2 ? '¡Segundo!' : yo.puesto === 3 ? '¡Tercero!' : '¡Cuarto!';
+  card('<div class="pg6-ico">' + (yo.puesto === 1 ? '🏆' : yo.puesto <= 3 ? '🏅' : '🏁') + '</div><h2 class="stk">' + TT(tit) + '</h2>' +
+    '<div class="res pgc-res">' + L.join('') + '<p class="tot"><span>' + FLOR_SVG + ' ' + TT('Premio') + '</span><b>+' + prem + '</b></p></div>' +
+    '<div class="acc clara"><button class="b1" data-act="pgc:otra">🔁 ' + TT('Otra carrera') + '</button><button class="b3" data-act="pgc:sigue">🐥 ' + TT('Seguir jugando') + '</button></div>', 'ready pkr-ready pg6 pgc');
+}
+
+/* ---------- cada fotograma ---------- */
+function pgcCarrera(dt) {
+  var C = PGC.car, yo = C.yo, Lp = PG2.L, meta = PGC.vueltas * Lp, i;
+  C.t += dt;
+  if (C.fase === 'parrilla') {
+    var c0 = Math.ceil(C.cuenta - 0.4); C.cuenta -= dt; var c1 = Math.ceil(C.cuenta - 0.4);
+    if (c1 !== c0) { if (c1 > 0) SFX.pick(2); else { SFX.tlin(); C.fase = 'corre'; C.tYa = C.t; C.verde = 1.2; pgDice('car_ya'); } }
+    P.speed = 0;
+  }
+  if (C.verde > 0) C.verde -= dt;
+  for (i = TRAF.length - 1; i >= 0; i--) if (PGC.calles[TRAF[i].si]) { C.traf.push(TRAF[i]); TRAF.splice(i, 1); }   // (y si llega alguno, fuera)
+  /* tú: dónde vas en la pista (lo recorrido, nunca más deprisa que la moto) */
+  if (P.state === 'ride') {
+    var pr = pgcProy(P.x, P.y, yo.i, 4, 2);                                  // (poco hacia atrás: en la horquilla, el otro lado de la curva queda cerca)
+    if (pr.d < 160) {
+      var s0 = yo.s == null ? pr.s : yo.s, d = pr.s - s0;
+      if (d > Lp / 2) d -= Lp; else if (d < -Lp / 2) d += Lp;
+      var tope = Math.max(P.speed, 30) * dt * 1.25 + 1;
+      yo.prog += clamp(d, -tope, tope); yo.s = pr.s; yo.i = pr.i; yo.u = pr.u;
+      yo.mal = Math.cos(adiff(P.h, pr.h)) < -0.3 && P.speed > 20 ? yo.mal + dt : 0;
+    } else yo.mal = 0;
+    yo.lejos = pr.d;
+  }
+  if (C.fase === 'corre' && yo.fin == null) {
+    var v = clamp(Math.floor(yo.prog / Lp) + 1, 1, PGC.vueltas);
+    if (v !== C.vuelta) { C.vuelta = v; SFX.tlin(); pop('🏁 ' + TT(v === PGC.vueltas ? '¡Última vuelta!' : 'Vuelta ' + v), P.x, P.y + 56, '#ffe27a', 1.3); pgDice(v === PGC.vueltas ? 'car_ultima' : 'car_vuelta'); }
+    if (yo.prog >= meta) pgcMeta();
+  }
+  /* los rivales */
+  var todos = C.R.concat([{ yo: true, prog: yo.prog, u: yo.u || 0, v: P.speed }]);
+  C.R.forEach(function (R) {
+    if (C.fase === 'parrilla' || C.t - C.tYa < R.reac) return;                         // (cada uno reacciona a su ritmo al ¡YA!)
+    var sl = ((PG2.sIni + R.prog) % Lp + Lp) % Lp, k0 = pgcIdx(sl), n = PG2.loop.length, vC = 1e9, k;
+    for (k = 0; k <= 3; k++) vC = Math.min(vC, PGC.vCurva[(k0 + k) % n]);
+    var gap = R.prog - yo.prog, f = 1;                                                    // para niños: los de delante esperan, los de detrás aprietan
+    if (yo.fin == null) { if (gap > 90) f = Math.max(0.62, 1 - (gap - 90) / 520); else if (gap < -180) f = Math.min(1.14, 1 + (-gap - 180) / 900); }
+    var vT = Math.min(vC, R.vmax * f);
+    if (R.fin != null) vT = Math.min(vT, 70);                                              // ya ha llegado: una vuelta de paseo
+    var lib = true;
+    todos.forEach(function (O) {                                                          // alguien delante, en su carril: se aparta (o espera)
+      if (O === R) return;
+      var ds = O.prog - R.prog, du = O.u - R.u;
+      if (ds > 0 && ds < 34 && Math.abs(du) < (C.quad ? 17 : 13)) { lib = false; R.uT = O.u > 0 ? -13 : 13; if (ds < 20) vT = Math.min(vT, (O.v || 0) + 6); }
+    });
+    if (lib && Math.abs(R.uT) > 0 && Math.random() < dt * 0.15) R.uT = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 8);
+    R.v += clamp(vT - R.v, -PGC.frena * dt, PGC.acel * dt);
+    R.v = Math.max(0, R.v);
+    R.prog += R.v * dt;
+    R.u += clamp(R.uT - R.u, -16 * dt, 16 * dt);
+    var w = pgcEn(R.prog, R.u), dh = adiff(w.h, R.h);
+    R.h = adiff(R.h + dh * expo(9, dt), 0);
+    var giro = dh * expo(9, dt) / Math.max(dt, 1e-3);
+    R.lean += (clamp(giro * R.v / 520, -0.42, 0.42) - R.lean) * expo(6, dt);
+    R.giro = clamp(giro * 0.12, -0.4, 0.4);
+    R.x = w.x; R.y = w.y; R.rod += R.v * dt; R.it.x = R.x; R.it.y = R.y;
+    if (R.bote > 0) R.bote -= dt;
+    if (R.fin == null && R.prog >= meta) { R.fin = C.t; if (yo.fin == null) pop('🏁 ' + R.nom, R.x, R.y + 50, '#ffffff', 0.9); }
+    /* contigo: se toca, se aparta (y tú también, un poco) */
+    if (P.state === 'ride') {
+      var dx = P.x - R.x, dy = P.y - R.y, dd = Math.hypot(dx, dy), rc = C.quad ? 19 : 15;
+      if (dd < rc && dd > 0.01) {
+        var nx = dx / dd, ny = dy / dd, m = rc - dd;
+        P.x += nx * m * 0.6; P.y += ny * m * 0.6;
+        R.uT = clamp(R.u + (yo.u > R.u ? -10 : 10), -16, 16); R.u += (yo.u > R.u ? -1 : 1) * m * 0.4;
+        if (C.t - R.toc > 0.7) { R.toc = C.t; R.bote = 0.24; R.v *= 0.85; P.speed *= 0.9; SFX.bonk ? SFX.bonk() : SFX.thud(); pop(pickM(['¡Toc!', '¡Uy!', '¡Ey!']), (P.x + R.x) / 2, (P.y + R.y) / 2 + 30, '#ffffff', 0.9); }
+      }
+    }
+  });
+  /* el puesto */
+  if (yo.fin == null) {
+    var delante = 0; C.R.forEach(function (R) { if (R.fin != null || R.prog > yo.prog) delante++; });
+    yo.puesto = delante + 1;
+    if (C.fase === 'corre' && C.t > 6 && yo.puesto < C.puestoAnt && C.t - (C.adelT || 0) > 6) { C.adelT = C.t; pgDice(yo.puesto === 1 ? 'car_primero' : 'car_adelanta'); }
+    C.puestoAnt = yo.puesto;
+  }
+  if (C.fase === 'meta') { C.finT += dt; if (C.finT > 2.4 && !G.card) { G.card = true; pgcFinTarjeta(); } }
+}
+
+/* el gas solo del quad: la velocidad a la que va (la de las curvas de delante, como los rivales, algo más alegre; fuera de la pista, despacito) */
+function pgcCrucero(C) {
+  var yo = C.yo, Lp = PG2.L, n = PG2.loop.length, sl = ((PG2.sIni + yo.prog) % Lp + Lp) % Lp, k0 = pgcIdx(sl), v = 1e9, k;
+  for (k = 0; k <= 4; k++) v = Math.min(v, PGC.vCurva[(k0 + k) % n] * PGC.cruK);
+  if (yo.lejos > 40 || yo.mal > 0) v = Math.min(v, PGC.cruFuera);
+  return Math.max(55, v);
+}
+
+/* ---------- los rivales, pintados (como los de la liga de los ojek: de cerca en 3D, de lejos su cartón) ---------- */
+function pgcOpc(R, o) { lgOpc(R, o); if (R.look.quad) o.cesta = 'no'; return o; }
+function pgcCarton(R, vista) {
+  var s = R.cart[vista]; if (s) return s;
+  if (PGC.cartT === G.t && R.cart0 && R.cart0[vista]) return R.cart0[vista];
+  PGC.cartT = G.t;
+  var lado = vista === 'l';
+  s = k3Carton(lado ? 82 : 50, 120, 3, function (g) { motoGuiri3D(g, 0, 0, 0, vista === 'f' ? Math.PI : (lado ? Math.PI / 2 : 0), pgcOpc(R, { k: 1, t: 0.6, v: 0.3 })); }, 10);
+  return (R.cart[vista] = s);
+}
+function pgcPrepara() {                                                      // cuáles van en 3D: los más cercanos
+  var C = PGC.car; if (!C) return;
+  var L = [], tope = TOUCH ? PGC.max3 : PGC.max3 + 1;
+  C.R.forEach(function (R) { R.m3 = false; R.f3 = fwd(R.x, R.y); if (R.f3 > 20 && R.f3 < PGC.cerca && MOTO3D) L.push(R); });
+  L.sort(function (a, b) { return a.f3 - b.f3; });
+  for (var i = 0; i < L.length && i < tope; i++) L[i].m3 = true;
+}
+function pgcDibuja(g, R) {
+  var d = proj(R.x, R.y, 0); if (d < 10) return;
+  shadow(g, R.x, R.y, R.look.quad ? 14 : 11, 17.5, R.h);
+  if (R.m3) {
+    scr(g);
+    motoGuiri3D(g, R.x, R.y, 0, R.h, pgcOpc(R, { incl: R.look.quad ? R.lean * 0.35 : R.lean, giro: R.giro, bote: R.bote > 0 ? Math.sin(R.bote / 0.24 * Math.PI) : 0, rot: -R.rod / (6.2 * MG3.k), t: G.t + R.i * 1.7, v: Math.min(1, R.v / MAXV), gas: R.v > 5, frena: false }));
+  } else {
+    var rel = adiff(R.h, CAM.yaw), a = Math.abs(rel);
+    if (a > 2.1) k3Bill(g, pgcCarton(R, 'f'), R.x, R.y, 0, MG3.k, -R.lean, false);
+    else if (a < 1.05) k3Bill(g, pgcCarton(R, 'r'), R.x, R.y, 0, MG3.k, R.lean, false);
+    else k3Bill(g, pgcCarton(R, 'l'), R.x, R.y, 0, MG3.k, 0, rel < 0);
+  }
+  if (d < PGC.nombre) {                                                      // su nombre, encima
+    proj(R.x, R.y, 78 * MG3.k); scr(g);
+    var s = clamp(PS, 0.75, 1.25), txt = R.nom;
+    g.globalAlpha = clamp((PGC.nombre - d) / 70, 0, 1);
+    g.font = '900 ' + (11 * s).toFixed(1) + 'px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    g.lineWidth = 3.4 * s; g.strokeStyle = INK; g.strokeText(txt, PX, PY); g.fillStyle = '#ffffff'; g.fillText(txt, PX, PY);
+    var tw = g.measureText(txt).width; circ(g, PX - tw / 2 - 7 * s, PY, 3.6 * s, R.col, INK, 1.2);
+    g.globalAlpha = 1; g.textAlign = 'left';
+  }
+}
+
+/* ---------- en pantalla: la vuelta, el puesto, el semáforo y los rivales en el plano ---------- */
+function pgcHUD(g) {
+  var C = PGC.car, yo = C.yo, x = 10, y = 9, i, der = V.w - 114;
+  for (i = 0; i < PGD.vidas; i++) g.drawImage((i < P.hp ? SP.helm : SP.helmX).c, x + i * 19, y, 17, 12.5);
+  g.textAlign = 'left'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.strokeStyle = INK;
+  g.save(); g.translate(x + 7, y + 25); g.scale(1.35, 1.35); g.drawImage(SP.flor.c, -5, -5, 10, 10); g.restore();
+  g.font = '900 15px ' + FONT; g.lineWidth = 3.5; g.strokeText('' + G.fl, x + 17, y + 26); g.fillStyle = '#fff7df'; g.fillText('' + G.fl, x + 17, y + 26);
+  var bx = 110, bw = clamp(der - bx, 150, 210), by = 7, bh = 38, mid = by + bh / 2 + 1;
+  rrect(g, bx, by, bw, bh, 10, 'rgba(255,253,244,.96)', INK, 2.6);
+  pgEmoji(g, '🏁', bx + 20, mid, 21);
+  g.fillStyle = INK; g.textAlign = 'left'; g.font = '900 16px ' + FONT;
+  var vt = C.fase === 'parrilla' ? TT('¡Preparados!') : yo.fin != null ? TT('¡Meta!') : TT('Vuelta') + ' ' + C.vuelta + '/' + PGC.vueltas;
+  g.fillText(vt, bx + 36, mid, bw - 90);
+  g.textAlign = 'right'; g.font = '900 18px ' + FONT; g.fillStyle = yo.puesto === 1 ? '#c98a00' : INK; g.fillText(pgcOrd(yo.puesto), bx + bw - 10, mid);
+  /* el puesto, grande, bajo el plano */
+  if (C.fase !== 'parrilla') {
+    var px = V.w - 14, py = 212, de = '/ ' + (C.R.length + 1), col = yo.puesto === 1 ? '#ffe066' : yo.puesto <= 3 ? '#ffffff' : '#ffd2c2';
+    g.font = '900 13px ' + FONT; g.textAlign = 'right'; var w0 = g.measureText(de).width; g.lineWidth = 3.5; g.strokeText(de, px, py + 6); g.fillStyle = '#ffffff'; g.fillText(de, px, py + 6);
+    g.font = '900 34px ' + FONT; g.lineWidth = 6; g.strokeText(pgcOrd(yo.puesto), px - w0 - 5, py); g.fillStyle = col; g.fillText(pgcOrd(yo.puesto), px - w0 - 5, py);
+  }
+  /* el semáforo */
+  if (C.fase === 'parrilla' || C.verde > 0) {
+    var s = Math.min(1, V.w / 390), r0 = 14 * s + 4, gap = r0 * 2.6, cx = V.w / 2, cy = V.h * 0.3, verde = C.fase !== 'parrilla', enc = verde ? 3 : clamp(4 - Math.ceil(C.cuenta - 0.4), 0, 3);
+    g.globalAlpha = verde ? clamp(C.verde / 0.5, 0, 1) : 1;
+    rrect(g, cx - gap * 1.5 - 6, cy - r0 - 8, gap * 3 + 12, r0 * 2 + 16, r0 + 6, 'rgba(20,24,30,.85)', INK, 2);
+    for (i = 0; i < 3; i++) { var xx = cx + (i - 1) * gap, on = verde || i < enc; circ(g, xx, cy, r0, on ? (verde ? '#3ee070' : '#ff3b2f') : '#3a3f48', INK, 1.5); if (on) { g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.arc(xx - r0 * 0.3, cy - r0 * 0.35, r0 * 0.3, 0, TAU); g.fill(); } }
+    g.font = '900 ' + Math.round(34 * s) + 'px ' + FONT; g.textAlign = 'center'; g.lineWidth = 6; g.strokeStyle = INK;
+    var tx = verde ? TT('¡YA!') : '' + Math.max(1, Math.ceil(C.cuenta - 0.4)); g.strokeText(tx, cx, cy + r0 + 32 * s); g.fillStyle = verde ? '#7dff9a' : '#ffe27a'; g.fillText(tx, cx, cy + r0 + 32 * s);
+    g.globalAlpha = 1;
+  }
+  /* al revés o lejos de la pista: la flecha */
+  if (C.fase !== 'parrilla' && yo.fin == null && P.state === 'ride' && (yo.mal > 0.6 || yo.lejos > 70)) {
+    var O = pgcEn(yo.prog + 90, 0), ax = V.w > V.h ? V.w * 0.6 : V.w / 2, ay = Math.min(250, V.h * 0.3), bote = Math.sin(G.t * 5) * 2;
+    circ(g, ax, ay + bote, 23, 'rgba(255,253,244,.94)', INK, 2.6);
+    g.save(); g.translate(ax, ay + bote); g.rotate(Math.atan2(O.x - P.x, O.y - P.y) - CAM.yaw);
+    poly(g, [0, -16, 12, 2, 4.6, 2, 4.6, 14, -4.6, 14, -4.6, 2, -12, 2], '#27ae60', INK, 2.2); g.restore();
+    g.font = '900 13px ' + FONT; g.textAlign = 'center'; g.lineWidth = 3.5; g.strokeStyle = INK;
+    var mt = TT(yo.mal > 0.6 ? '¡Al revés!' : '¡Por aquí!'); g.strokeText(mt, ax, ay + bote + 36); g.fillStyle = '#ffffff'; g.fillText(mt, ax, ay + bote + 36);
+  }
+  g.textAlign = 'left';
+  drawMinimap(g);
+  var R0 = 56, mcx = V.w - R0 - 10, mcy = 68 + R0, sc = 0.055, cs = Math.cos(CAM.yaw), sn = Math.sin(CAM.yaw);   // (los rivales en el plano: como el plano)
+  C.R.forEach(function (R) {
+    var dx = R.x - P.x, dy = R.y - P.y, qx = mcx + (dx * cs - dy * sn) * sc, qy = mcy - (dx * sn + dy * cs) * sc, ex = qx - mcx, ey = qy - mcy, dd = Math.hypot(ex, ey);
+    if (dd > R0 - 6) { qx = mcx + ex / dd * (R0 - 6); qy = mcy + ey / dd * (R0 - 6); }
+    circ(g, qx, qy, 4.2, R.col, INK, 1.6);
+  });
+}
+
+/* ---------- los enganches ---------- */
+if (PGC.vivo) {
+  var pgCadaPGC = pgCada;
+  pgCada = function (dt) {
+    pgCadaPGC(dt);
+    if (!pgOn()) return;
+    if (PGC.car && G.state === 'play' && !G.card) pgcCarrera(dt);
+    if (PGC.car || G.state !== 'play' || G.card || P.state !== 'ride' || PGC.abierto) return;
+    var d = d2(P.x, P.y, PGC.aro.x, PGC.aro.y);
+    if (PGC.fuera) { if (d > 70) PGC.fuera = false; return; }
+    if (d < 24) pgcPregunta();
+    else if (d < 230 && !PGC.dicho) { PGC.dicho = 1; pgDice('car_cerca'); }
+  };
+  var pgRidePGC = pgRide;
+  pgRide = function (dt) {
+    var C = pgOn() ? PGC.car : null;
+    if (C && C.fase === 'parrilla') { P.speed = 0; return; }                 // en la parrilla, quieto hasta el ¡YA!
+    if (C && C.quad && !IN.brake && P.state === 'ride') {                    // en quad, el gas va solo (y frena solo antes de las curvas: el peque, solo girar)
+      var vO = pgcCrucero(C), g0 = IN.gas, b0 = IN.brake;
+      IN.gas = P.speed < vO ? 1 : 0; IN.brake = P.speed > vO + 22 ? 1 : 0;
+      try { pgRidePGC(dt); } finally { IN.gas = g0; IN.brake = b0; }
+      return;
+    }
+    pgRidePGC(dt);
+  };
+  var pgMisionPGC = pgMision;
+  pgMision = function (dt) { if (PGC.car) { MIS.left = 999; MIS.route = null; MIS.turn = null; return; } pgMisionPGC(dt); };   // (los encargos esperan)
+  var pg2VueltaPGC = pg2Vuelta;
+  pg2Vuelta = function () { if (PGC.car) return; pg2VueltaPGC(); };          // (en la carrera, las vueltas son las de la carrera)
+  var pgObjetivoPGC = pgObjetivo;
+  pgObjetivo = function () {
+    if (PGC.car && pgOn()) { var O = pgcEn(PGC.car.yo.prog + 120, 0); return { x: O.x, y: O.y, d: d2(O.x, O.y, P.x, P.y) }; }
+    return pgObjetivoPGC();
+  };
+  var pgHUDPGC = pgHUD;
+  pgHUD = function (g) { if (PGC.car && pgOn()) { pgcHUD(g); return; } pgHUDPGC(g); };
+  var cityRenderPGC = cityRender;
+  cityRender = function () { if (PGC.car && pgOn()) pgcPrepara(); cityRenderPGC(); };
+  var pgEmpiezaPGC = pgEmpieza;
+  pgEmpieza = function () { pgcLimpia(true); PGC.abierto = false; PGC.fuera = false; PGC.dicho = 0; pgEmpiezaPGC(); };
+  var menuActPGC = menuAct;
+  menuAct = function (a) {
+    if (typeof a === 'string' && a.indexOf('pgc:') === 0) {
+      if (a === 'pgc:moto' || a === 'pgc:quad') { SAVE.pgQuad = a === 'pgc:quad' ? 1 : 0; writeSave(); pgcPregunta(); return true; }
+      if (a === 'pgc:go') { pgcEmpieza(); return true; }
+      if (a === 'pgc:no') { pgcSigue(); if (pgcQuad()) pgDice('car_quadsi'); return true; }
+      if (a === 'pgc:otra') { pgcEmpieza(); return true; }
+      if (a === 'pgc:sigue') { pgcLimpia(); pgcSigue(); pgDice('car_sigue'); return true; }
+    }
+    if (typeof a === 'string' && PGC.car && (a === 'menu' || a.indexOf('modo:') === 0 || a === 'retry')) pgcLimpia(true);
+    return menuActPGC(a);
+  };
+}
+
+/* ---------- el quad: pintado (con Pitik en la cabeza), más despacio y sin caídas ---------- */
+if (PGC.vivo) {
+  var cityPlayerPGC = cityPlayer;
+  cityPlayer = function (g) {
+    if (!pgcQuad() || !pgOn()) { cityPlayerPGC(g); return; }
+    PGC.yoDib = true; PGC.cestaPitik = false;
+    try { cityPlayerPGC(g); } finally { PGC.yoDib = false; }
+    if (PGC.cestaPitik && P.state === 'ride') {                              // Pitik iba en la cesta: en el quad, a la cabeza
+      var bump = P.bounce > 0 ? Math.sin(P.bounce / 0.24 * Math.PI) : 0, sal = PG.salto >= 0 && PG.salto < 1 ? PG.salto : -1;
+      pgPitikCabeza(g, clamp(P.lean || 0, -0.42, 0.42) * 0.35, bump, sal);
+    }
+  };
+  var motoGuiri3DPGC = motoGuiri3D;
+  motoGuiri3D = function (g, x, y, z, ang, o) {
+    if (PGC.yoDib && o && !o.sinGuiri) {
+      var LK = lookGet(), q = {}, k; for (k in LK) q[k] = LK[k]; q.quad = 1; o.look = q;
+      if (o.cesta === 'pitik') PGC.cestaPitik = true;
+      o.cesta = 'no'; o.incl = (o.incl || 0) * 0.35;
+    }
+    return motoGuiri3DPGC.apply(this, arguments);
+  };
+  var MKPGC = MK;
+  MK = function () {
+    var m = MKPGC(); if (!pgcQuad() || !pgOn()) return m;
+    var q = {}, k; for (k in m) q[k] = m[k]; q.vmax = m.vmax * PGC.quadV; return q;
+  };
+  var cityCrashPGC = cityCrash;
+  cityCrash = function (kind, txt) {
+    if (!pgcQuad() || !pgOn() || P.state !== 'ride') { cityCrashPGC(kind, txt); return; }
+    P.pgPared = false;                                                       // el quad no se cae: un golpe y sigues
+    if (G.t - PGC.golT < 0.6) return;
+    PGC.golT = G.t; P.speed *= 0.35; P.bounce = 0.24; shake(0.32); SFX.thud();
+    pop(pickM(['¡PUM!', '¡BOING!', '¡Uy!']), P.x, P.y + 40, '#ffffff', 1);
+  };
+}
+
+/* ---------- Pitik y los textos ---------- */
+if (PGC.vivo) {
+  PG_DICE.car_cerca = [['🏁', '¡Una carrera en el circuito! Entra en el aro verde']];
+  PG_DICE.car_hola = [['🏁', '¡Tres vueltas! ¡A por ellos!']];
+  PG_DICE.car_quad = [['🏎️', 'Con el quad, el gas va solo: ¡tú gira!']];
+  PG_DICE.car_quadsi = [['🏎️', '¡Qué quad más chulo!']];
+  PG_DICE.car_ya = [['🟢', '¡YA! ¡Vamos, vamos!']];
+  PG_DICE.car_vuelta = [['🏁', '¡Otra vuelta! ¡Sigue así!']];
+  PG_DICE.car_ultima = [['🏁', '¡Última vuelta!']];
+  PG_DICE.car_adelanta = [['💨', '¡Adelantamos!'], ['💨', '¡Toma ya!']];
+  PG_DICE.car_primero = [['🥇', '¡Vamos primeros!']];
+  PG_DICE.car_gana = [['🏆', '¡Hemos ganado! ¡Campeones!']];
+  PG_DICE.car_podio = [['🏅', '¡Al podio! ¡Muy bien!']];
+  PG_DICE.car_otra = [['💪', '¡Casi! ¡La próxima ganamos!']];
+  PG_DICE.car_sigue = [['🐥', '¡Qué carrera! Seguimos']];
+  ['car_hola', 'car_ya', 'car_gana', 'car_podio', 'car_primero', 'car_quadsi', 'car_sigue'].forEach(function (k) { PG_EST[k] = 'feliz'; });
+  ['car_ya', 'car_ultima', 'car_gana', 'car_podio', 'car_otra', 'car_primero'].forEach(function (k) { PG_YA[k] = 1; });
+}
+(function () {
+  var css = '.pgc .pgc-veh{display:flex;gap:10px;justify-content:center;margin:8px 0 2px}.pgc .pgc-veh button{flex:1 1 0;max-width:150px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;font-size:15px}' +
+    '.pgc .pgc-veh button img.ic{width:44px!important;height:auto}.pgc .pgc-veh .pgc-e{font-size:34px;line-height:1.1}.pgc .pgc-veh button.on{background:#ffe066!important;color:#2a1a0c!important;box-shadow:0 0 0 3px #2a1a0c inset}' +
+    '.pgc .pgc-nota{font-size:13px;opacity:.85}.pgc .pgc-res p span{display:flex;align-items:center;gap:6px}.pgc .pgc-pt{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid #2a1a0c}.pgc .pgc-yo{background:rgba(255,224,102,.55);border-radius:8px}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  var N = {
+    'La minicarrera': ['The mini race', 'Balapan mini'], '3 vueltas al circuito contra': ['3 laps of the track against', '3 putaran sirkuit melawan'], 'y': ['and', 'dan'],
+    'Moto': ['Scooter', 'Motor'], 'Quad': ['Quad', 'ATV'],
+    'Con el quad no te caes y el gas va solo: ¡solo hay que girar!': ['On the quad you can\'t fall and the throttle is automatic: just steer!', 'Dengan ATV kamu tidak jatuh dan gasnya otomatis: cukup belok!'],
+    'Con la moto: gas, freno y ¡a girar!': ['On the scooter: throttle, brake and steer!', 'Dengan motor: gas, rem, dan belok!'],
+    '¡A correr!': ['Race!', 'Balapan!'], 'Ahora no': ['Not now', 'Nanti saja'], '¡Preparados!': ['Get ready!', 'Siap-siap!'], '¡Meta!': ['Finish!', 'Finis!'], 'Vuelta': ['Lap', 'Putaran'],
+    '¡YA!': ['GO!', 'MULAI!'], '¡Al revés!': ['Wrong way!', 'Arah salah!'], '¡Por aquí!': ['This way!', 'Lewat sini!'], '¡Última vuelta!': ['Final lap!', 'Putaran terakhir!'],
+    'Vuelta 2': ['Lap 2', 'Putaran 2'], 'Vuelta 3': ['Lap 3', 'Putaran 3'], 'Tú': ['You', 'Kamu'], 'Premio': ['Prize', 'Hadiah'],
+    '¡Has ganado!': ['You won!', 'Kamu menang!'], '¡Segundo!': ['Second!', 'Kedua!'], '¡Tercero!': ['Third!', 'Ketiga!'], '¡Cuarto!': ['Fourth!', 'Keempat!'],
+    'Otra carrera': ['Race again', 'Balapan lagi'], 'Seguir jugando': ['Keep playing', 'Main lagi'],
+    '¡Una carrera en el circuito! Entra en el aro verde': ['A race on the track! Ride into the green ring', 'Balapan di sirkuit! Masuk lingkaran hijau'],
+    '¡Tres vueltas! ¡A por ellos!': ['Three laps! Let\'s get them!', 'Tiga putaran! Ayo kejar!'], 'Con el quad, el gas va solo: ¡tú gira!': ['On the quad the throttle is automatic: you steer!', 'Dengan ATV gasnya otomatis: kamu belok!'],
+    '¡Qué quad más chulo!': ['What a cool quad!', 'ATV-nya keren!'], '¡YA! ¡Vamos, vamos!': ['GO! Come on!', 'MULAI! Ayo, ayo!'], '¡Otra vuelta! ¡Sigue así!': ['Another lap! Keep going!', 'Satu putaran lagi! Terus!'],
+    '¡Adelantamos!': ['We overtook!', 'Kita menyalip!'], '¡Toma ya!': ['Yes!', 'Mantap!'], '¡Vamos primeros!': ['We\'re in first!', 'Kita di depan!'], '¡Hemos ganado! ¡Campeones!': ['We won! Champions!', 'Kita menang! Juara!'],
+    '¡Al podio! ¡Muy bien!': ['On the podium! Well done!', 'Naik podium! Bagus!'], '¡Casi! ¡La próxima ganamos!': ['Almost! We\'ll win next time!', 'Hampir! Lain kali kita menang!'], '¡Qué carrera! Seguimos': ['What a race! Let\'s go on', 'Balapan seru! Lanjut'],
+    '¡Toc!': ['Bump!', 'Tok!'], '¡Uy!': ['Oops!', 'Ups!'], '¡Ey!': ['Hey!', 'Hei!'], '¡PUM!': ['BUMP!', 'BUK!'], '¡BOING!': ['BOING!', 'BOING!']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
