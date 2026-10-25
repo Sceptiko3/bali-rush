@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v35</title>
+<title>Bali Rush Poki v36</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v35 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v36 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -120175,6 +120175,16 @@ if (PGMX.vivo) {
      su humo, el lago en la caldera y las linternas de los que suben).
      Nuevos ayudantes: pkcaMeru (torre de tejados), pkcaCandi (media
      puerta partida), pkcaOlas.
+   - v36, la página de ANIMALES: el mono de cola larga (madre con su
+     cría en la cabeza de piedra de un naga, con musgo, en el bosque de
+     Ubud), el tokek (en el muro del templo bajo la luna, con su
+     «to-kek» siete veces en letras de luz), el perro de Kintamani
+     (blanco, de pelo esponjoso y cola de plumero, con el Batur detrás),
+     la vaca de Bali (canela, con calcetines blancos, la mancha de atrás
+     y una garcita en el lomo), las garzas de Petulu (volviendo a dormir
+     a los árboles al atardecer), la tortuga marina (las crías de Kuta
+     camino del mar y una grande nadando) y el ciervo de Menjangan (en la
+     playa, de noche, con la estatua de Ganesha de la isla al fondo).
    PKCA.vivo = false (o ?nopkca): los cromos como la v33.
    ================================================================ */
 var PKCA = { vivo: PKO.vivo && !/[?&#]nopkca/.test(location.search + location.hash), cache: {}, arte: {} };
@@ -120829,6 +120839,263 @@ PKCA.arte.batur = function () {
   pts.forEach(function (p) { c += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.4" fill="#fff2b0" filter="url(#brilla)"/><circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.4" fill="#fff"/>'; });
   c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="40" cy="60" r="2.4"/></g>';
   return pkcaSVG('lugares', ['#0e0c2a', '#5a3a6a'], c, { luz: '#ffd27a', defs: defs });
+};
+
+/* ================================================================
+   ANIMALES (v36)
+   ================================================================ */
+function pkcaHojas(r, x, y, n, rad, cols) {                                 // un manojo de hojas (selva)
+  var h = '', i;
+  for (i = 0; i < n; i++) { var a = r() * 6.28, d = r() * rad, px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * 0.7, s = 7 + r() * 9, rot = r() * 360;
+    h += '<path transform="translate(' + pkcaN(px) + ' ' + pkcaN(py) + ') rotate(' + pkcaN(rot) + ')" d="M0 0 Q' + pkcaN(s * 0.5) + ' ' + pkcaN(-s * 0.45) + ' ' + pkcaN(s * 1.6) + ' 0 Q' + pkcaN(s * 0.5) + ' ' + pkcaN(s * 0.45) + ' 0 0 Z" fill="' + cols[i % cols.length] + '"/>'; }
+  return h;
+}
+
+/* el mono de cola larga: en el bosque sagrado de Ubud, una madre con su cría sentada en la cabeza de piedra de un naga cubierta de musgo, entre
+   raíces de baniano y la luz que entra entre las hojas */
+PKCA.arte.mono = function () {
+  var r = pkcaRnd('mono'), c = '', i;
+  var defs = '<radialGradient id="pelo" cx=".45" cy=".35" r=".7"><stop offset="0" stop-color="#a89878"/><stop offset="1" stop-color="#6a5a44"/></radialGradient>' +
+    '<linearGradient id="rayo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c0" stop-opacity=".55"/><stop offset="1" stop-color="#fff6c0" stop-opacity="0"/></linearGradient>';
+  c += '<path d="M60 14 L110 14 L170 340 L120 340 Z" fill="url(#rayo)"/><path d="M180 14 L206 14 L236 260 L214 260 Z" fill="url(#rayo)" opacity=".7"/>';
+  c += pkcaHojas(r, 60, 40, 40, 70, ['#1f4a2a', '#2a5a30', '#3a6a36']) + pkcaHojas(r, 250, 50, 34, 60, ['#1f4a2a', '#2a5a30', '#3a6a36']);
+  /* las raíces del baniano colgando */
+  var rz = ''; for (i = 0; i < 14; i++) { var x = 20 + r() * 260; rz += '<path d="M' + pkcaN(x) + ' 30 q' + pkcaN((r() - 0.5) * 16) + ' 90 ' + pkcaN((r() - 0.5) * 10) + ' ' + pkcaN(150 + r() * 120) + '"/>'; }
+  c += '<g fill="none" stroke="#5a4a3a" stroke-width="2" opacity=".55">' + rz + '</g>';
+  c += '<path d="M14 290 Q80 270 150 284 Q220 296 286 280 V340 H14 Z" fill="#2a4a24"/>';
+  /* la cabeza de naga de piedra, con musgo */
+  c += '<path d="M60 330 Q56 250 92 224 Q120 204 170 210 Q214 216 236 248 Q248 270 240 300 L226 330 Z" fill="#7a7a6a" stroke="#2a2a20" stroke-width="2"/>';
+  c += '<path d="M92 224 Q120 204 170 210 Q214 216 236 248 Q200 232 160 230 Q120 230 92 224 Z" fill="#5a8a3a"/>';
+  c += '<g fill="#5a8a3a" opacity=".8"><ellipse cx="110" cy="280" rx="16" ry="6"/><ellipse cx="200" cy="300" rx="20" ry="7"/></g>';
+  c += '<circle cx="206" cy="262" r="12" fill="#5a5a4c" stroke="#2a2a20" stroke-width="2"/><circle cx="206" cy="262" r="6" fill="#2a2a20"/>';
+  c += pkcaRizo(130, 262, 9, 0.8, '#3a3a30', 2) + pkcaRizo(92, 300, 7, 2.4, '#3a3a30', 2) + pkcaRizo(170, 300, 8, 1.5, '#3a3a30', 2);
+  c += '<path d="M226 300 q16 4 22 22 M236 290 l14 -4" fill="none" stroke="#2a2a20" stroke-width="2.4"/>';
+  /* la madre, sentada, con su cría */
+  c += '<g transform="translate(152 162) scale(1.45)">';
+  c += '<path d="M28 34 q40 10 44 -30 q2 -20 -10 -30" fill="none" stroke="#6a5a44" stroke-width="5" stroke-linecap="round"/>';
+  c += '<path d="M-30 40 Q-34 0 -12 -12 Q0 -16 12 -12 Q34 0 30 40 Z" fill="url(#pelo)" stroke="#3a2a1a" stroke-width="1.8"/>';
+  c += '<path d="M-26 40 q-8 -14 4 -22 M26 40 q8 -14 -4 -22" fill="none" stroke="#6a5a44" stroke-width="7" stroke-linecap="round"/>';
+  c += '<circle cx="0" cy="-26" r="17" fill="url(#pelo)" stroke="#3a2a1a" stroke-width="1.8"/><path d="M-17 -30 q-8 -6 -2 -14 M17 -30 q8 -6 2 -14" fill="none" stroke="#a89878" stroke-width="3"/>';
+  c += '<path d="M-11 -30 Q0 -40 11 -30 Q14 -14 0 -10 Q-14 -14 -11 -30 Z" fill="#d9b08a" stroke="#6a4a2a" stroke-width="1.2"/>';
+  c += '<circle cx="-5" cy="-27" r="2.6" fill="#3a1a0a"/><circle cx="5" cy="-27" r="2.6" fill="#3a1a0a"/><circle cx="-4.4" cy="-28" r=".9" fill="#fff"/><circle cx="5.6" cy="-28" r=".9" fill="#fff"/>';
+  c += '<path d="M-6 -33 q6 -3 12 0" fill="none" stroke="#6a4a2a" stroke-width="1.4"/><path d="M-2 -20 h4 M-4 -16 q4 2 8 0" fill="none" stroke="#6a4a2a" stroke-width="1.1"/>';
+  /* la cría, agarrada al pecho */
+  c += '<circle cx="2" cy="14" r="9" fill="#8a7a5e" stroke="#3a2a1a" stroke-width="1.4"/><path d="M-4 10 Q2 4 8 10 Q9 18 2 20 Q-5 18 -4 10 Z" fill="#e8c8a0"/><circle cx="-0.5" cy="12" r="1.5" fill="#3a1a0a"/><circle cx="4.5" cy="12" r="1.5" fill="#3a1a0a"/>';
+  c += '<path d="M-8 18 q-6 6 -2 12 M10 18 q6 6 2 12" fill="none" stroke="#8a7a5e" stroke-width="3" stroke-linecap="round"/>';
+  c += '</g>';
+  /* un plátano en la piedra y unas mariposas de luz */
+  c += '<path d="M96 238 q14 -12 30 -4 q-14 2 -28 8 z" fill="#f6d33a" stroke="#8a6a10" stroke-width="1"/>';
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="90" cy="150" r="2.6"/><circle cx="220" cy="130" r="2"/><circle cx="240" cy="200" r="2.4"/></g>';
+  return pkcaSVG('animales', ['#1a3a2a', '#3a6a3a'], c, { luz: '#fff6c0', defs: defs });
+};
+
+/* el tokek: el gecko grande, azul gris con manchas naranjas, pegado al muro del templo bajo la luna; su canto «to-kek» sale en letras de luz,
+   siete veces (dicen que trae buena suerte) */
+PKCA.arte.tokek = function () {
+  var r = pkcaRnd('tokek'), c = '', i;
+  var defs = '<linearGradient id="muro" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a5a4a"/><stop offset="1" stop-color="#5a3a32"/></linearGradient>' +
+    '<radialGradient id="piel" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#8ab0d8"/><stop offset="1" stop-color="#4a6a98"/></radialGradient>';
+  c += pkcaEstrellas(r, 26, 100, '#fff8e0');
+  c += '<circle cx="222" cy="64" r="26" fill="#fff6d8"/><circle cx="214" cy="58" r="22" fill="#14102e" opacity=".0"/><circle cx="222" cy="64" r="70" fill="url(#luz)"/>';
+  /* el muro de ladrillo rojo del templo, con su relieve de piedra */
+  c += '<rect x="14" y="110" width="272" height="230" fill="url(#muro)"/>';
+  var lad = ''; for (var f = 0; f < 12; f++) { var y = 110 + f * 19; lad += '<path d="M14 ' + y + ' H286"/>'; for (var k = 0; k < 9; k++) { var x = 14 + k * 34 + (f % 2) * 17; lad += '<path d="M' + x + ' ' + y + ' v19"/>'; } }
+  c += '<g stroke="#3a2420" stroke-width="1.2" opacity=".6">' + lad + '</g>';
+  c += '<rect x="14" y="100" width="272" height="16" fill="#9a8a7a" stroke="#3a2a1a" stroke-width="1.4"/>' + pkcaRizo(60, 108, 5, 0.4, '#5a4a3a', 1.6) + pkcaRizo(150, 108, 5, 2.4, '#5a4a3a', 1.6) + pkcaRizo(240, 108, 5, 0.4, '#5a4a3a', 1.6);
+  /* el halo de luz detrás del tokek */
+  c += '<circle cx="150" cy="222" r="80" fill="url(#luz)" opacity=".6"/>';
+  /* el tokek: cuerpo, patas con sus dedos anchos, cola y cabeza grande */
+  c += '<g transform="translate(150 222) rotate(-8)">';
+  c += '<path d="M0 50 Q-10 80 6 100 Q24 110 34 96" fill="none" stroke="#4a6a98" stroke-width="12" stroke-linecap="round"/><path d="M0 50 Q-10 80 6 100 Q24 110 34 96" fill="none" stroke="url(#piel)" stroke-width="9" stroke-linecap="round"/>';
+  function pata(x, y, a) { var h = '<path d="M' + x + ' ' + y + ' l' + pkcaN(Math.cos(a) * 22) + ' ' + pkcaN(Math.sin(a) * 22) + '" stroke="#4a6a98" stroke-width="8" stroke-linecap="round"/>'; var ex = x + Math.cos(a) * 24, ey = y + Math.sin(a) * 24; for (var d = -2; d <= 2; d++) { var aa = a + d * 0.42; h += '<path d="M' + pkcaN(ex) + ' ' + pkcaN(ey) + ' l' + pkcaN(Math.cos(aa) * 8) + ' ' + pkcaN(Math.sin(aa) * 8) + '" stroke="#6a8ab8" stroke-width="2.4" stroke-linecap="round"/><circle cx="' + pkcaN(ex + Math.cos(aa) * 8.5) + '" cy="' + pkcaN(ey + Math.sin(aa) * 8.5) + '" r="2.4" fill="#8ab0d8"/>'; } return h; }
+  c += pata(-14, -20, -2.4) + pata(14, -20, -0.7) + pata(-14, 34, 2.3) + pata(14, 34, 0.8);
+  c += '<ellipse cx="0" cy="8" rx="20" ry="42" fill="url(#piel)" stroke="#2a3a5a" stroke-width="2"/>';
+  for (i = 0; i < 16; i++) { var sx = (r() - 0.5) * 28, sy = -26 + r() * 64; if ((sx * sx) / 300 + ((sy - 8) * (sy - 8)) / 1700 > 1) continue; c += '<circle cx="' + pkcaN(sx) + '" cy="' + pkcaN(sy) + '" r="' + pkcaN(2 + r() * 2) + '" fill="#f08a3a"/>'; }
+  c += '<path d="M-22 -40 Q-24 -66 0 -70 Q24 -66 22 -40 Q14 -28 0 -28 Q-14 -28 -22 -40 Z" fill="url(#piel)" stroke="#2a3a5a" stroke-width="2"/>';
+  c += '<g fill="#f08a3a"><circle cx="-8" cy="-50" r="2.4"/><circle cx="9" cy="-46" r="2"/><circle cx="0" cy="-60" r="2.2"/></g>';
+  c += '<circle cx="-15" cy="-56" r="7" fill="#ffd23f" stroke="#2a3a5a" stroke-width="1.6"/><circle cx="15" cy="-56" r="7" fill="#ffd23f" stroke="#2a3a5a" stroke-width="1.6"/><path d="M-15 -62 v12 M15 -62 v12" stroke="#120804" stroke-width="2.2" stroke-linecap="round"/>';
+  c += '<path d="M-14 -36 Q0 -30 14 -36" fill="none" stroke="#2a3a5a" stroke-width="1.6"/>';
+  c += '</g>';
+  /* «to-kek», siete veces, en letras de luz */
+  var pal = [[44, 150, -12], [62, 186, -6], [40, 224, -10], [236, 160, 10], [254, 200, 6], [230, 238, 12], [70, 262, -8]];
+  pal.forEach(function (p, k) { c += '<text x="' + p[0] + '" y="' + p[1] + '" transform="rotate(' + p[2] + ' ' + p[0] + ' ' + p[1] + ')" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="' + (15 - k * 0.6) + '" fill="#ffe9a8" stroke="#5a3608" stroke-width=".6" opacity="' + (1 - k * 0.07) + '">to-kek</text>'; });
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="150" cy="140" r="3"/></g>';
+  return pkcaSVG('animales', ['#0c1230', '#2a2050'], c, { luz: '#fff2c0', defs: defs });
+};
+
+/* el perro de Kintamani: blanco, de pelo largo, con la cola como un plumero, sentado en lo alto, con el Batur y su lago detrás */
+PKCA.arte.perro = function () {
+  var r = pkcaRnd('perro'), c = '', i;
+  var defs = '<radialGradient id="pelo" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#ece6da"/><stop offset="1" stop-color="#c9bfae"/></radialGradient>';
+  c += '<circle cx="70" cy="70" r="22" fill="#fff6c8"/><circle cx="70" cy="70" r="70" fill="url(#luz)"/>';
+  c += pkcaNube(220, 64, 0.55, '#fef8ec', '#e2a83a');
+  /* el Batur, el lago y la ladera */
+  c += '<path d="M14 210 L110 120 Q122 110 134 116 L230 196 L286 186 V230 H14 Z" fill="#6a6a8a"/><path d="M114 118 q10 8 20 0" fill="#4a4a6a"/>' + pkcaHumo(122, 112, 50, 1, 0.35);
+  c += '<path d="M14 218 Q120 206 286 222 V250 H14 Z" fill="#5a9ac8"/><path d="M40 226 h50 M140 230 h60" stroke="#e8f6ff" stroke-width="1.4" opacity=".7"/>';
+  c += '<path d="M14 244 Q100 232 190 246 Q240 254 286 244 V340 H14 Z" fill="#6aa04a"/><path d="M14 270 Q120 258 286 276" stroke="#8aca5a" stroke-width="2" fill="none" opacity=".6"/>';
+  c += pkcaHojas(r, 40, 250, 10, 26, ['#4a8a3a', '#5a9a42']) + pkcaHojas(r, 262, 256, 10, 24, ['#4a8a3a', '#5a9a42']);
+  /* el perro, sentado de tres cuartos: el contorno de pelo a festones */
+  function fest(pts, n, amp) {                                                    // un contorno con festones (pelo esponjoso) por los puntos dados
+    var d = 'M' + pts[0][0] + ' ' + pts[0][1], k, j;
+    for (k = 0; k < pts.length - 1; k++) { var a = pts[k], b = pts[k + 1], dx = (b[0] - a[0]) / n, dy = (b[1] - a[1]) / n, L = Math.hypot(dx, dy) || 1;
+      for (j = 0; j < n; j++) { var x0 = a[0] + dx * j, y0 = a[1] + dy * j; d += 'Q' + pkcaN(x0 + dx / 2 + dy / L * amp) + ' ' + pkcaN(y0 + dy / 2 - dx / L * amp) + ' ' + pkcaN(x0 + dx) + ' ' + pkcaN(y0 + dy); } }
+    return d + 'Z';
+  }
+  c += '<g transform="translate(150 252)">';
+  /* la cola de plumero, enroscada por encima del lomo */
+  c += '<path d="' + fest([[26, -4], [52, -30], [58, -62], [40, -78], [20, -70], [32, -52], [30, -28], [12, -10]], 3, 5) + '" fill="url(#pelo)" stroke="#9a907e" stroke-width="1.6"/>';
+  c += '<path d="M28 -14 Q50 -40 42 -66" fill="none" stroke="#d8d0c0" stroke-width="2" stroke-linecap="round"/>';
+  /* el cuerpo sentado */
+  c += '<path d="' + fest([[-36, 54], [-44, 20], [-34, -14], [-10, -28], [22, -20], [40, 4], [42, 54]], 3, 4) + '" fill="url(#pelo)" stroke="#9a907e" stroke-width="1.8"/>';
+  c += '<path d="M24 54 Q30 26 18 10" fill="none" stroke="#c9bfae" stroke-width="2"/>';
+  /* las patas de delante */
+  c += '<path d="M-24 54 V14 Q-24 6 -16 6 Q-8 6 -8 14 V54 Z M-4 54 V16 Q-4 8 4 8 Q12 8 12 16 V54 Z" fill="#f8f4ec" stroke="#9a907e" stroke-width="1.6"/>';
+  c += '<g fill="#f8f4ec" stroke="#9a907e" stroke-width="1.4"><ellipse cx="-16" cy="54" rx="10" ry="5"/><ellipse cx="4" cy="54" rx="10" ry="5"/></g><g stroke="#9a907e" stroke-width="1"><path d="M-19 52 v4 M-13 52 v4 M1 52 v4 M7 52 v4"/></g>';
+  /* la gorguera de pelo del pecho */
+  c += '<path d="' + fest([[-34, -18], [-30, 6], [-16, 18], [0, 20], [14, 10], [18, -12]], 3, 4.5) + '" fill="#ffffff" stroke="#b8ae9a" stroke-width="1.4"/>';
+  /* la cabeza: cráneo, orejas de punta, hocico afilado, nariz negra y ojos oscuros */
+  c += '<path d="M-26 -82 L-34 -112 L-12 -88 Z" fill="#f4efe6" stroke="#9a907e" stroke-width="1.8"/><path d="M-25 -88 L-30 -106 L-16 -90 Z" fill="#e8b8a8"/>';
+  c += '<path d="M2 -88 L12 -116 L18 -84 Z" fill="#f4efe6" stroke="#9a907e" stroke-width="1.8"/><path d="M5 -90 L12 -110 L15 -88 Z" fill="#e8b8a8"/>';
+  c += '<path d="' + fest([[-34, -60], [-32, -84], [-12, -96], [10, -90], [22, -70], [18, -48], [-4, -40], [-24, -44]], 2, 3) + '" fill="url(#pelo)" stroke="#9a907e" stroke-width="1.8"/>';
+  c += '<path d="M-28 -62 Q-48 -60 -56 -54 Q-52 -46 -40 -44 Q-28 -44 -20 -50 Z" fill="#fffaf0" stroke="#9a907e" stroke-width="1.6"/>';
+  c += '<ellipse cx="-54" cy="-54" rx="4.4" ry="3.4" fill="#2a1a14"/><circle cx="-55" cy="-55.5" r="1" fill="#fff"/>';
+  c += '<path d="M-52 -48 Q-44 -44 -34 -47" fill="none" stroke="#9a907e" stroke-width="1.4"/><path d="M-46 -46 q2 6 8 5" fill="#e8786a" stroke="#9a5a50" stroke-width=".8"/>';
+  c += '<path d="M-26 -70 q4 -4 9 -1" fill="none" stroke="#2a1a14" stroke-width="3.2" stroke-linecap="round"/><path d="M-4 -72 q4 -4 9 -1" fill="none" stroke="#2a1a14" stroke-width="3.2" stroke-linecap="round"/>';
+  c += '<circle cx="-22" cy="-71" r="1" fill="#fff"/><circle cx="0" cy="-73" r="1" fill="#fff"/>';
+  /* el collar rojo con su cascabel */
+  c += '<path d="M-30 -42 Q-8 -30 16 -42" fill="none" stroke="#d8312a" stroke-width="4" stroke-linecap="round"/><circle cx="-8" cy="-33" r="3.6" fill="url(#oro)" stroke="#5a3608" stroke-width=".8"/>';
+  c += '</g>';
+  c += pkcaFlor(46, 300, 6, '#fffaf0', '#f6c330') + pkcaFlor(256, 304, 5.4, '#ff9ac0', '#f6c330');
+  return pkcaSVG('animales', ['#7ab8e8', '#f2e8d0'], c, { luz: '#fff6c8', defs: defs });
+};
+
+/* la vaca de Bali: color canela, con las patas blancas como calcetines y la mancha blanca atrás, en el arrozal recién segado, con una garcita
+   en el lomo y el atardecer */
+PKCA.arte.vaca = function () {
+  var r = pkcaRnd('vaca'), c = '', i;
+  var defs = '<linearGradient id="piel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e09a4a"/><stop offset="1" stop-color="#b06a28"/></linearGradient>';
+  c += '<circle cx="224" cy="118" r="28" fill="#ffd27a"/><circle cx="224" cy="118" r="76" fill="url(#luz)"/>';
+  c += pkcaNube(70, 70, 0.55, '#f8d8b8', '#e2a83a') + pkcaNube(240, 52, 0.4, '#f8d8b8', '#e2a83a');
+  c += '<path d="M14 170 L70 150 L120 166 L200 140 L286 160 V200 H14 Z" fill="#7a6a8a" opacity=".7"/>';
+  c += '<path d="M14 190 H286 V340 H14 Z" fill="#c9b45a"/>';
+  for (i = 0; i < 6; i++) c += '<path d="M14 ' + (204 + i * 22) + ' Q150 ' + (196 + i * 22) + ' 286 ' + (206 + i * 22) + '" stroke="#a8943a" stroke-width="2" fill="none" opacity=".7"/>';
+  var ras = ''; for (i = 0; i < 70; i++) { var x = 20 + r() * 260, y = 200 + r() * 130; ras += '<path d="M' + pkcaN(x) + ' ' + pkcaN(y) + ' v-4 M' + pkcaN(x + 2) + ' ' + pkcaN(y) + ' l1.5 -3"/>'; }
+  c += '<g stroke="#8a7a2a" stroke-width="1">' + ras + '</g>';
+  c += '<g fill="#e8c36a" stroke="#8a6a2a" stroke-width="1">' + [[40, 196], [262, 200]].map(function (p) { return '<path d="M' + p[0] + ' ' + p[1] + ' l-8 26 h16 z"/>'; }).join('') + '</g>';
+  /* la vaca de perfil */
+  c += '<g transform="translate(150 240)">';
+  c += '<path d="M-74 -10 Q-80 -40 -50 -48 Q0 -56 50 -46 Q72 -42 76 -20 Q78 6 66 16 Q0 26 -64 16 Q-76 6 -74 -10 Z" fill="url(#piel)" stroke="#5a3010" stroke-width="2"/>';
+  c += '<path d="M-74 -10 Q-80 -30 -66 -40 Q-56 -20 -60 10 Q-66 14 -70 8 Z" fill="#fffaf0"/>';
+  c += '<path d="M-20 -52 Q0 -64 20 -52" fill="none" stroke="#c97a30" stroke-width="6" stroke-linecap="round"/>';
+  /* las patas con sus calcetines blancos */
+  [[-58, 1], [-40, 0], [42, 1], [58, 0]].forEach(function (p) { c += '<path d="M' + p[0] + ' 12 V44" stroke="' + (p[1] ? '#b06a28' : '#9a5a20') + '" stroke-width="10" stroke-linecap="round"/><path d="M' + p[0] + ' 30 V46" stroke="#fffaf0" stroke-width="10" stroke-linecap="round"/><path d="M' + (p[0] - 5) + ' 48 h10" stroke="#2a1a10" stroke-width="3"/>'; });
+  c += '<path d="M-76 -14 q-14 10 -10 34" fill="none" stroke="#b06a28" stroke-width="3" stroke-linecap="round"/><path d="M-86 18 l-3 8 l6 -2 z" fill="#2a1a10"/>';
+  /* la cabeza con sus cuernos cortos y el morro claro */
+  c += '<path d="M66 -30 Q92 -40 104 -22 Q110 -6 100 6 Q86 10 76 0 Z" fill="url(#piel)" stroke="#5a3010" stroke-width="2"/>';
+  c += '<path d="M96 -6 Q108 -4 106 6 Q98 10 90 4 Z" fill="#f6e2c8" stroke="#5a3010" stroke-width="1.4"/><circle cx="100" cy="2" r="1.4" fill="#2a1a10"/>';
+  c += '<path d="M84 -34 q-4 -12 4 -16 M96 -32 q4 -12 12 -12" fill="none" stroke="#3a2a1a" stroke-width="3.4" stroke-linecap="round"/>';
+  c += '<path d="M74 -26 q-10 -4 -14 2 q8 4 14 4 z" fill="#c97a30" stroke="#5a3010" stroke-width="1.2"/>';
+  c += '<circle cx="88" cy="-20" r="2.6" fill="#2a1a10"/><circle cx="88.8" cy="-20.8" r=".9" fill="#fff"/>';
+  /* el collar con su campana (como las de los toros de las carreras) */
+  c += '<path d="M70 -14 q4 14 16 12" fill="none" stroke="#d8312a" stroke-width="3"/><path d="M82 -2 l-4 10 h10 z" fill="url(#oro)" stroke="#5a3608" stroke-width=".8"/>';
+  /* la garcita en el lomo */
+  c += '<g transform="translate(-6 -50)"><path d="M-10 0 Q0 -10 12 -4 Q14 2 4 4 Q-6 4 -10 0 Z" fill="#fffaf0" stroke="#8a8070" stroke-width="1"/><path d="M8 -6 Q12 -18 18 -18" fill="none" stroke="#fffaf0" stroke-width="3" stroke-linecap="round"/><path d="M18 -18 l6 1" stroke="#f6c330" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="-19" r=".9" fill="#2a1a10"/><path d="M-2 4 v6 M2 4 v6" stroke="#2a2a20" stroke-width="1"/></g>';
+  c += '</g>';
+  return pkcaSVG('animales', ['#4a2a6a', '#f2a060'], c, { luz: '#ffd27a', defs: defs });
+};
+
+/* las garzas de Petulu: al caer la tarde, miles de garzas blancas vuelven a dormir a los árboles del pueblo */
+PKCA.arte.garza = function () {
+  var r = pkcaRnd('garza'), c = '', i;
+  c += '<circle cx="150" cy="210" r="40" fill="#ffd27a"/><circle cx="150" cy="210" r="100" fill="url(#luz)"/>';
+  c += pkcaNube(64, 120, 0.5, '#d86a6a', '#ffd27a') + pkcaNube(240, 96, 0.45, '#d86a6a', '#ffd27a');
+  /* los árboles en sombra, llenos de garzas */
+  var copas = [[40, 250, 44], [96, 262, 40], [160, 248, 52], [228, 258, 46], [276, 246, 36]];
+  c += '<path d="M14 280 H286 V340 H14 Z" fill="#1a1a2a"/>';
+  copas.forEach(function (q) { c += '<path d="M' + q[0] + ' 340 V' + (q[1] + 10) + '" stroke="#1a1a2a" stroke-width="6"/>'; });
+  var hj = ''; copas.forEach(function (q) { for (var k = 0; k < 9; k++) { var a = r() * 6.28, d = r() * q[2] * 0.7; hj += '<circle cx="' + pkcaN(q[0] + Math.cos(a) * d) + '" cy="' + pkcaN(q[1] + Math.sin(a) * d * 0.6) + '" r="' + pkcaN(q[2] * (0.35 + r() * 0.2)) + '"/>'; } });
+  c += '<g fill="#22223a">' + hj + '</g>';
+  var po = ''; copas.forEach(function (q) { for (var k = 0; k < 10; k++) { var px = q[0] + (r() - 0.5) * q[2] * 1.4, py = q[1] + (r() - 0.65) * q[2] * 0.75, sd = r() < 0.5 ? -1 : 1;
+    po += '<ellipse cx="' + pkcaN(px) + '" cy="' + pkcaN(py) + '" rx="3.6" ry="2.2" transform="rotate(' + (sd * 20) + ' ' + pkcaN(px) + ' ' + pkcaN(py) + ')"/><circle cx="' + pkcaN(px + sd * 3.2) + '" cy="' + pkcaN(py - 3) + '" r="1.5"/>'; } });
+  c += '<g fill="#f8f4ea" opacity=".95">' + po + '</g>';
+  /* las garzas volando: una V grande delante y muchas pequeñas detrás */
+  function garza(x, y, s, ala) {
+    var h = '<g transform="translate(' + pkcaN(x) + ' ' + pkcaN(y) + ') scale(' + pkcaN(s) + ')">';
+    h += '<path d="M-2 0 Q-20 ' + (-14 * ala) + ' -38 ' + (-4 * ala) + ' Q-22 ' + (-2 * ala) + ' -8 4 Z" fill="#fffaf0" stroke="#8a8070" stroke-width="1"/>';
+    h += '<path d="M2 0 Q20 ' + (-14 * ala) + ' 38 ' + (-4 * ala) + ' Q22 ' + (-2 * ala) + ' 8 4 Z" fill="#f4efe6" stroke="#8a8070" stroke-width="1"/>';
+    h += '<path d="M-10 2 Q0 -2 12 2 Q20 0 26 -4 Q22 4 12 6 Q0 8 -10 2 Z" fill="#fffaf0" stroke="#8a8070" stroke-width="1"/>';
+    h += '<path d="M26 -4 l10 1" stroke="#f6c330" stroke-width="2.2" stroke-linecap="round"/><path d="M-10 2 l-14 4 M-10 3 l-14 6" stroke="#2a2a20" stroke-width="1.2"/>';
+    return h + '</g>';
+  }
+  for (i = 0; i < 26; i++) { var t = r(); c += garza(30 + r() * 240, 40 + r() * 150, 0.14 + t * 0.18, r() < 0.5 ? 1 : -0.6); }
+  c += garza(150, 120, 1.2, 1) + garza(96, 150, 0.8, -0.6) + garza(206, 156, 0.75, 1) + garza(60, 92, 0.55, 1) + garza(240, 92, 0.55, -0.6);
+  return pkcaSVG('animales', ['#3a2a6a', '#f29a6a'], c, { luz: '#ffd27a' });
+};
+
+/* la tortuga marina: en la playa de Kuta, al atardecer, las crías van hacia el mar; mar adentro, una tortuga grande con su caparazón dibujado */
+PKCA.arte.tortuga = function () {
+  var r = pkcaRnd('tortuga'), c = '', i;
+  var defs = '<linearGradient id="mar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ab0c8"/><stop offset="1" stop-color="#14607a"/></linearGradient>' +
+    '<linearGradient id="arena" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2d8a0"/><stop offset="1" stop-color="#d8b070"/></linearGradient>' +
+    '<radialGradient id="capa" cx=".45" cy=".35" r=".7"><stop offset="0" stop-color="#8ab05a"/><stop offset="1" stop-color="#3a6a3a"/></radialGradient>';
+  c += '<circle cx="70" cy="80" r="26" fill="#ffd27a"/><circle cx="70" cy="80" r="70" fill="url(#luz)"/>';
+  c += pkcaNube(220, 56, 0.55, '#fde2c8', '#e2a83a');
+  c += '<path d="M14 110 H286 V230 Q200 220 150 232 Q90 244 14 232 Z" fill="url(#mar)"/>';
+  c += pkcaOlas(120, 220, r, '#cfeefe', 14);
+  /* la tortuga grande, nadando, con el caparazón de escudos */
+  c += '<g transform="translate(176 166) rotate(-10)">';
+  c += '<path d="M-34 -10 q-26 -14 -30 4 q16 0 26 10 z M30 -14 q24 -18 34 -2 q-16 2 -26 12 z M-28 18 q-16 6 -12 18 q10 -6 18 -12 z M26 18 q14 8 10 18 q-10 -6 -16 -12 z" fill="#6a9a5a" stroke="#2a4a2a" stroke-width="1.6"/>';
+  c += '<ellipse cx="0" cy="2" rx="38" ry="28" fill="url(#capa)" stroke="#2a4a2a" stroke-width="2"/>';
+  c += '<g fill="none" stroke="#2a4a2a" stroke-width="1.4"><path d="M-10 -12 L10 -12 L16 2 L10 16 L-10 16 L-16 2 Z"/><path d="M-10 -12 L-22 -20 M10 -12 L22 -20 M16 2 L34 2 M-16 2 L-34 2 M10 16 L20 24 M-10 16 L-20 24"/></g>';
+  c += '<path d="M36 -4 q18 -6 22 4 q-4 10 -20 8 z" fill="#8ab05a" stroke="#2a4a2a" stroke-width="1.6"/><circle cx="50" cy="-1" r="2" fill="#1a1a10"/>';
+  c += '</g>';
+  /* burbujas */
+  for (i = 0; i < 8; i++) c += '<circle cx="' + pkcaN(220 + r() * 40) + '" cy="' + pkcaN(130 + r() * 30) + '" r="' + pkcaN(1.4 + r() * 2) + '" fill="none" stroke="#e8f8ff" stroke-width="1"/>';
+  /* la orilla con espuma y la arena */
+  c += '<path d="M14 232 Q90 244 150 232 Q200 220 286 230 V340 H14 Z" fill="url(#arena)"/>';
+  c += '<path d="M14 232 Q90 244 150 232 Q200 220 286 230" fill="none" stroke="#fffaf0" stroke-width="4" stroke-linecap="round"/>';
+  for (i = 0; i < 6; i++) c += pkcaRizo(30 + i * 46, 236 - (i % 2) * 6, 4, 3.6, '#fffaf0', 1.4);
+  /* las crías, camino del mar, con sus huellas */
+  function cria(x, y, a) { return '<g transform="translate(' + x + ' ' + y + ') rotate(' + a + ')"><path d="M-6 -2 l-6 -4 M6 -2 l6 -4 M-5 5 l-5 4 M5 5 l5 4" stroke="#3a3a2a" stroke-width="2" stroke-linecap="round"/><ellipse cx="0" cy="1" rx="6" ry="8" fill="#4a4a3a" stroke="#1a1a10" stroke-width="1"/><circle cx="0" cy="-9" r="3" fill="#4a4a3a"/></g>'; }
+  [[70, 280, -20], [110, 300, -8], [150, 270, 6], [196, 292, 14], [236, 274, 24], [126, 322, -4]].forEach(function (p) {
+    c += '<path d="M' + p[0] + ' ' + (p[1] + 10) + ' l-3 8 m6 -6 l-3 8 m-6 4 l-3 8 m6 -6 l-3 8" stroke="#b89050" stroke-width="1.2" opacity=".7"/>' + cria(p[0], p[1], p[2]);
+  });
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="176" cy="150" r="3" opacity=".7"/></g>';
+  return pkcaSVG('animales', ['#f2a06a', '#ffe0b0'], c, { luz: '#ffd27a', defs: defs });
+};
+
+/* el ciervo de Menjangan: un ciervo con su cornamenta en la playa de la isla, a la luz de la luna; al fondo, la isla con la gran estatua de
+   Ganesha mirando al mar, y el agua clara con corales */
+PKCA.arte.ciervo = function () {
+  var r = pkcaRnd('ciervo'), c = '', i;
+  var defs = '<linearGradient id="mar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a6a9a"/><stop offset="1" stop-color="#1a3a6a"/></linearGradient>' +
+    '<linearGradient id="piel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8784a"/><stop offset="1" stop-color="#7a5232"/></linearGradient>';
+  c += pkcaEstrellas(r, 36, 140, '#fff8e0');
+  c += '<circle cx="70" cy="70" r="24" fill="#fff6d8"/><circle cx="70" cy="70" r="70" fill="url(#luz)"/>';
+  /* el mar, la isla y la estatua de Ganesha */
+  c += '<rect x="14" y="170" width="272" height="100" fill="url(#mar)"/><path d="M60 180 h30 M50 188 h50" stroke="#fff6d8" stroke-width="1.6" opacity=".6"/>';
+  c += '<path d="M170 172 Q200 150 240 156 Q270 160 286 172 Z" fill="#1a2a3a"/>';
+  c += '<g transform="translate(236 140)" fill="#2a3a4a"><rect x="-8" y="8" width="16" height="10"/><circle cx="0" cy="-2" r="9"/><path d="M-4 4 q-6 8 -2 14 q4 -2 3 -6" /><path d="M-9 -8 q-8 -2 -8 6 q4 2 8 -2 M9 -8 q8 -2 8 6 q-4 2 -8 -2"/><path d="M-4 -14 L0 -22 L4 -14 Z"/></g>';
+  c += '<g fill="#fff4c8" filter="url(#brilla)" opacity=".7"><circle cx="236" cy="124" r="2.4"/></g>';
+  c += pkcaOlas(196, 262, r, '#a8d8f0', 12);
+  /* la arena y el agua clara con corales a un lado */
+  c += '<path d="M14 266 Q80 250 150 262 Q220 274 286 258 V340 H14 Z" fill="#e8d8b0"/><path d="M14 266 Q80 250 150 262 Q220 274 286 258" fill="none" stroke="#fffaf0" stroke-width="3"/>';
+  c += '<g fill="#f08a8a" opacity=".8"><path d="M40 300 q-6 -12 0 -18 q2 8 6 4 q2 -8 8 -6 q-4 10 -2 20 z"/><path d="M250 296 q-6 -10 0 -16 q2 6 6 2 q4 -6 8 -2 q-6 8 -4 16 z"/></g>';
+  /* el ciervo, de pie, mirando hacia atrás */
+  c += '<g transform="translate(140 270)">';
+  c += '<path d="M-36 -40 Q-40 -60 -18 -64 Q20 -68 40 -58 Q52 -50 48 -36 Q44 -26 30 -26 Q-10 -24 -30 -28 Z" fill="url(#piel)" stroke="#3a2010" stroke-width="2"/>';
+  [[-28, 1], [-16, 0], [30, 1], [40, 0]].forEach(function (p) { c += '<path d="M' + p[0] + ' -30 L' + (p[0] + (p[1] ? -2 : 2)) + ' 4" stroke="#7a5232" stroke-width="5" stroke-linecap="round"/><path d="M' + (p[0] - 3) + ' 6 h6" stroke="#2a1a10" stroke-width="2.4"/>'; });
+  c += '<path d="M-36 -44 q-8 -2 -10 6" fill="none" stroke="#fffaf0" stroke-width="4" stroke-linecap="round"/>';
+  /* el cuello y la cabeza vuelta, con las orejas y la cornamenta */
+  c += '<path d="M30 -56 Q36 -80 30 -96 L44 -100 Q50 -78 46 -54 Z" fill="url(#piel)" stroke="#3a2010" stroke-width="2"/>';
+  c += '<path d="M28 -96 Q34 -108 50 -104 Q62 -100 64 -92 Q60 -86 50 -88 Q40 -88 28 -96 Z" fill="url(#piel)" stroke="#3a2010" stroke-width="2"/><circle cx="63" cy="-92" r="2" fill="#1a1010"/>';
+  c += '<circle cx="46" cy="-98" r="2.2" fill="#1a1010"/><circle cx="46.6" cy="-98.6" r=".7" fill="#fff"/>';
+  c += '<path d="M32 -102 q-10 -6 -14 -2 q6 4 14 6 z" fill="#a8784a" stroke="#3a2010" stroke-width="1.2"/>';
+  c += '<g fill="none" stroke="#e8d8b8" stroke-width="2.6" stroke-linecap="round"><path d="M36 -104 Q30 -122 20 -134 M30 -118 l-12 -4 M26 -126 l4 -12"/><path d="M42 -106 Q48 -124 60 -134 M50 -120 l12 -4 M56 -128 l-2 -12"/></g>';
+  c += '<path d="M36 -60 q4 10 12 8" fill="none" stroke="#fffaf0" stroke-width="2" opacity=".6"/>';
+  c += '</g>';
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="180" cy="140" r="2.4"/><circle cx="100" cy="120" r="2"/></g>';
+  return pkcaSVG('animales', ['#0c1838', '#2a4a7a'], c, { luz: '#fff6d8', defs: defs });
 };
 
 /* ---------- el cromo, con su lámina ---------- */
