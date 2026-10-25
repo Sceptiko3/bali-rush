@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v30</title>
+<title>Bali Rush Poki v31</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v30 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v31 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -119368,6 +119368,249 @@ if (PKAB.vivo) {
   var menuActPKAB = menuAct;
   menuAct = function (a) { if (a === 'modo:pesadilla' || a === 'modo:pollito') { SAVE.pelis = SAVE.pelis || {}; SAVE.pelis.pesadilla = 1; } return menuActPKAB(a); };
 }
+/*#pieza nucleo/696_poki_mapa_historia.js*/
+/* ================================================================
+   POKI V31 · EL MAPA DE LA HISTORIA: LA VUELTA A BALI
+   Jose Javier (25-10-2026): «el modo historia tiene que tener un apoyo
+   de mapa más visual, como casi todos los juegos, en este caso 10
+   carreras por Bali, que aparezca sombreado y con las estrellas;
+   cuando pasas una carrera, iluminado y el número de estrellas
+   conseguido». Preguntado: 10 paradas, con Menjangan (la carrera de
+   las barcas de Tirta yatra, que acaba en el buceo) como la 10.ª
+   (el buceo sigue también en Complementos).
+   - LA ISLA (SVG, el contorno de 125, Natural Earth): el mar con sus
+     olas, la arena, el verde con bancales de arroz y la selva del
+     oeste, los volcanes (el Agung, el Batur echando humo, el
+     Batukaru), los lagos, barquitas que se mecen, nubes que pasan y la
+     brújula.
+   - LAS 10 PARADAS, en su sitio (un poco separadas, para que se toquen
+     bien), unidas por el camino de la historia: cada una es un
+     medallón con su postal (el fotograma del vídeo de su fiesta, 636),
+     su número, su dibujo, su nombre y tres estrellas encima.
+     · Sin pasar: SOMBREADA (en gris y oscura) y las estrellas vacías.
+     · Pasada: ILUMINADA (a color, con un halo dorado) y sus estrellas.
+     · La que toca: late, con «¡AQUÍ!» encima.
+     El camino: lo hecho, dorado; hasta la que toca, a trazos que
+     avanzan; lo demás, gris.
+   - Al volver con estrellas nuevas, su parada se ilumina (la sombra se
+     va), las estrellas aparecen una a una (con su ¡tlin!) y el halo.
+   - Todo abierto (v30): se puede tocar cualquiera y se juega. Abajo,
+     «▶ Jugar» la que toca; arriba, las estrellas (de 30).
+   - Se llega desde la portada (el botón grande de la carrera), desde
+     el 🗺️ de las tarjetas de las carreras, y desde «Siguiente ▶» al
+     ganar (así se ve cómo se ilumina, y la siguiente late).
+   - Ahora son 10 carreras (LEVELS_OPEN = 10): Menjangan vuelve a ser
+     la 10.ª.
+   PKMH.vivo = false (o ?nopkm): sin el mapa (como la v30, con 9).
+   ================================================================ */
+var PKMH = {
+  vivo: POK.vivo && !/[?&#]nopkm/.test(location.search + location.hash),
+  W: 360, H: 235,
+  pos: [[228, 147], [245, 112], [197, 126], [277, 129], [262, 72], [300, 98], [333, 82], [212, 195], [188, 70], [38, 26]],   // las 10, en el orden de la historia (ORDEN)
+  lab: ['b', 'r', 'l', 'b', 'r', 'b', 'b', 'r', 'l', 'r'],                   // dónde va el nombre: abajo, a la derecha, a la izquierda
+  img: {}, foco: -1, desde: null
+};
+function pkmLis() { return ORDEN.slice(0, 10); }
+function pkmSt(li) { return Math.max(0, Math.min(3, SAVE.st[li] || 0)); }
+function pkmToca() { var L = pkmLis(); for (var p = 0; p < L.length; p++) if (!(pkmSt(L[p]) > 0)) return p; return -1; }
+function pkmTotal() { var n = 0; pkmLis().forEach(function (li) { n += pkmSt(li); }); return n; }
+function pkmEstrella(cx, cy, r, cls) {
+  var p = '', k, a, rr;
+  for (k = 0; k < 10; k++) { a = -Math.PI / 2 + k * Math.PI / 5; rr = k % 2 ? r * 0.45 : r; p += (k ? 'L' : 'M') + mpR(cx + Math.cos(a) * rr) + ' ' + mpR(cy + Math.sin(a) * rr); }
+  return '<path class="' + cls + '" d="' + p + 'Z"/>';
+}
+function pkmNubes() {
+  var h = '';
+  [[40, 205, 1, 0], [250, 14, 0.8, -18], [150, 225, 0.9, -34], [320, 160, 0.7, -50]].forEach(function (c, i) {
+    h += '<g class="pkm-nube" style="animation-delay:' + c[3] + 's"><g transform="translate(' + c[0] + ' ' + c[1] + ') scale(' + c[2] + ')">' +
+      '<ellipse cx="0" cy="0" rx="13" ry="4.6" fill="#fff"/><ellipse cx="-5" cy="-3" rx="6" ry="4.4" fill="#fff"/><ellipse cx="4" cy="-3.6" rx="7" ry="5" fill="#fff"/></g></g>';
+  });
+  return h;
+}
+function pkmBarca(x, y, s, d) {                                              // una jukung, con sus balancines
+  return '<g class="pkm-barca" style="animation-delay:' + d + 's"><g transform="translate(' + x + ' ' + y + ') scale(' + s + ')">' +
+    '<path d="M-6 0Q0 3 6 0L5 -1.2L-5 -1.2Z" fill="#fbfaf4" stroke="#2a1a0c" stroke-width=".5"/><path d="M-4 1.6L4 1.6M-4 -2.6L4 -2.6" stroke="#2a1a0c" stroke-width=".45"/>' +
+    '<path d="M0 -1.2L0 -7L3.5 -2Z" fill="#e2452f" stroke="#2a1a0c" stroke-width=".4"/></g></g>';
+}
+function pkmVolcan(x, y, a, humo) {
+  var h = '<path d="M' + (x - a) + ' ' + (y + a * 0.42) + 'Q' + (x - a * 0.45) + ' ' + (y - a * 0.1) + ' ' + (x - a * 0.16) + ' ' + (y - a * 0.6) + 'L' + (x + a * 0.16) + ' ' + (y - a * 0.6) + 'Q' + (x + a * 0.45) + ' ' + (y - a * 0.1) + ' ' + (x + a) + ' ' + (y + a * 0.42) + 'Z" fill="url(#pkmMonte)" stroke="#5b3f22" stroke-width=".9"/>' +
+    '<path d="M' + (x - a * 0.16) + ' ' + (y - a * 0.6) + 'L' + (x - a * 0.3) + ' ' + (y - a * 0.3) + 'L' + (x - a * 0.08) + ' ' + (y - a * 0.38) + 'L' + (x + a * 0.06) + ' ' + (y - a * 0.28) + 'L' + (x + a * 0.3) + ' ' + (y - a * 0.33) + 'L' + (x + a * 0.16) + ' ' + (y - a * 0.6) + 'Z" fill="#8a7a66" opacity=".9"/>';
+  if (humo) for (var k = 0; k < 3; k++) h += '<circle class="pkm-humo" style="animation-delay:' + (k * 1.1) + 's" cx="' + x + '" cy="' + (y - a * 0.7) + '" r="2.2" fill="#f2efe8"/>';
+  return h;
+}
+function pkmSVG(toca) {
+  var W = PKMH.W, H = PKMH.H, L = pkmLis(), P = PKMH.pos, h = '', i, k;
+  var V0 = SAVE.pkmV || {};
+  h += '<svg class="pkm-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + TT('Mapa de Bali') + '">';
+  h += '<defs>' +
+    '<radialGradient id="pkmMar" cx=".55" cy=".45" r=".85"><stop offset="0" stop-color="#7fd4d6"/><stop offset=".7" stop-color="#3a9ea8"/><stop offset="1" stop-color="#25768a"/></radialGradient>' +
+    '<linearGradient id="pkmIsla" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fae4a"/><stop offset=".55" stop-color="#8cc85e"/><stop offset="1" stop-color="#bcd982"/></linearGradient>' +
+    '<linearGradient id="pkmMonte" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a6a58"/><stop offset=".55" stop-color="#8f7a5e"/><stop offset="1" stop-color="#5f8f45"/></linearGradient>' +
+    '<radialGradient id="pkmLuz"><stop offset="0" stop-color="rgba(255,230,120,.95)"/><stop offset=".55" stop-color="rgba(255,200,60,.45)"/><stop offset="1" stop-color="rgba(255,200,60,0)"/></radialGradient>' +
+    '<pattern id="pkmTerr" width="9" height="5" patternUnits="userSpaceOnUse"><path d="M0 2.5Q2.25 0.6 4.5 2.5T9 2.5" fill="none" stroke="#d7efa0" stroke-width=".7" opacity=".85"/></pattern>' +
+    '<pattern id="pkmSelva" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.5" fill="#2f6e2a" opacity=".55"/><circle cx="5.5" cy="5.2" r="1.2" fill="#3f7d2e" opacity=".5"/></pattern>' +
+    '<clipPath id="pkmClipIsla"><path d="' + MP_ISLA + '"/></clipPath>' +
+    '<clipPath id="pkmClipN"><circle cx="0" cy="0" r="9"/></clipPath>' +
+    '<filter id="pkmGris"><feColorMatrix type="saturate" values=".12"/><feComponentTransfer><feFuncR type="linear" slope=".62"/><feFuncG type="linear" slope=".62"/><feFuncB type="linear" slope=".7"/></feComponentTransfer></filter>' +
+    '</defs>';
+  /* el mar */
+  h += '<rect width="' + W + '" height="' + H + '" fill="url(#pkmMar)"/>';
+  [[30, 150], [92, 205], [140, 38], [300, 26], [334, 214], [100, 128], [16, 200], [262, 222], [343, 150], [178, 12], [60, 60], [120, 180], [280, 190], [70, 110], [350, 40]].forEach(function (w, j) {
+    h += '<path class="pkm-ola" style="animation-delay:' + (j * 0.37) + 's" d="M' + w[0] + ' ' + w[1] + 'q3 -2.4 6 0t6 0" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1" stroke-linecap="round"/>';
+  });
+  h += '<text class="pkm-mar" x="112" y="22">' + TT('MAR DE BALI') + '</text><text class="pkm-mar" x="40" y="228">' + TT('OCÉANO ÍNDICO') + '</text>';
+  h += pkmBarca(352, 74, 0.9, 0) + pkmBarca(60, 14, 0.8, 1.2) + pkmBarca(232, 214, 0.85, 0.6) + pkmBarca(310, 165, 0.75, 1.8);
+  /* la isla: la arena, el verde, los bancales y la selva */
+  [MP_ISLA, MP_PENIDA].forEach(function (d) { h += '<path d="' + d + '" fill="#f3dfa2" stroke="#f3dfa2" stroke-width="5" stroke-linejoin="round"/>'; });
+  [MP_ISLA, MP_PENIDA].forEach(function (d) { h += '<path d="' + d + '" fill="url(#pkmIsla)" stroke="#5b3f22" stroke-width="1.1" stroke-linejoin="round"/>'; });
+  h += '<g clip-path="url(#pkmClipIsla)"><ellipse cx="232" cy="128" rx="48" ry="30" fill="url(#pkmTerr)"/><ellipse cx="300" cy="118" rx="30" ry="16" fill="url(#pkmTerr)" opacity=".7"/>' +
+    '<rect x="0" y="0" width="175" height="235" fill="url(#pkmSelva)"/></g>';
+  var mj = mpXY([114.508, -8.094]);
+  h += '<ellipse cx="' + mpR(mj[0]) + '" cy="' + mpR(mj[1]) + '" rx="5" ry="2.2" transform="rotate(-18 ' + mpR(mj[0]) + ' ' + mpR(mj[1]) + ')" fill="#8cc85e" stroke="#5b3f22" stroke-width=".8"/>';
+  /* lagos y volcanes */
+  [[115.402, -8.262, 3.6, 8.6, 18], [115.165, -8.279, 2.2, 3, 0], [115.137, -8.247, 3.5, 1.7, -12], [115.098, -8.256, 2.6, 1.4, -25]].forEach(function (l) {
+    var q = mpXY(l); h += '<ellipse cx="' + mpR(q[0]) + '" cy="' + mpR(q[1]) + '" rx="' + l[2] + '" ry="' + l[3] + '" transform="rotate(' + l[4] + ' ' + mpR(q[0]) + ' ' + mpR(q[1]) + ')" fill="#4fb3c9" stroke="#2c7f93" stroke-width=".6"/>';
+  });
+  var ag = mpXY([115.508, -8.343]), bt = mpXY([115.375, -8.242]), bk = mpXY([115.089, -8.333]);
+  h += pkmVolcan(mpR(bk[0]), mpR(bk[1]), 10, false) + pkmVolcan(mpR(bt[0]) - 6, mpR(bt[1]) - 2, 11, true) + pkmVolcan(mpR(ag[0]), mpR(ag[1]) - 4, 16, false);
+  /* el camino de la historia */
+  var pts = P.map(function (q) { return q; });
+  for (i = 0; i < pts.length - 1; i++) {
+    var hecho = pkmSt(L[i]) > 0 && pkmSt(L[i + 1]) > 0, hacia = pkmSt(L[i]) > 0 && i + 1 === toca;
+    var d = mpSeg(pts[i - 1] || pts[i], pts[i], pts[i + 1], pts[i + 2] || pts[i + 1]);
+    h += '<path d="' + d + '" fill="none" stroke="rgba(42,26,12,.35)" stroke-width="3.6" stroke-linecap="round"/>';
+    h += '<path class="' + (hacia ? 'pkm-va' : '') + '" d="' + d + '" fill="none" stroke-linecap="round" ' +
+      (hecho ? 'stroke="#ffd23f" stroke-width="2.2"' : hacia ? 'stroke="#ffd23f" stroke-width="2" stroke-dasharray="3.5 2.6"' : 'stroke="#e8e0cc" stroke-width="1.5" stroke-dasharray="2.4 2.4"') + '/>';
+  }
+  /* las paradas */
+  var lbs = '';
+  for (i = 0; i < L.length; i++) {
+    var li = L[i], st = pkmSt(li), x = P[i][0], y = P[i][1], hecha = st > 0, esT = i === toca, nuevo = st > (V0[li] || 0), cls = 'pkm-n' + (hecha ? ' hecha' : ' sombra') + (esT ? ' toca' : '') + (nuevo ? ' nuevo' : '');
+    var src = PKMH.img[li] || '';
+    var g = '<g class="' + cls + '" data-act="pkm:ir:' + li + '" transform="translate(' + x + ' ' + y + ')">';
+    if (hecha) g += '<circle class="pkm-luz" r="16" fill="url(#pkmLuz)"/>';
+    if (esT) g += '<circle class="pkm-pulso" r="12.5" fill="none" stroke="#fffaf0" stroke-width="1.8"/>';
+    g += '<circle r="10.4" fill="#2a1a0c"/>';
+    g += src ? '<image class="pkm-img" href="' + src + '" x="-15" y="-10" width="30" height="20" preserveAspectRatio="xMidYMid slice" clip-path="url(#pkmClipN)"' + (hecha ? '' : ' filter="url(#pkmGris)"') + '/>'
+      : '<circle r="9" fill="' + (hecha ? '#ffe9a8' : '#8a8478') + '"/><text class="pkm-emo" y="2.6" text-anchor="middle">' + F(li, 'ico') + '</text>';
+    if (hecha && nuevo && src) g += '<g class="pkm-quita"><image href="' + src + '" x="-15" y="-10" width="30" height="20" preserveAspectRatio="xMidYMid slice" clip-path="url(#pkmClipN)" filter="url(#pkmGris)"/><circle r="9" fill="rgba(18,24,40,.3)"/></g>';
+    if (!hecha) g += '<circle r="9" fill="rgba(18,24,40,' + (esT ? '.12' : '.32') + ')"/>';
+    g += '<circle r="9.3" fill="none" stroke="' + (hecha ? '#ffd23f' : esT ? '#fffaf0' : '#a89c86') + '" stroke-width="1.7"/>';
+    g += '<g transform="translate(-7.6 6.8)"><circle r="3.7" fill="' + (hecha ? '#d8432f' : '#5b4a36') + '" stroke="#2a1a0c" stroke-width=".7"/><text class="pkm-num" y="1.65" text-anchor="middle">' + (i + 1) + '</text></g>';
+    g += '<g transform="translate(7.6 6.8)"><circle r="3.7" fill="#fffaf0" stroke="#2a1a0c" stroke-width=".7"/><text class="pkm-ico" y="1.5" text-anchor="middle">' + F(li, 'ico') + '</text></g>';
+    for (k = 0; k < 3; k++) {                                                  // las tres estrellas, en arco por encima
+      var a = -Math.PI / 2 + (k - 1) * 0.62, sx = Math.cos(a) * 13.4, sy = Math.sin(a) * 13.4 + (k === 1 ? -0.6 : 0.6);
+      var si = k < st;
+      g += '<g class="pkm-est' + (si ? ' si' : '') + '" style="animation-delay:' + (0.95 + k * 0.32) + 's">' + pkmEstrella(sx, sy, 3.5, si ? 'pkm-e1' : 'pkm-e0') + '</g>';
+    }
+    g += '<circle r="15" fill="transparent"/>';
+    if (esT) g += '<g class="pkm-aqui" transform="translate(0 -24)"><rect x="-10" y="-4.6" width="20" height="7.4" rx="3.7" fill="#d8432f" stroke="#2a1a0c" stroke-width=".7"/><text class="pkm-aq" y="1.3" text-anchor="middle">' + TT('¡AQUÍ!') + '</text><path d="M-2 2.8L0 5.6L2 2.8Z" fill="#d8432f" stroke="#2a1a0c" stroke-width=".6"/></g>';
+    g += '</g>';
+    h += g;
+    var lb = PKMH.lab[i], n = LEVELS[li].n, tw = n.length * 2.75 + 6, lx = lb === 'r' ? x + 12.5 : lb === 'l' ? x - 12.5 - tw : x - tw / 2, ly = lb === 'b' ? y + 12 : y - 3.6;
+    lbs += '<g class="pkm-lb' + (hecha ? ' hecha' : '') + '" data-act="pkm:ir:' + li + '"><rect x="' + mpR(lx) + '" y="' + mpR(ly) + '" width="' + mpR(tw) + '" height="7.2" rx="3.6"/><text x="' + mpR(lx + tw / 2) + '" y="' + mpR(ly + 5.3) + '" text-anchor="middle">' + n + '</text></g>';
+  }
+  h += lbs;
+  h += '<g class="pkm-brujula" transform="translate(344 214)"><circle r="8" fill="rgba(255,250,240,.85)" stroke="#2a1a0c" stroke-width=".7"/><path d="M0 -6.5L2 0L0 -1L-2 0Z" fill="#d8432f" stroke="#2a1a0c" stroke-width=".4"/><path d="M0 6.5L2 0L0 1L-2 0Z" fill="#fffaf0" stroke="#2a1a0c" stroke-width=".4"/><text y="-8.6" text-anchor="middle" class="pkm-n0">N</text></g>';
+  h += pkmNubes();
+  h += '</svg>';
+  return h;
+}
+function pkmPostales() {                                                       // las postales que faltan (de una en una: cada una es un fotograma de su vídeo)
+  pkmLis().forEach(function (li) { if (PKMH.img[li] == null) { try { PKMH.img[li] = pkoPostal(li) || ''; } catch (e) { PKMH.img[li] = ''; } } });
+}
+function pkmMostrar(foco) {
+  if (typeof fasEntra === 'function') fasEntra();
+  menuFondo(); G.enMenu = true;
+  pkmPostales();
+  var L = pkmLis(), toca = pkmToca(), f = foco != null ? foco : toca >= 0 ? toca : 0;
+  var tot = pkmTotal(), V0 = SAVE.pkmV || {}, nuevos = L.filter(function (li) { return pkmSt(li) > (V0[li] || 0); });
+  var h = '<div class="pkm-cab"><button class="fs-vol" data-act="menu" aria-label="' + TT('Volver') + '">‹</button>' +
+    '<h2 class="stk">' + TT('La vuelta a Bali') + '</h2></div>';
+  h += '<div class="pkm-scroll">' + pkmSVG(toca) + '</div>';
+  var pie;
+  if (toca >= 0) { var lt = L[toca]; pie = '<button class="b1 pkm-jugar" data-act="pkm:ir:' + lt + '"><span>▶ ' + TT('Jugar') + '</span><b>' + (toca + 1) + ' · ' + LEVELS[lt].n + '</b><small>' + F(lt, 'ico') + ' ' + F(lt, 'fiesta') + '</small></button>'; }
+  else pie = '<button class="b1 pkm-jugar" data-act="pkm:ir:' + L[pkmMejora()] + '"><span>🏆 ' + TT('¡Las 10!') + '</span><b>' + TT('Repite y gana más estrellas') + '</b></button>';
+  h += '<div class="pkm-pie"><span class="pkm-tot"><b>★</b> ' + tot + '<small> / 30</small></span>' + pie + '</div>';
+  card(h, 'menu pkm');
+  $('pad') && $('pad').classList.add('hide');
+  pkmEncaja(f);
+  /* lo nuevo: el ¡tlin! de cada estrella, y apuntarlo como visto */
+  if (nuevos.length) {
+    var n0 = 0; nuevos.forEach(function (li) { var a = (V0[li] || 0), b = pkmSt(li); for (var k = a; k < b; k++) { (function (d) { setTimeout(function () { if (document.querySelector('#scr .card.pkm')) SFX.tlin ? SFX.tlin() : SFX.pick(3); }, d); })(950 + (k) * 320 + n0 * 80); } n0++; });
+    setTimeout(function () { if (document.querySelector('#scr .card.pkm')) SFX.win && SFX.win(); }, 500);
+  }
+  SAVE.pkmV = {}; L.forEach(function (li) { SAVE.pkmV[li] = pkmSt(li); }); writeSave();
+}
+function pkmMejora() { var L = pkmLis(), b = 0, bs = 9; L.forEach(function (li, p) { if (pkmSt(li) < bs) { bs = pkmSt(li); b = p; } }); return b; }
+function pkmEncaja(f) {                                                        // el mapa, del tamaño de la pantalla (de pie: más ancho, y se desliza de lado), centrado en la que toca
+  var sc = document.querySelector('#scr .card.pkm .pkm-scroll'), svg = sc && sc.querySelector('svg'); if (!svg) return;
+  var cab = document.querySelector('#scr .card.pkm .pkm-cab'), pie = document.querySelector('#scr .card.pkm .pkm-pie');
+  var ww = window.innerWidth, hh = window.innerHeight, disp = hh - (cab ? cab.offsetHeight : 56) - (pie ? pie.offsetHeight : 90) - 10;
+  var h = Math.max(220, disp), w = h * PKMH.W / PKMH.H;                         // (de pie: más ancho que la pantalla, se desliza; tumbado: cabe entero, centrado)
+  svg.style.width = Math.round(w) + 'px'; svg.style.height = Math.round(h) + 'px'; svg.style.margin = w < ww ? '0 auto' : '0';
+  sc.style.height = Math.round(h) + 'px';
+  var x = PKMH.pos[f] ? PKMH.pos[f][0] / PKMH.W * w : w / 2;
+  sc.scrollLeft = Math.max(0, x - ww / 2);
+}
+
+/* ---------- los enganches ---------- */
+if (PKMH.vivo) {
+  var pokAjustaPKM = pokAjusta;
+  pokAjusta = function () { pokAjustaPKM.apply(this, arguments); LEVELS_OPEN = 10; };   // las 10: Menjangan vuelve a ser la 10.ª
+  if (typeof LEVELS_OPEN !== 'undefined') LEVELS_OPEN = 10;
+  var showMenuPKM = showMenu;
+  showMenu = function () {
+    showMenuPKM.apply(this, arguments);
+    var b = document.querySelector('#scr .card.pok-ini .fs-cont'); if (b) {                    // el botón grande de la carrera: al mapa
+      b.setAttribute('data-act', 'pkm:mapa'); b.classList.add('pkm-ent');
+      var sm = b.querySelector('.fs-c-txt small'), t = pkmToca(); if (sm && t >= 0) sm.textContent = '🗺️ ' + TT('CARRERA') + ' ' + (t + 1) + ' / 10';
+    }
+  };
+  var menuActPKM = menuAct;
+  menuAct = function (a) {
+    if (typeof a === 'string') {
+      if (a === 'pkm:mapa' || a === 'pok:carreras') { pkmMostrar(); return true; }
+      if (a.indexOf('pkm:ir:') === 0) { var li = +a.slice(7); hideScr(); return menuActPKM('nivel:' + li); }
+      if (a === 'mapa') { pkmMostrar(); return true; }                                       // todos los «🗺️ Mapa» (antes, en Poki, el álbum: sigue en la portada)
+      if (a === 'next' && document.querySelector('#scr .card.pkt-win')) { pkmMostrar(); return true; }   // al ganar: «Siguiente» pasa por el mapa (se ilumina lo ganado y late la siguiente)
+    }
+    return menuActPKM(a);
+  };
+  window.addEventListener('resize', function () { if (document.querySelector('#scr .card.pkm')) pkmEncaja(pkmToca() >= 0 ? pkmToca() : 0); });
+}
+(function () {
+  var css = '#scr .card.pkm{position:fixed;inset:0;max-width:none;width:100%;height:100%!important;max-height:none!important;transform:none!important;animation:none!important;margin:0;border-radius:0;border:0;padding:0;display:flex;flex-direction:column;background:#1f6f80;overflow:hidden;box-shadow:none}' +
+    '.pkm .pkm-cab{display:flex;align-items:center;gap:10px;padding:10px 120px 6px 14px;padding-top:max(10px,env(safe-area-inset-top))}.pkm .pkm-cab h2{flex:1;margin:0;font-size:24px;text-align:left}' +
+    '.pkm .pkm-tot{align-self:center;background:#2a1a0c;color:#fff7df;border:2px solid #ffd23f;border-radius:16px;padding:6px 11px;font:900 20px/1.1 var(--f,system-ui);white-space:nowrap}.pkm .pkm-tot b{color:#ffd23f}.pkm .pkm-tot small{font-size:13px;opacity:.85}' +
+    '.pkm .pkm-scroll{flex:1 1 auto;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}.pkm .pkm-scroll::-webkit-scrollbar{display:none}.pkm .pkm-svg{display:block}' +
+    '.pkm .pkm-pie{padding:8px 14px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:flex;justify-content:center;gap:10px}' +
+    '.pkm .pkm-jugar{display:flex;flex-direction:column;align-items:center;gap:1px;flex:0 1 340px;min-width:0;padding:8px 14px;line-height:1.15}.pkm .pkm-jugar span{font-size:20px}.pkm .pkm-jugar b{font-size:16px}.pkm .pkm-jugar small{font-size:12px;opacity:.9}' +
+    '.pkm-svg .pkm-mar{font:italic 700 6px Georgia,serif;fill:rgba(255,255,255,.55);letter-spacing:.12em}' +
+    '.pkm-svg .pkm-num{font:900 4.6px system-ui,sans-serif;fill:#fff}.pkm-svg .pkm-ico{font-size:4.4px}.pkm-svg .pkm-emo{font-size:9px}.pkm-svg .pkm-aq{font:900 4.4px system-ui,sans-serif;fill:#fff}.pkm-svg .pkm-n0{font:900 4px system-ui;fill:#2a1a0c}' +
+    '.pkm-svg .pkm-e1{fill:#ffd23f;stroke:#2a1a0c;stroke-width:.6;stroke-linejoin:round}.pkm-svg .pkm-e0{fill:rgba(20,24,36,.45);stroke:rgba(255,255,255,.7);stroke-width:.5;stroke-linejoin:round}' +
+    '.pkm-svg .pkm-lb rect{fill:rgba(42,26,12,.82)}.pkm-svg .pkm-lb text{font:800 4.5px system-ui,sans-serif;fill:#d9cfbd}.pkm-svg .pkm-lb.hecha rect{fill:#fff7df;stroke:#2a1a0c;stroke-width:.5}.pkm-svg .pkm-lb.hecha text{fill:#2a1a0c}' +
+    '.pkm-svg .pkm-n,.pkm-svg .pkm-lb{cursor:pointer}' +
+    '.pkm-svg .pkm-luz{transform-box:fill-box;transform-origin:center;animation:pkmLuz 2.6s ease-in-out infinite}@keyframes pkmLuz{0%,100%{opacity:.75;transform:scale(.92)}50%{opacity:1;transform:scale(1.08)}}' +
+    '.pkm-svg .pkm-pulso{transform-box:fill-box;transform-origin:center;animation:pkmPulso 1.3s ease-out infinite}@keyframes pkmPulso{0%{opacity:1;transform:scale(.8)}100%{opacity:0;transform:scale(1.5)}}' +
+    '.pkm-svg .pkm-aqui{animation:pkmBota .9s ease-in-out infinite}@keyframes pkmBota{0%,100%{transform:translate(0px,-24px)}50%{transform:translate(0px,-27px)}}' +
+    '.pkm-svg .pkm-va{animation:pkmVa 1s linear infinite}@keyframes pkmVa{to{stroke-dashoffset:-12.2}}' +
+    '.pkm-svg .pkm-ola{animation:pkmOla 3.2s ease-in-out infinite}@keyframes pkmOla{0%,100%{opacity:.25;transform:translateX(0)}50%{opacity:.9;transform:translateX(2px)}}' +
+    '.pkm-svg .pkm-nube{animation:pkmNube 70s linear infinite;opacity:.82}@keyframes pkmNube{from{transform:translateX(-60px)}to{transform:translateX(420px)}}' +
+    '.pkm-svg .pkm-barca{animation:pkmBarca 2.6s ease-in-out infinite}@keyframes pkmBarca{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.2px)}}' +
+    '.pkm-svg .pkm-humo{transform-box:fill-box;transform-origin:center;animation:pkmHumo 3.3s ease-out infinite;opacity:0}@keyframes pkmHumo{0%{opacity:.85;transform:translate(0,0) scale(.6)}100%{opacity:0;transform:translate(5px,-14px) scale(2.2)}}' +
+    /* lo nuevo: se va la sombra, sale el halo y las estrellas una a una */
+    '.pkm-svg .nuevo .pkm-quita{animation:pkmQuita 1.1s .35s ease-out both}@keyframes pkmQuita{to{opacity:0}}' +
+    '.pkm-svg .nuevo .pkm-luz{animation:pkmLuzN 1.4s .5s ease-out both,pkmLuz 2.6s 1.9s ease-in-out infinite}@keyframes pkmLuzN{0%{opacity:0;transform:scale(.4)}60%{opacity:1;transform:scale(1.6)}100%{opacity:.85;transform:scale(1)}}' +
+    '.pkm-svg .nuevo .pkm-est.si{transform-box:fill-box;transform-origin:center;animation:pkmEst .55s ease-out both}@keyframes pkmEst{0%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(1.6) rotate(10deg)}100%{transform:scale(1)}}' +
+    '@media (prefers-reduced-motion:reduce){.pkm-svg *{animation:none!important}}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  var N = {
+    'La vuelta a Bali': ['Around Bali', 'Keliling Bali'], 'LA VUELTA A BALI': ['AROUND BALI', 'KELILING BALI'], 'Jugar': ['Play', 'Main'], '¡AQUÍ!': ['HERE!', 'DI SINI!'], '¡Las 10!': ['All 10!', 'Semua 10!'],
+    'Repite y gana más estrellas': ['Replay and earn more stars', 'Ulangi dan dapatkan lebih banyak bintang'], 'Mapa de Bali': ['Map of Bali', 'Peta Bali']
+  };
+  for (var k in N) if (!D[k]) D[k] = N[k];
+})();
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
