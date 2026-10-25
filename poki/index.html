@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v36</title>
+<title>Bali Rush Poki v37</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v36 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v37 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -120185,6 +120185,17 @@ if (PGMX.vivo) {
      a los árboles al atardecer), la tortuga marina (las crías de Kuta
      camino del mar y una grande nadando) y el ciervo de Menjangan (en la
      playa, de noche, con la estatua de Ganesha de la isla al fondo).
+   - v37, la página de COMIDA: el coco verde (abierto, con su pajita y
+     un hibisco, en la playa al atardecer), el babi guling (el cerdo
+     asado dorado sobre hojas de plátano, en el banquete de la fiesta),
+     el nasi campur (el cono de arroz y un poco de todo, en la mesa del
+     warung), el sate lilit (en la parrilla de barro, entre brasas, humo
+     y chispas), la salak (el racimo de piel de escamas, una abierta, y
+     una serpiente verde en la rama), el café de Kintamani (la taza
+     humeante, el cafeto con sus cerezas y el Batur) y el arroz (Dewi
+     Sri, la diosa del arroz, en su figura de hoja de palma, con su halo
+     de llamas, entre espigas doradas). Y el reverso de los que aún no
+     tienes, a juego: oscuro, con el marco dorado y la «?» de oro.
    PKCA.vivo = false (o ?nopkca): los cromos como la v33.
    ================================================================ */
 var PKCA = { vivo: PKO.vivo && !/[?&#]nopkca/.test(location.search + location.hash), cache: {}, arte: {} };
@@ -121098,6 +121109,234 @@ PKCA.arte.ciervo = function () {
   return pkcaSVG('animales', ['#0c1838', '#2a4a7a'], c, { luz: '#fff6d8', defs: defs });
 };
 
+/* ================================================================
+   COMIDA (v37)
+   ================================================================ */
+function pkcaHojaPlatano(x, y, w, h, rot) {                                  // una hoja de plátano (de bandeja)
+  return '<g transform="translate(' + x + ' ' + y + ') rotate(' + (rot || 0) + ')"><path d="M' + (-w / 2) + ' 0 Q0 ' + (-h) + ' ' + (w / 2) + ' 0 Q0 ' + h + ' ' + (-w / 2) + ' 0 Z" fill="#3f9a4a" stroke="#1f5a26" stroke-width="1.6"/>' +
+    '<path d="M' + (-w / 2) + ' 0 H' + (w / 2) + '" stroke="#8ad070" stroke-width="1.6"/>' +
+    [-0.3, -0.1, 0.1, 0.3].map(function (t) { return '<path d="M' + pkcaN(w * t) + ' 0 l' + pkcaN(w * 0.08) + ' ' + pkcaN(-h * 0.7) + ' M' + pkcaN(w * t) + ' 0 l' + pkcaN(w * 0.08) + ' ' + pkcaN(h * 0.7) + '" stroke="#2f7a36" stroke-width="1"/>'; }).join('') + '</g>';
+}
+function pkcaVapor(x, y, n, alto) {                                           // el vapor de algo caliente
+  var h = '', i;
+  for (i = 0; i < n; i++) { var dx = x + (i - (n - 1) / 2) * 12; h += '<path d="M' + dx + ' ' + y + ' q-8 ' + (-alto / 4) + ' 0 ' + (-alto / 2) + ' q8 ' + (-alto / 4) + ' 0 ' + (-alto / 2) + '" />'; }
+  return '<g fill="none" stroke="#ffffff" stroke-opacity=".55" stroke-width="3.4" stroke-linecap="round" filter="url(#brilla)">' + h + '</g><g fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="1.2" stroke-linecap="round">' + h + '</g>';
+}
+
+/* el coco verde: el coco tierno abierto, con su pajita y una flor de hibisco, en la arena al atardecer, bajo las palmeras */
+PKCA.arte.coco = function () {
+  var r = pkcaRnd('coco'), c = '', i;
+  var defs = '<radialGradient id="cocoV" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#9ad85a"/><stop offset=".7" stop-color="#4f9a2e"/><stop offset="1" stop-color="#2f6a1e"/></radialGradient>' +
+    '<linearGradient id="mar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2a06a"/><stop offset="1" stop-color="#3a7aa8"/></linearGradient>';
+  c += '<circle cx="190" cy="140" r="30" fill="#ffd27a"/><circle cx="190" cy="140" r="80" fill="url(#luz)"/>';
+  c += pkcaNube(80, 70, 0.55, '#f6c8b8', '#e2a83a');
+  c += '<rect x="14" y="160" width="272" height="60" fill="url(#mar)"/><path d="M160 166 h60 M170 174 h40" stroke="#ffd27a" stroke-width="2" opacity=".6"/>';
+  c += '<path d="M14 214 Q150 200 286 216 V340 H14 Z" fill="#f2d8a0"/><path d="M14 214 Q150 200 286 216" fill="none" stroke="#fffaf0" stroke-width="3"/>';
+  /* la palmera de la izquierda */
+  c += '<path d="M40 340 Q30 220 70 110" fill="none" stroke="#6a4a2a" stroke-width="8" stroke-linecap="round"/>';
+  for (i = 0; i < 9; i++) { var a = -2.9 + i / 8 * 2.6; c += '<path d="M70 110 q' + pkcaN(Math.cos(a) * 24) + ' ' + pkcaN(Math.sin(a) * 24 - 10) + ' ' + pkcaN(Math.cos(a) * 52) + ' ' + pkcaN(Math.sin(a) * 18 + 14) + '" fill="none" stroke="#2a6a2a" stroke-width="5" stroke-linecap="round"/>'; }
+  c += '<g fill="#4f8a2a" stroke="#2a4a14" stroke-width="1"><circle cx="66" cy="118" r="7"/><circle cx="76" cy="118" r="7"/><circle cx="71" cy="126" r="7"/></g>';
+  /* el coco verde, grande, abierto arriba */
+  c += '<path d="M110 300 Q96 250 122 214 L178 214 Q204 250 190 300 Q150 318 110 300 Z" fill="url(#cocoV)" stroke="#1f4a14" stroke-width="2.4"/>';
+  c += '<path d="M122 214 Q150 196 178 214" fill="#4f9a2e" stroke="#1f4a14" stroke-width="2"/><ellipse cx="150" cy="212" rx="26" ry="8" fill="#f6f2e0" stroke="#1f4a14" stroke-width="2"/><ellipse cx="150" cy="212" rx="18" ry="5" fill="#dff2f6"/>';
+  c += '<path d="M118 240 q-6 30 6 54" fill="none" stroke="#c8f08a" stroke-width="3" opacity=".6" stroke-linecap="round"/>';
+  c += '<g fill="none" stroke="#2f6a1e" stroke-width="1.2" opacity=".6"><path d="M136 220 q-8 40 -2 84 M150 222 v86 M164 220 q8 40 2 84 M178 220 q14 36 6 76"/></g>';
+  c += '<path d="M128 214 L134 204 L142 210 L150 200 L158 210 L166 204 L172 214" fill="none" stroke="#d6f0a0" stroke-width="2"/>';
+  /* la pajita a rayas y la flor de hibisco */
+  c += '<path d="M156 210 L184 140 L196 132" fill="none" stroke="#fffaf0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M156 210 L184 140 L196 132" fill="none" stroke="#e2452f" stroke-width="6" stroke-dasharray="6 6" stroke-linejoin="round"/>';
+  var pet = ''; for (i = 0; i < 5; i++) { var aa = i / 5 * 6.28 - 1.57; pet += '<path transform="translate(124 208) rotate(' + pkcaN(aa * 57.3) + ')" d="M0 0 Q6 -6 18 -4 Q22 0 18 4 Q6 6 0 0 Z"/>'; }
+  c += '<g fill="#e2312a" stroke="#7a1010" stroke-width="1">' + pet + '</g><path d="M124 208 l10 -14" stroke="#ffd76a" stroke-width="2"/><circle cx="134" cy="194" r="2" fill="#ffd76a"/>';
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="150" cy="210" r="4" opacity=".7"/></g>';
+  c += pkcaFlor(230, 300, 7, '#fffaf0', '#f6c330') + pkcaFlor(60, 312, 6, '#fffaf0', '#f6c330');
+  return pkcaSVG('comida', ['#5a3a7a', '#f8b07a'], c, { luz: '#ffd27a', defs: defs });
+};
+
+/* el babi guling: el cerdo asado entero, dorado y brillante, sobre hojas de plátano en la bandeja de la fiesta, con su arroz, verduras y
+   flores; detrás, los colores del banquete del templo */
+PKCA.arte.babi = function () {
+  var r = pkcaRnd('babi'), c = '', i;
+  var defs = '<linearGradient id="asado" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2a64a"/><stop offset=".5" stop-color="#c8641e"/><stop offset="1" stop-color="#7a3810"/></linearGradient>' +
+    '<linearGradient id="mesa" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a5a32"/><stop offset="1" stop-color="#5a3a1e"/></linearGradient>';
+  c += pkcaEstrellas(r, 16, 90, '#fff4c8');
+  c += pkcaNube(70, 64, 0.5, '#5a2a4a', '#f2c14e') + pkcaNube(236, 80, 0.45, '#5a2a4a', '#f2c14e');
+  /* las guirnaldas de banderines de la fiesta */
+  c += '<path d="M14 100 Q150 150 286 100" fill="none" stroke="#d9b65a" stroke-width="1.4"/>';
+  for (i = 0; i < 11; i++) { var t = (i + 0.5) / 11, x = 14 + t * 272, y = 100 + Math.sin(t * Math.PI) * 25; c += '<path d="M' + pkcaN(x - 8) + ' ' + pkcaN(y) + ' L' + pkcaN(x + 8) + ' ' + pkcaN(y) + ' L' + pkcaN(x) + ' ' + pkcaN(y + 16) + ' Z" fill="' + ['#e2452f', '#f6c330', '#fffaf0', '#3fa36a'][i % 4] + '" stroke="#5a3a1a" stroke-width=".8"/>'; }
+  /* la mesa y la bandeja de hojas */
+  c += '<path d="M14 230 H286 V340 H14 Z" fill="url(#mesa)"/><path d="M14 230 H286" stroke="#b08050" stroke-width="2"/>';
+  c += '<ellipse cx="150" cy="248" rx="132" ry="34" fill="#3a2414" opacity=".5"/>';
+  c += pkcaHojaPlatano(90, 240, 150, 30, -6) + pkcaHojaPlatano(210, 242, 150, 30, 8);
+  /* el cerdo asado, tumbado de lado, con la piel dorada y crujiente: lomo redondo, la pata de delante doblada, la oreja, el hocico y la cola */
+  c += '<g transform="translate(150 206)">';
+  c += '<path d="M-84 20 Q-92 -6 -70 -26 Q-40 -46 10 -44 Q56 -42 76 -24 Q90 -10 88 10 Q86 26 70 30 Q0 40 -84 20 Z" fill="url(#asado)" stroke="#4a2008" stroke-width="2.4"/>';
+  c += '<path d="M-66 -22 Q-30 -42 14 -40 Q50 -38 68 -24" fill="none" stroke="#ffe0a0" stroke-width="5" stroke-linecap="round" opacity=".55"/>';
+  for (i = 0; i < 26; i++) { var bx = -70 + r() * 150, by = -30 + r() * 46; c += '<ellipse cx="' + pkcaN(bx) + '" cy="' + pkcaN(by) + '" rx="' + pkcaN(2 + r() * 2.5) + '" ry="1.4" fill="#ffd27a" opacity="' + pkcaN(0.25 + r() * 0.4) + '"/>'; }
+  c += '<path d="M-30 26 Q-34 40 -18 44 L4 44 Q10 40 2 34 Q-10 34 -14 24 Z" fill="#c8641e" stroke="#4a2008" stroke-width="1.8"/><path d="M40 28 Q44 42 58 42 L70 40 Q72 34 64 32 Q54 32 52 24 Z" fill="#b85a1a" stroke="#4a2008" stroke-width="1.8"/>';
+  /* la cabeza: mejilla, oreja caída, ojo cerrado, hocico con su disco y sus agujeros */
+  c += '<path d="M70 -22 Q98 -26 110 -6 Q116 10 104 22 Q88 30 74 22 Z" fill="url(#asado)" stroke="#4a2008" stroke-width="2.2"/>';
+  c += '<path d="M78 -22 Q86 -40 100 -34 Q96 -22 88 -14 Z" fill="#c8641e" stroke="#4a2008" stroke-width="1.6"/>';
+  c += '<path d="M90 -6 q5 -4 10 0" fill="none" stroke="#2a1004" stroke-width="1.8" stroke-linecap="round"/>';
+  c += '<ellipse cx="112" cy="8" rx="6" ry="8" fill="#a84a14" stroke="#4a2008" stroke-width="1.6"/><ellipse cx="110" cy="5" rx="1.3" ry="1.8" fill="#2a1004"/><ellipse cx="114" cy="11" rx="1.3" ry="1.8" fill="#2a1004"/>';
+  c += '<path d="M94 16 q6 4 12 2" fill="none" stroke="#2a1004" stroke-width="1.4"/>';
+  c += '<path d="M-84 8 q-12 -4 -12 -14 q6 2 4 8" fill="none" stroke="#c8641e" stroke-width="3" stroke-linecap="round"/>';
+  c += pkcaFlor(96, -30, 4.6, '#e2312a', '#ffd76a');
+  c += '</g>';
+  /* el arroz, las verduras y las flores alrededor */
+  c += '<path d="M40 262 Q54 236 70 262 Z" fill="#fffaf0" stroke="#c8c0a8" stroke-width="1.2"/><path d="M230 264 Q246 240 262 264 Z" fill="#fffaf0" stroke="#c8c0a8" stroke-width="1.2"/>';
+  c += '<g fill="#3f9a3a">' + [[90, 268], [104, 272], [196, 270], [210, 268]].map(function (p) { return '<ellipse cx="' + p[0] + '" cy="' + p[1] + '" rx="8" ry="4"/>'; }).join('') + '</g>';
+  c += '<g fill="#e2452f">' + [[120, 270], [184, 272]].map(function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4"/>'; }).join('') + '</g>';
+  c += pkcaFlor(150, 274, 6, '#fffaf0', '#f6c330') + pkcaFlor(30, 246, 5, '#f6c330', '#e07a1a') + pkcaFlor(270, 248, 5, '#e2452f', '#ffd76a');
+  c += pkcaVapor(150, 160, 3, 50);
+  return pkcaSVG('comida', ['#1c0e2a', '#6a2a2a'], c, { luz: '#ffc06a', defs: defs });
+};
+
+/* el nasi campur: el cono de arroz en el centro de la hoja, y alrededor un poco de todo: sate, huevo, tempe, verduras, cacahuetes y el sambal;
+   en la mesa del warung, con su lámpara */
+PKCA.arte.nasi = function () {
+  var r = pkcaRnd('nasi'), c = '', i;
+  var defs = '<linearGradient id="mesa" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b07a4a"/><stop offset="1" stop-color="#7a4a26"/></linearGradient>' +
+    '<radialGradient id="plato" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#e8e2d0"/><stop offset="1" stop-color="#b8b09a"/></radialGradient>';
+  c += pkcaEstrellas(r, 14, 80, '#fff4c8');
+  /* la lámpara del warung */
+  c += '<path d="M150 14 V60" stroke="#3a2a1a" stroke-width="2"/><path d="M128 76 Q150 52 172 76 Z" fill="#e2a83a" stroke="#5a3608" stroke-width="1.6"/><circle cx="150" cy="80" r="7" fill="#fff6c0" filter="url(#brilla)"/><circle cx="150" cy="140" r="120" fill="url(#luz)" opacity=".8"/>';
+  c += '<path d="M14 150 H286 V340 H14 Z" fill="url(#mesa)"/><g stroke="#6a3e1e" stroke-width="1.2" opacity=".6"><path d="M14 190 H286 M14 240 H286 M14 290 H286"/></g>';
+  /* el plato de barro y la hoja */
+  c += '<ellipse cx="150" cy="236" rx="128" ry="74" fill="#5a3a20" opacity=".4"/><ellipse cx="150" cy="230" rx="124" ry="70" fill="url(#plato)" stroke="#6a5a40" stroke-width="2"/>';
+  c += '<path d="M150 230 m-106 0 a106 58 0 1 0 212 0 a106 58 0 1 0 -212 0" fill="#3f9a4a" stroke="#1f5a26" stroke-width="1.6"/>';
+  c += '<g stroke="#2f7a36" stroke-width="1" opacity=".7"><path d="M44 230 H256"/><path d="M80 200 L110 230 M130 186 L140 230 M180 188 L170 230 M220 200 L196 230 M80 260 L110 230 M220 260 L196 230"/></g>';
+  /* el cono de arroz */
+  c += '<path d="M120 236 Q122 196 150 176 Q178 196 180 236 Q150 246 120 236 Z" fill="#fffdf2" stroke="#b8b09a" stroke-width="1.6"/>';
+  for (i = 0; i < 24; i++) { var px = 126 + r() * 48, py = 186 + r() * 48; if (Math.abs(px - 150) > (py - 176) * 0.55) continue; c += '<ellipse cx="' + pkcaN(px) + '" cy="' + pkcaN(py) + '" rx="1.4" ry=".8" fill="#e8e2c8"/>'; }
+  c += '<path d="M150 176 q-3 -6 0 -10 q3 4 0 10" fill="#e2312a"/>';
+  /* alrededor: sate, medio huevo, tempe, judías, cacahuetes, sambal y lechuga */
+  c += '<g transform="translate(70 222) rotate(-20)"><path d="M-30 0 H30" stroke="#d9b65a" stroke-width="2"/><g fill="#9a4a1a" stroke="#4a2008" stroke-width="1"><rect x="-22" y="-5" width="10" height="10" rx="3"/><rect x="-10" y="-5" width="10" height="10" rx="3"/><rect x="2" y="-5" width="10" height="10" rx="3"/></g></g>';
+  c += '<g transform="translate(78 254) rotate(-14)"><path d="M-30 0 H30" stroke="#d9b65a" stroke-width="2"/><g fill="#9a4a1a" stroke="#4a2008" stroke-width="1"><rect x="-20" y="-5" width="10" height="10" rx="3"/><rect x="-8" y="-5" width="10" height="10" rx="3"/><rect x="4" y="-5" width="10" height="10" rx="3"/></g></g>';
+  c += '<ellipse cx="214" cy="212" rx="18" ry="13" fill="#fffdf2" stroke="#b8b09a" stroke-width="1.4"/><circle cx="214" cy="213" r="7.5" fill="#f6b830"/>';
+  c += '<g fill="#e0b46a" stroke="#7a5a2a" stroke-width="1"><rect x="196" y="236" width="18" height="12" rx="2" transform="rotate(10 205 242)"/><rect x="214" y="242" width="18" height="12" rx="2" transform="rotate(-6 223 248)"/></g><g fill="#7a5a2a">' + [[200, 240], [206, 244], [218, 246], [224, 250]].map(function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.1"/>'; }).join('') + '</g>';
+  c += '<g stroke="#3a8a2a" stroke-width="3" stroke-linecap="round">' + [[132, 262], [140, 266], [148, 262], [156, 268]].map(function (p) { return '<path d="M' + p[0] + ' ' + p[1] + ' l10 4"/>'; }).join('') + '</g>';
+  c += '<g fill="#c88a4a" stroke="#6a4a1a" stroke-width=".6">' + [[176, 262], [182, 266], [188, 260], [184, 270], [190, 266]].map(function (p) { return '<ellipse cx="' + p[0] + '" cy="' + p[1] + '" rx="2.6" ry="1.8"/>'; }).join('') + '</g>';
+  c += '<path d="M96 196 Q104 186 116 194 Q110 204 96 196 Z" fill="#d8312a" stroke="#7a1010" stroke-width="1"/><path d="M100 194 l8 -2" stroke="#ff8a6a" stroke-width="1.4"/>';
+  c += '<path d="M170 188 q14 -10 28 0 q-14 10 -28 0 z" fill="#8ad070" stroke="#3a7a2a" stroke-width="1"/>';
+  c += pkcaVapor(150, 168, 3, 46);
+  return pkcaSVG('comida', ['#2a1a3a', '#7a4a3a'], c, { luz: '#ffe2a0', defs: defs });
+};
+
+/* el sate lilit: la carne picada enrollada en palos de caña de limón, sobre las brasas, con el humo que sube y las chispas */
+PKCA.arte.sate = function () {
+  var r = pkcaRnd('sate'), c = '', i;
+  var defs = '<linearGradient id="brasa" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb04a"/><stop offset="1" stop-color="#c8361a"/></linearGradient>' +
+    '<linearGradient id="carne" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e0b070"/><stop offset=".5" stop-color="#c8864a"/><stop offset="1" stop-color="#9a5a2a"/></linearGradient>';
+  c += pkcaEstrellas(r, 18, 110, '#fff4c8');
+  c += pkcaNube(70, 70, 0.5, '#4a2a3a', '#f2a03a') + pkcaNube(236, 54, 0.42, '#4a2a3a', '#f2a03a');
+  c += '<ellipse cx="150" cy="250" rx="150" ry="90" fill="url(#luz)"/>';
+  /* el humo y las chispas */
+  c += pkcaHumo(110, 200, 150, 1, 0.4) + pkcaHumo(170, 200, 160, -1, 0.35) + pkcaHumo(220, 210, 120, 1, 0.3);
+  for (i = 0; i < 18; i++) c += '<circle cx="' + pkcaN(70 + r() * 160) + '" cy="' + pkcaN(110 + r() * 100) + '" r="' + pkcaN(1 + r() * 1.6) + '" fill="#ffd27a" opacity="' + pkcaN(0.5 + r() * 0.5) + '"/>';
+  /* la parrilla de barro y las brasas */
+  c += '<path d="M40 250 H260 L246 320 H54 Z" fill="#8a4a2a" stroke="#3a1a0a" stroke-width="2"/><path d="M40 250 H260" stroke="#b86a3a" stroke-width="3"/>';
+  c += '<path d="M48 254 Q150 236 252 254 L250 262 H50 Z" fill="url(#brasa)"/>';
+  for (i = 0; i < 16; i++) c += '<ellipse cx="' + pkcaN(56 + r() * 188) + '" cy="' + pkcaN(252 + r() * 6) + '" rx="' + pkcaN(5 + r() * 6) + '" ry="3" fill="' + (r() < 0.5 ? '#3a1a10' : '#ffd27a') + '" opacity=".85"/>';
+  /* los palos de sate, en diagonal sobre la parrilla */
+  function palo(x, y, a) {
+    var h = '<g transform="translate(' + x + ' ' + y + ') rotate(' + a + ')">';
+    h += '<path d="M-70 0 H70" stroke="#c8d86a" stroke-width="5" stroke-linecap="round"/><path d="M-70 0 H70" stroke="#8a9a3a" stroke-width="1.6"/>';
+    h += '<path d="M60 -3 q8 -6 14 -4 M62 2 q8 6 14 4" stroke="#8ab83a" stroke-width="2" fill="none"/>';
+    h += '<path d="M-58 -10 Q-60 0 -58 10 H20 Q24 0 20 -10 Z" fill="url(#carne)" stroke="#5a2a10" stroke-width="1.6"/>';
+    for (var k = 0; k < 6; k++) h += '<path d="M' + (-50 + k * 12) + ' -10 q4 10 0 20" fill="none" stroke="#7a3a14" stroke-width="1.4" opacity=".7"/>';
+    h += '<g fill="#5a8a2a">' + [-40, -16, 8].map(function (q) { return '<circle cx="' + q + '" cy="-2" r="1.3"/>'; }).join('') + '</g>';
+    return h + '</g>';
+  }
+  c += palo(150, 236, -14) + palo(160, 214, -8) + palo(140, 196, -18);
+  /* la hoja de plátano con el arroz y el sambal, delante */
+  c += pkcaHojaPlatano(70, 322, 100, 22, -4) + '<path d="M56 320 Q66 302 78 320 Z" fill="#fffdf2" stroke="#c8c0a8" stroke-width="1"/><circle cx="92" cy="318" r="6" fill="#d8312a" stroke="#7a1010"/>';
+  c += pkcaFlor(236, 320, 6, '#fffaf0', '#f6c330');
+  return pkcaSVG('comida', ['#1c0e22', '#5a2a2a'], c, { luz: '#ff9a4a', defs: defs });
+};
+
+/* la salak, la «fruta serpiente»: un racimo de frutas de piel de escamas, una abierta con sus gajos blancos, y una serpiente verde de los
+   árboles enroscada en la rama, curiosa; en el huerto, de noche */
+PKCA.arte.salak = function () {
+  var r = pkcaRnd('salak'), c = '', i;
+  var defs = '<pattern id="escama" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#7a3a24"/><path d="M0 8 Q4 0 8 8" fill="#9a4a2a" stroke="#4a1a10" stroke-width=".8"/><path d="M-4 4 Q0 -4 4 4 M4 4 Q8 -4 12 4" fill="#9a4a2a" stroke="#4a1a10" stroke-width=".8"/></pattern>';
+  c += pkcaEstrellas(r, 22, 120, '#fff4c8');
+  c += '<circle cx="150" cy="200" r="110" fill="url(#luz)" opacity=".8"/>';
+  /* las hojas de la palmera salak, con espinas */
+  for (i = 0; i < 7; i++) { var a = -2.8 + i * 0.45, x0 = 150, y0 = 330; c += '<path d="M' + x0 + ' ' + y0 + ' Q' + pkcaN(x0 + Math.cos(a) * 80) + ' ' + pkcaN(y0 + Math.sin(a) * 120) + ' ' + pkcaN(x0 + Math.cos(a) * 160) + ' ' + pkcaN(y0 + Math.sin(a) * 150) + '" fill="none" stroke="#2a5a2a" stroke-width="8" stroke-linecap="round"/><path d="M' + x0 + ' ' + y0 + ' Q' + pkcaN(x0 + Math.cos(a) * 80) + ' ' + pkcaN(y0 + Math.sin(a) * 120) + ' ' + pkcaN(x0 + Math.cos(a) * 160) + ' ' + pkcaN(y0 + Math.sin(a) * 150) + '" fill="none" stroke="#4a8a3a" stroke-width="2" stroke-dasharray="2 6"/>'; }
+  /* la rama y la serpiente verde enroscada, con su lengua */
+  c += '<path d="M14 120 Q90 110 150 130 Q210 150 286 136" fill="none" stroke="#5a3a1e" stroke-width="9" stroke-linecap="round"/>';
+  c += '<path d="M60 116 q10 -16 24 -2 q14 14 26 -2 q12 -16 26 0 q10 12 22 4" fill="none" stroke="#2a6a2a" stroke-width="11" stroke-linecap="round"/><path d="M60 116 q10 -16 24 -2 q14 14 26 -2 q12 -16 26 0 q10 12 22 4" fill="none" stroke="#6ac04a" stroke-width="7" stroke-linecap="round"/>';
+  c += '<path d="M60 116 q10 -16 24 -2 q14 14 26 -2 q12 -16 26 0 q10 12 22 4" fill="none" stroke="#c8f08a" stroke-width="1.6" stroke-dasharray="3 5"/>';
+  c += '<path d="M158 118 Q176 108 186 120 Q178 132 160 124 Z" fill="#6ac04a" stroke="#2a6a2a" stroke-width="1.8"/><circle cx="176" cy="117" r="3" fill="#ffd23f" stroke="#1a3a1a" stroke-width=".8"/><path d="M176 114 v6" stroke="#120804" stroke-width="1.4"/>';
+  c += '<path d="M186 121 l10 2 m-2 -3 l3 3 l-3 2" fill="none" stroke="#e2312a" stroke-width="1.4" stroke-linecap="round"/>';
+  /* el racimo de salak */
+  function fruta(x, y, s) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"><path d="M0 -26 Q22 -20 22 4 Q20 26 0 28 Q-20 26 -22 4 Q-22 -20 0 -26 Z" fill="url(#escama)" stroke="#3a1008" stroke-width="2"/><path d="M-6 -26 L0 -36 L6 -26 Z" fill="#5a2a14"/><path d="M-12 -14 q-4 10 0 22" fill="none" stroke="#c8784a" stroke-width="2" opacity=".6"/></g>'; }
+  c += fruta(112, 236, 1) + fruta(150, 222, 1.1) + fruta(190, 238, 1) + fruta(132, 270, 1) + fruta(172, 272, 1);
+  /* una abierta, con sus gajos blancos */
+  c += '<g transform="translate(150 300)"><path d="M-30 0 Q-30 -14 -16 -16 L16 -16 Q30 -14 30 0 Q30 16 0 22 Q-30 16 -30 0 Z" fill="#7a3a24" stroke="#3a1008" stroke-width="2"/>';
+  c += '<g fill="#fff8e4" stroke="#c8b890" stroke-width="1"><path d="M-22 -2 Q-22 -14 -8 -14 Q-4 -2 -8 10 Q-20 10 -22 -2 Z"/><path d="M-6 -14 Q8 -16 8 0 Q6 12 -4 12 Q-8 0 -6 -14 Z"/><path d="M10 -14 Q24 -12 22 2 Q18 12 8 10 Q12 -2 10 -14 Z"/></g></g>';
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="150" cy="296" r="4" opacity=".6"/><circle cx="60" cy="200" r="2"/><circle cx="240" cy="190" r="2"/></g>';
+  return pkcaSVG('comida', ['#14102a', '#2a4a2a'], c, { luz: '#fff2c0', defs: defs });
+};
+
+/* el café de Kintamani: la taza humeante en la terraza, con las ramas del cafeto con sus cerezas rojas, y delante el Batur con su lago al
+   amanecer */
+PKCA.arte.cafe = function () {
+  var r = pkcaRnd('cafe'), c = '', i;
+  var defs = '<linearGradient id="taza" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d8c8a8"/><stop offset=".45" stop-color="#fffaf0"/><stop offset="1" stop-color="#c8b898"/></linearGradient>' +
+    '<linearGradient id="mesa" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a4a26"/><stop offset="1" stop-color="#4a2a14"/></linearGradient>';
+  c += '<circle cx="216" cy="130" r="22" fill="#ffe0a0"/><circle cx="216" cy="130" r="80" fill="url(#luz)"/>';
+  c += pkcaNube(80, 70, 0.55, '#f2d0d8', '#e2a83a');
+  c += '<path d="M14 190 L120 110 Q130 102 140 108 L230 176 L286 170 V220 H14 Z" fill="#5a5a7a"/>' + pkcaHumo(130, 104, 50, 1, 0.35);
+  c += '<path d="M14 200 Q150 186 286 202 V226 H14 Z" fill="#7aa8d0"/><path d="M60 206 h50 M160 210 h60" stroke="#fff4e0" stroke-width="1.4" opacity=".7"/>';
+  c += '<path d="M14 222 Q150 210 286 224 V250 H14 Z" fill="#4a7a3a"/>';
+  /* la mesa, la taza y el platito */
+  c += '<path d="M14 250 H286 V340 H14 Z" fill="url(#mesa)"/><path d="M14 250 H286" stroke="#a8784a" stroke-width="2"/>';
+  c += '<ellipse cx="150" cy="300" rx="58" ry="14" fill="#e8dcc0" stroke="#8a7a5a" stroke-width="1.6"/><ellipse cx="150" cy="298" rx="40" ry="8" fill="#d8ccb0"/>';
+  c += '<path d="M112 230 Q112 290 150 296 Q188 290 188 230 Z" fill="url(#taza)" stroke="#6a5a3a" stroke-width="2"/>';
+  c += '<path d="M188 244 q22 0 20 18 q-2 16 -24 14" fill="none" stroke="#e8dcc0" stroke-width="7"/><path d="M188 244 q22 0 20 18 q-2 16 -24 14" fill="none" stroke="#6a5a3a" stroke-width="1.6"/>';
+  c += '<ellipse cx="150" cy="230" rx="38" ry="9" fill="#3a1e0e" stroke="#6a5a3a" stroke-width="1.6"/><ellipse cx="146" cy="229" rx="20" ry="4" fill="#7a4a26" opacity=".7"/>';
+  c += '<path d="M120 254 q8 -4 16 0 q8 4 16 0 q8 -4 16 0 q8 4 16 0" fill="none" stroke="#3a7a8a" stroke-width="2"/>';
+  c += pkcaVapor(150, 222, 3, 60);
+  /* las ramas del cafeto con sus hojas y cerezas */
+  c += '<path d="M14 120 Q60 140 90 180" fill="none" stroke="#5a3a1e" stroke-width="4"/><path d="M286 110 Q240 140 226 190" fill="none" stroke="#5a3a1e" stroke-width="4"/>';
+  c += pkcaHojas(r, 46, 140, 12, 30, ['#2a6a2a', '#3a8a3a']) + pkcaHojas(r, 254, 140, 12, 30, ['#2a6a2a', '#3a8a3a']);
+  c += '<g fill="#d8312a" stroke="#6a0a0a" stroke-width=".8">' + [[60, 150], [66, 156], [72, 150], [80, 166], [86, 172], [240, 150], [246, 158], [236, 160], [232, 176]].map(function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4"/>'; }).join('') + '</g>';
+  c += '<g fill="#5a2a14">' + [[52, 290], [60, 296], [242, 296], [250, 288], [236, 300]].map(function (p) { return '<ellipse cx="' + p[0] + '" cy="' + p[1] + '" rx="4.4" ry="3"/>'; }).join('') + '</g>';
+  return pkcaSVG('comida', ['#3a3a7a', '#f6c8a0'], c, { luz: '#ffe0a0', defs: defs });
+};
+
+/* el arroz y Dewi Sri: la figura de hoja de palma (cili) de la diosa del arroz, con su halo de oro, entre espigas doradas que se doblan, sobre
+   las terrazas; el lugar más místico de la página */
+PKCA.arte.arroz = function () {
+  var r = pkcaRnd('arroz'), c = '', i;
+  c += pkcaEstrellas(r, 26, 140, '#fff8e0');
+  c += pkcaNube(60, 70, 0.5, '#2a3a5a', '#e9b949') + pkcaNube(244, 60, 0.45, '#2a3a5a', '#e9b949');
+  c += '<circle cx="150" cy="150" r="140" fill="url(#luz)"/>';
+  /* las terrazas, abajo */
+  for (i = 0; i < 4; i++) { var y = 262 + i * 22; c += '<path d="M14 ' + (y + 6) + ' Q90 ' + (y - 8) + ' 150 ' + (y + 2) + ' Q220 ' + (y + 12) + ' 286 ' + y + ' V340 H14 Z" fill="' + ['#4a8a3a', '#3f7a32', '#346a2a', '#2a5a24'][i] + '" stroke="#1a3a14" stroke-width="1.4"/>'; }
+  /* el halo de llamas y la figura de Dewi Sri hecha de hoja (cili): cabeza en abanico, cara, brazos y la falda en triángulos */
+  c += pkcaLlamas(150, 140, 74, 20, 'url(#oroV)', '#6b3f0c', 0, 30);
+  c += '<circle cx="150" cy="140" r="74" fill="#22305a" stroke="url(#oro)" stroke-width="4"/>';
+  c += '<g fill="#efe78a" stroke="#7a7420" stroke-width="1.4" stroke-linejoin="round">';
+  c += pkcaAbanico(150, 104, 6, 34, -1.2, 1.2, 9).replace(/url\(#oroV\)/g, '#efe78a').replace(/#5a3608/g, '#7a7420');
+  c += '<path d="M138 104 Q150 94 162 104 Q166 122 150 128 Q134 122 138 104 Z"/>';
+  c += '<path d="M150 128 L134 140 L118 132 L122 146 L136 150 L150 142 L164 150 L178 146 L182 132 L166 140 Z"/>';
+  c += '<path d="M150 142 L124 200 L176 200 Z"/><path d="M150 168 L116 232 L184 232 Z"/>';
+  c += '</g>';
+  c += '<g fill="none" stroke="#a8a03a" stroke-width="1.2"><path d="M150 146 V198 M150 172 V230 M136 186 L164 186 M130 214 L170 214"/></g>';
+  c += '<g fill="#d8312a"><circle cx="150" cy="112" r="2.4"/><circle cx="150" cy="186" r="2.6"/><circle cx="150" cy="214" r="2.8"/></g>';
+  c += '<path d="M144 112 q6 4 12 0" fill="none" stroke="#7a7420" stroke-width="1.2"/><circle cx="145" cy="108" r="1.2" fill="#3a3a10"/><circle cx="155" cy="108" r="1.2" fill="#3a3a10"/>';
+  /* las espigas doradas que se doblan a los lados */
+  function espiga(x, y, h, sd) {
+    var t = '<path d="M' + x + ' ' + y + ' Q' + (x + sd * 6) + ' ' + (y - h * 0.6) + ' ' + (x + sd * 26) + ' ' + (y - h) + '" fill="none" stroke="#c9a23a" stroke-width="2"/>';
+    for (var k = 0; k < 7; k++) { var tt = 0.55 + k * 0.065, gx = x + sd * 26 * tt * tt, gy = y - h * tt; t += '<ellipse cx="' + pkcaN(gx + sd * 4) + '" cy="' + pkcaN(gy + 2) + '" rx="2.2" ry="4" transform="rotate(' + (sd * 40) + ' ' + pkcaN(gx + sd * 4) + ' ' + pkcaN(gy + 2) + ')" fill="#f2c14e" stroke="#8a6a1a" stroke-width=".6"/>'; }
+    return t;
+  }
+  for (i = 0; i < 6; i++) { c += espiga(30 + i * 9, 300, 90 + i * 6, 1) + espiga(270 - i * 9, 300, 90 + i * 6, -1); }
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="150" cy="60" r="4"/><circle cx="96" cy="130" r="2.4"/><circle cx="204" cy="130" r="2.4"/></g>';
+  return pkcaSVG('comida', ['#0e1430', '#3a3a6a'], c, { luz: '#ffe9a8' });
+};
+
 /* ---------- el cromo, con su lámina ---------- */
 if (PKCA.vivo) {
   var pkoCromoHTMLPKCA = pkoCromoHTML;
@@ -121114,7 +121353,10 @@ if (PKCA.vivo) {
       '.pko-cromo.pkca b.largo{font-size:max(6.5px,7.4cqw);top:82.6%}.pko-cromo.pkca b.mlargo{font-size:max(6.5px,6.2cqw);top:83.2%;left:7%;right:7%}' +
       '.pko-cromo.pkca small{position:absolute;left:9%;right:9%;top:89.8%;color:#f6d7e4;font:800 6px/1 system-ui,sans-serif;font-size:6cqw;text-shadow:0 1px 0 #2a1608;white-space:nowrap;overflow:hidden}' +
       '.pko-cromo.pkca::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,245,210,.32) 45%,transparent 60%);background-size:250% 100%;background-position:120% 0;pointer-events:none}' +
-      '.pko-cromo.pkca.gira::after,.pko-cromo.pkca.gr::after{animation:pkcaBrillo 2.6s ease-in-out .5s infinite}@keyframes pkcaBrillo{0%{background-position:120% 0}55%,100%{background-position:-60% 0}}';
+      '.pko-cromo.pkca.gira::after,.pko-cromo.pkca.gr::after{animation:pkcaBrillo 2.6s ease-in-out .5s infinite}@keyframes pkcaBrillo{0%{background-position:120% 0}55%,100%{background-position:-60% 0}}' +
+      '.pko-cromo.nada{background:radial-gradient(circle at 50% 45%,#3a2058 0,#1a0e2a 70%)!important;border:3px solid #d9a640!important;box-shadow:inset 0 0 0 3px #1a0e2a,inset 0 0 0 4.5px rgba(242,193,78,.55),0 3px 0 #2a1a0c!important;opacity:1!important;border-radius:6%/4.5%}' +
+      '.pko-cromo.nada i{color:#f2c14e!important;font:900 34px/1 Georgia,serif!important;text-shadow:0 0 10px rgba(242,193,78,.6)}' +
+      '.pko-cromo.pkca{container-name:pkca}@container pkca (max-width:100px){.pko-cromo.pkca small{display:none}.pko-cromo.pkca b,.pko-cromo.pkca b.largo,.pko-cromo.pkca b.mlargo{top:85%}}';
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   })();
 }
