@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v29</title>
+<title>Bali Rush Poki v30</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v29 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v30 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -119275,6 +119275,99 @@ if (PGX.vivo) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza nucleo/694_poki_abierto_plano.js*/
+/* ================================================================
+   POKI V30 · TODO ABIERTO, Y LOS SITIOS DEL PLAYGROUND EN EL PLANO
+   Jose Javier (25-10-2026): «los sitios a donde ir deben estar
+   señalados en el mapa con halo, y deja todo abierto, no bloquees».
+   - TODO ABIERTO (PKAB): todas las carreras, todo lo de «Con la moto»
+     y «Complementos» y todas las motos del taller (las motos se siguen
+     pagando con flores: eso no es un candado). Se enciende el «todo
+     abierto» del juego completo (613, ABRE: Poki lo tenía apagado) y
+     se quitan las reglas de Poki de «tras la carrera n» (pokAbre) y
+     las de las motos (pkbAbierta). No toca el guardado: «la carrera
+     que toca» sigue siendo la primera sin ganar.
+   - EL PLANO DEL PLAYGROUND (PGMP): lo que toca (adónde llevar el
+     encargo, o adónde ir a por él), con su dibujo y un halo dorado
+     que late; si queda fuera del plano, en el borde, señalando hacia
+     dónde. Y los sitios para jugar, con su dibujo y su halo de color:
+     🔧 el taller, 👕 la tienda, 🏁 la minicarrera, 🌴 la tirolina,
+     🌙 Pitik Nightmare, 🚦 la autoescuela, 🚀 la súper rampa (los que
+     caben en el plano).
+   PKAB.vivo = false (o ?nopkab): con los candados de la v29.
+   PGMP.vivo = false (o ?nopgmp): el plano de la v29.
+   ================================================================ */
+var PKAB = { vivo: POK.vivo && !/[?&#]nopkab/.test(location.search + location.hash) };
+if (PKAB.vivo) {
+  if (typeof ABRE !== 'undefined') ABRE.vivo = true;
+  var pokAjustaPKAB = pokAjusta;
+  pokAjusta = function () { pokAjustaPKAB.apply(this, arguments); if (typeof ABRE !== 'undefined') ABRE.vivo = true; };
+  pokAbre = function () { return true; };
+  if (typeof pkbAbierta === 'function') pkbAbierta = function () { return true; };
+}
+
+var PGMP = {
+  vivo: PGD.vivo && !/[?&#]nopgmp/.test(location.search + location.hash),
+  col: { taller: '#4fc3f7', tienda: '#ff7eb3', carrera: '#3ee070', tiro: '#c9a0e8', pesadilla: '#9b8cff', carne: '#ff9f43', rampa: '#ffd23f' },
+  spr: {}
+};
+function pgmpSitios() {                                                      // los sitios para jugar: [clave, x, y, dibujo]
+  var L = [];
+  if (typeof PGB !== 'undefined' && PGB.vivo) { L.push(['taller', PGB.taller.rx, PGB.taller.ry, '🔧']); L.push(['tienda', PGB.tienda.rx, PGB.tienda.ry, '👕']); }
+  if (typeof PGC !== 'undefined' && PGC.vivo) L.push(['carrera', PGC.aro.x, PGC.aro.y, '🏁']);
+  if (typeof PG6 !== 'undefined' && PG6.vivo) {
+    L.push(['tiro', PG6.portales.tiro.rx, PG6.portales.tiro.ry, '🌴']); L.push(['pesadilla', PG6.portales.pesadilla.rx, PG6.portales.pesadilla.ry, '🌙']);
+    L.push(['carne', PG6.pruebas.conos.ini[0], (PG6.pruebas.conos.y + PG6.pruebas.freno.y) / 2, '🚦']);
+  }
+  if (typeof PGX !== 'undefined' && PGX.vivo) PGX.rampas.forEach(function (R) { if (R.sup) L.push(['rampa', R.x, R.y, '🚀']); });
+  return L;
+}
+function pgmpObjetivo() {                                                    // lo que toca: adónde llevarlo, o adónde ir a por él (sin lo escapado: eso ya va en amarillo)
+  if (!MIS) return null;
+  if (MIS.cur) { var a = PG.tarea && PG_SITIOS[PG.tarea.a]; return { x: MIS.cur.dest.x, y: MIS.cur.dest.y, ico: a ? a.ico : '📍' }; }
+  if (MIS.wait && MIS.wait[0]) { var de = PG.tarea && PG_SITIOS[PG.tarea.de]; return { x: MIS.wait[0].pl.x, y: MIS.wait[0].pl.y, ico: de ? de.ico : '📍', azul: true }; }
+  return null;
+}
+function pgmpHalo(g, x, y, r, col, fase) {                                   // un halo que late
+  var k = 0.5 + 0.5 * Math.sin(G.t * 4 + fase);
+  var gr = g.createRadialGradient(x, y, r * 0.3, x, y, r * (1.25 + 0.35 * k));
+  gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.globalAlpha = 0.55 + 0.3 * k; g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * (1.25 + 0.35 * k), 0, TAU); g.fill();
+  g.globalAlpha = 1;
+}
+function pgmpIco(g, ico, x, y, sz, fondo) {
+  circ(g, x, y, sz * 0.62, fondo || 'rgba(255,253,244,.95)', INK, 1.4);
+  pgEmoji(g, ico, x, y + 0.5, sz);
+}
+if (PGMP.vivo) {
+  var drawMinimapPGMP = drawMinimap;
+  drawMinimap = function (g) {
+    drawMinimapPGMP(g);
+    if (!pgOn() || (typeof PGC !== 'undefined' && PGC.car)) return;
+    var R = 56, cx = V.w - R - 10, cy = 68 + R, sc = 0.055, cs = Math.cos(CAM.yaw), sn = Math.sin(CAM.yaw);
+    function mp(x, y) { var dx = x - P.x, dy = y - P.y; return [cx + (dx * cs - dy * sn) * sc, cy - (dx * sn + dy * cs) * sc]; }
+    g.save(); g.textAlign = 'center'; g.textBaseline = 'middle';
+    pgmpSitios().forEach(function (S, i) {                                   // los sitios para jugar (los que caben)
+      var q = mp(S[1], S[2]), dx = q[0] - cx, dy = q[1] - cy; if (dx * dx + dy * dy > (R - 9) * (R - 9)) return;
+      pgmpHalo(g, q[0], q[1], 10, PGMP.col[S[0]] || '#ffffff', i * 1.3);
+      pgmpIco(g, S[3], q[0], q[1], 10);
+    });
+    var O = pgmpObjetivo();
+    if (O) {                                                                  // lo que toca: grande y dorado (en el borde si queda lejos, señalando hacia allí)
+      var q2 = mp(O.x, O.y), ex = q2[0] - cx, ey = q2[1] - cy, d = Math.hypot(ex, ey), fuera = d > R - 11;
+      if (fuera) { q2[0] = cx + ex / d * (R - 11); q2[1] = cy + ey / d * (R - 11); }
+      pgmpHalo(g, q2[0], q2[1], 13, O.azul ? '#4fc3f7' : '#ffd23f', 0);
+      if (fuera) { g.save(); g.translate(q2[0], q2[1]); g.rotate(Math.atan2(ey, ex)); poly(g, [16, 0, 9, -5, 9, 5], O.azul ? '#4fc3f7' : '#ffd23f', INK, 1.2); g.restore(); }
+      pgmpIco(g, O.ico, q2[0], q2[1], 13, O.azul ? '#d9f1ff' : '#fff3b0');
+    }
+    g.restore();
+  };
+}
+/* (y ningún vídeo sale solo: entrando en Pitik Nightmare por cualquier sitio —también desde el Playground—, sin el vídeo de antes, como desde su baldosa) */
+if (PKAB.vivo) {
+  var menuActPKAB = menuAct;
+  menuAct = function (a) { if (a === 'modo:pesadilla' || a === 'modo:pollito') { SAVE.pelis = SAVE.pelis || {}; SAVE.pelis.pesadilla = 1; } return menuActPKAB(a); };
+}
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
