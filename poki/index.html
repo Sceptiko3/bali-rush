@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v33</title>
+<title>Bali Rush Poki v34</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v33 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v34 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -120146,6 +120146,477 @@ if (PGMX.vivo) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
+/*#pieza nucleo/700_poki_cromos_arte.js*/
+/* ================================================================
+   POKI V34 · LOS CROMOS, DIBUJADOS (místicos y currados)
+   Jose Javier (25-10-2026), viendo el cromo del Barong (un emoji de
+   león): «los dibujos más místicos y currados, busca en internet».
+   - Cada cromo es ahora una LÁMINA dibujada (SVG propio, hecho a partir
+     de cómo son de verdad: la máscara del Barong Ket, el canang sari con
+     sus flores por los puntos cardinales, el penjor de Galungan…; nada
+     copiado de fotos ni de cuadros), con el aire de las pinturas de
+     Kamasan: cielo de noche, nubes en espiral (awan-awanan) con el
+     borde dorado, estrellas, un halo de llamas doradas detrás de lo
+     importante y un MARCO DORADO con sus esquinas de hojas (patra) y la
+     piedra del color de su página arriba. El nombre va en su cinta.
+   - Se pintan como imagen (data:image/svg+xml): ligeras, sin chocar
+     unas con otras, y la primera vez se guardan (PKCA.cache).
+   - Por partes: v34, la página de COSTUMBRES (Barong, canang sari,
+     penjor, ogoh-ogoh, Nyepi, kecak y la cometa janggan); los demás
+     siguen con su dibujo de antes hasta su versión.
+   PKCA.vivo = false (o ?nopkca): los cromos como la v33.
+   ================================================================ */
+var PKCA = { vivo: PKO.vivo && !/[?&#]nopkca/.test(location.search + location.hash), cache: {}, arte: {} };
+
+/* ---------- lo de todas las láminas: el cielo, las nubes, las estrellas, el halo y el marco ---------- */
+var PKCA_PAG = { animales: ['#2f8f4e', '#9fe08a'], comida: ['#c8682a', '#ffc27a'], lugares: ['#2b7fae', '#9fdcf2'], costumbres: ['#b23a68', '#ffb3cf'] };
+function pkcaRnd(s) { var x = 0; for (var i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) % 2147483647; return function () { x = (x * 48271) % 2147483647; return x / 2147483647; }; }
+function pkcaN(v) { return Math.round(v * 10) / 10; }
+function pkcaNube(x, y, s, col, oro) {                                      // una nube de Kamasan: lóbulos con el contorno dorado (solo por fuera) y su espiral
+  var L = [[-1.1, 0.25, 0.55], [-0.45, -0.25, 0.75], [0.35, -0.15, 0.7], [1.05, 0.25, 0.5]], h = '', q = '', k = s * 40;
+  L.forEach(function (l) { var cx = x + l[0] * k, cy = y + l[1] * k, rr = l[2] * k; h += '<circle cx="' + pkcaN(cx) + '" cy="' + pkcaN(cy) + '" r="' + pkcaN(rr) + '"/>';
+    q += '<path d="M' + pkcaN(cx + rr * 0.55) + ' ' + pkcaN(cy) + 'a' + pkcaN(rr * 0.55) + ' ' + pkcaN(rr * 0.55) + ' 0 1 1 ' + pkcaN(-rr * 0.55) + ' ' + pkcaN(-rr * 0.55) + 'a' + pkcaN(rr * 0.3) + ' ' + pkcaN(rr * 0.3) + ' 0 1 1 ' + pkcaN(-rr * 0.25) + ' ' + pkcaN(rr * 0.35) + '"/>'; });
+  h += '<rect x="' + pkcaN(x - 1.5 * k) + '" y="' + pkcaN(y + 0.12 * k) + '" width="' + pkcaN(2.95 * k) + '" height="' + pkcaN(0.68 * k) + '" rx="' + pkcaN(0.34 * k) + '"/>';
+  return '<g fill="' + oro + '" stroke="' + oro + '" stroke-width="' + pkcaN(4.4 * s) + '">' + h + '</g><g fill="' + col + '">' + h + '</g>' +
+    '<g fill="none" stroke="' + oro + '" stroke-width="' + pkcaN(1.6 * s) + '" stroke-linecap="round" opacity=".9">' + q + '</g>';
+}
+function pkcaEstrellas(r, n, y1, col) {
+  var h = '', i;
+  for (i = 0; i < n; i++) {
+    var x = 18 + r() * 264, y = 18 + r() * (y1 - 18), s = 0.6 + r() * 1.6;
+    if (r() < 0.22) h += '<path d="M' + pkcaN(x) + ' ' + pkcaN(y - s * 3) + 'L' + pkcaN(x + s * 0.7) + ' ' + pkcaN(y - s * 0.7) + 'L' + pkcaN(x + s * 3) + ' ' + pkcaN(y) + 'L' + pkcaN(x + s * 0.7) + ' ' + pkcaN(y + s * 0.7) + 'L' + pkcaN(x) + ' ' + pkcaN(y + s * 3) + 'L' + pkcaN(x - s * 0.7) + ' ' + pkcaN(y + s * 0.7) + 'L' + pkcaN(x - s * 3) + ' ' + pkcaN(y) + 'L' + pkcaN(x - s * 0.7) + ' ' + pkcaN(y - s * 0.7) + 'Z" fill="' + col + '"/>';
+    else h += '<circle cx="' + pkcaN(x) + '" cy="' + pkcaN(y) + '" r="' + pkcaN(s * 0.7) + '" fill="' + col + '" opacity="' + pkcaN(0.5 + r() * 0.5) + '"/>';
+  }
+  return h;
+}
+function pkcaLlamas(cx, cy, R, n, col, borde, giro, alto) {                // el halo de llamas (prabha): llamas con su rizo, alrededor (cada una, la misma llama girada)
+  var k = (alto || 34) / 34, h = '', v = '', i;
+  var LL = 'M-9 0C-13-12-4-19-6-29C-5-36 4-39 7-33C3-33 0-29 2-25C11-17 13-8 9 0Z', VV = 'M-3-2C-6-10 0-16-1-24';
+  for (i = 0; i < n; i++) {
+    var g = ((giro || 0) + i / n * Math.PI * 2) * 57.2958 + 90, t = 'translate(' + cx + ' ' + cy + ') rotate(' + pkcaN(g) + ') translate(0 ' + (-R) + ') scale(' + pkcaN(k * (i % 2 ? 0.8 : 1)) + ')';
+    h += '<path transform="' + t + '" d="' + LL + '"/>'; v += '<path transform="' + t + '" d="' + VV + '"/>';
+  }
+  return '<g fill="' + col + '" stroke="' + borde + '" stroke-width="1.3" stroke-linejoin="round">' + h + '</g><g fill="none" stroke="' + borde + '" stroke-width="1" stroke-linecap="round" opacity=".7">' + v + '</g>';
+}
+function pkcaAbanico(cx, cy, r0, r1, a0, a1, n) {                        // un abanico dorado (corona), con llamas en el borde
+  function P(an, rr) { return pkcaN(cx + Math.sin(an) * rr) + ' ' + pkcaN(cy - Math.cos(an) * rr); }
+  var h = '<path d="M' + P(a0, r0) + 'L' + P(a0, r1) + 'A' + r1 + ' ' + r1 + ' 0 0 1 ' + P(a1, r1) + 'L' + P(a1, r0) + 'A' + r0 + ' ' + r0 + ' 0 0 0 ' + P(a0, r0) + 'Z" fill="url(#oroV)" stroke="#5a3608" stroke-width="1.8"/>', f = '', i;
+  for (i = 0; i <= n; i++) { var an = a0 + (a1 - a0) * i / n; f += '<path transform="translate(' + cx + ' ' + cy + ') rotate(' + pkcaN(an * 57.2958) + ') translate(0 ' + (-r1 + 3) + ') scale(' + (i % 2 ? 0.8 : 1.05) + ')" d="M-9 0C-13-12-4-19-6-29C-5-36 4-39 7-33C3-33 0-29 2-25C11-17 13-8 9 0Z"/>'; }
+  return '<g fill="url(#oroV)" stroke="#5a3608" stroke-width="1.4" stroke-linejoin="round">' + f + '</g>' + h;
+}
+function pkcaRizo(x, y, r, a, col, w) {                                        // un rizo (espiral) suelto, para los adornos
+  var d = 'M' + pkcaN(x) + ' ' + pkcaN(y), k;
+  for (k = 1; k <= 14; k++) { var t = k / 14, an = a + t * Math.PI * 2.2, rr = r * (1 - t * 0.8); d += 'L' + pkcaN(x + Math.cos(an) * rr - Math.cos(a) * r) + ' ' + pkcaN(y + Math.sin(an) * rr - Math.sin(a) * r); }
+  return '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w || 1.6) + '" stroke-linecap="round" stroke-linejoin="round"/>';
+}
+function pkcaPelo(r, x0, y0, x1, y1, n, col, sombra, ancho, onda) {         // un mechón de pelo o de fibras: n hebras onduladas de (x0, y0) a (x1, y1)
+  var h = '', h2 = '', i;
+  for (i = 0; i < n; i++) {
+    var t = n > 1 ? i / (n - 1) : 0.5, ax = x0[0] + (x0[1] - x0[0]) * t, ay = y0[0] + (y0[1] - y0[0]) * t, bx = x1[0] + (x1[1] - x1[0]) * t + (r() - 0.5) * 12, by = y1[0] + (y1[1] - y1[0]) * t + (r() - 0.5) * 16;
+    var o = (onda || 10) * (0.6 + r() * 0.6), f = r() * 6.28, dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    var c1x = ax + dx * 0.33 + nx * o * Math.sin(f), c1y = ay + dy * 0.33 + ny * o * Math.sin(f), c2x = ax + dx * 0.66 - nx * o * Math.sin(f + 1.3), c2y = ay + dy * 0.66 - ny * o * Math.sin(f + 1.3);
+    var d = 'M' + pkcaN(ax) + ' ' + pkcaN(ay) + 'C' + pkcaN(c1x) + ' ' + pkcaN(c1y) + ' ' + pkcaN(c2x) + ' ' + pkcaN(c2y) + ' ' + pkcaN(bx) + ' ' + pkcaN(by);
+    if (i % 3 === 0) h2 += '<path d="' + d + '"/>'; else h += '<path d="' + d + '"/>';
+  }
+  return '<g fill="none" stroke-linecap="round"><g stroke="' + sombra + '" stroke-width="' + pkcaN((ancho || 3) + 1.2) + '">' + h + h2 + '</g><g stroke="' + col + '" stroke-width="' + (ancho || 3) + '">' + h + h2 + '</g><g stroke="#ffffff" stroke-opacity=".6" stroke-width="' + pkcaN((ancho || 3) * 0.4) + '">' + h2 + '</g></g>';
+}
+function pkcaFlor(x, y, s, col, cen, n) {                                    // una flor de cinco (o n) pétalos
+  var h = '', k, m = n || 5;
+  for (k = 0; k < m; k++) { var a = k / m * Math.PI * 2 - Math.PI / 2, px = x + Math.cos(a) * s * 0.9, py = y + Math.sin(a) * s * 0.9; h += '<ellipse cx="' + pkcaN(px) + '" cy="' + pkcaN(py) + '" rx="' + pkcaN(s * 0.85) + '" ry="' + pkcaN(s * 0.55) + '" transform="rotate(' + pkcaN(a * 57.3) + ' ' + pkcaN(px) + ' ' + pkcaN(py) + ')"/>'; }
+  return '<g fill="' + col + '" stroke="rgba(60,30,10,.55)" stroke-width="' + pkcaN(s * 0.12) + '">' + h + '</g><circle cx="' + pkcaN(x) + '" cy="' + pkcaN(y) + '" r="' + pkcaN(s * 0.42) + '" fill="' + (cen || '#f2c14e') + '"/>';
+}
+function pkcaHumo(x, y, alto, lado, op) {                                     // una voluta de humo de incienso
+  var d = 'M' + x + ' ' + y, k, px = x, py = y;
+  for (k = 1; k <= 4; k++) { var nx = x + Math.sin(k * 1.7) * 14 * lado, ny = y - alto * k / 4; d += 'Q' + pkcaN(px + lado * 16 * (k % 2 ? 1 : -1)) + ' ' + pkcaN((py + ny) / 2) + ' ' + pkcaN(nx) + ' ' + pkcaN(ny); px = nx; py = ny; }
+  return '<path d="' + d + '" fill="none" stroke="#efe6ff" stroke-opacity="' + (op || 0.35) + '" stroke-width="5" stroke-linecap="round" filter="url(#brilla)"/><path d="' + d + '" fill="none" stroke="#fff" stroke-opacity="' + ((op || 0.35) * 0.9) + '" stroke-width="1.2" stroke-linecap="round"/>';
+}
+function pkcaEspejo(x, y, r) { return '<circle cx="' + pkcaN(x) + '" cy="' + pkcaN(y) + '" r="' + pkcaN(r) + '" fill="url(#espejo)" stroke="#6b3f0c" stroke-width="' + pkcaN(r * 0.25) + '"/><circle cx="' + pkcaN(x - r * 0.3) + '" cy="' + pkcaN(y - r * 0.3) + '" r="' + pkcaN(r * 0.28) + '" fill="#fff"/>'; }
+function pkcaEsquina(x, y, sx, sy) {                                         // la hoja (patra) de cada esquina del marco
+  var t = 'translate(' + x + ' ' + y + ') scale(' + sx + ' ' + sy + ')';
+  return '<g transform="' + t + '" fill="url(#oro)" stroke="#5a3608" stroke-width="1.2" stroke-linejoin="round">' +
+    '<path d="M0 0 C 18 2 30 10 34 26 C 26 18 16 16 8 20 C 14 12 8 6 0 8 Z"/>' +
+    '<path d="M0 0 C 2 18 10 30 26 34 C 18 26 16 16 20 8 C 12 14 6 8 8 0 Z"/>' +
+    '<circle cx="7" cy="7" r="5"/></g>';
+}
+function pkcaSVG(pag, cielo, cuerpo, o) {
+  o = o || {};
+  var P = PKCA_PAG[pag] || PKCA_PAG.costumbres;
+  var defs = '<defs>' +
+    '<linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + cielo[0] + '"/><stop offset="1" stop-color="' + cielo[1] + '"/></linearGradient>' +
+    '<linearGradient id="oro" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b8"/><stop offset=".35" stop-color="#f2c14e"/><stop offset=".7" stop-color="#b9781f"/><stop offset="1" stop-color="#f6d36b"/></linearGradient>' +
+    '<linearGradient id="oroV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b8"/><stop offset=".45" stop-color="#f2c14e"/><stop offset="1" stop-color="#a8691a"/></linearGradient>' +
+    '<radialGradient id="luz" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="' + (o.luz || '#ffe9a8') + '" stop-opacity=".85"/><stop offset=".55" stop-color="' + (o.luz || '#ffe9a8') + '" stop-opacity=".25"/><stop offset="1" stop-color="' + (o.luz || '#ffe9a8') + '" stop-opacity="0"/></radialGradient>' +
+    '<radialGradient id="espejo" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#bfe8ff"/><stop offset="1" stop-color="#3f7fa8"/></radialGradient>' +
+    '<filter id="brilla" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>' +
+    (o.defs || '') + '</defs>';
+  var marco = '<rect x="6" y="6" width="288" height="388" rx="18" fill="none" stroke="url(#oro)" stroke-width="10"/>' +
+    '<rect x="15" y="15" width="270" height="370" rx="11" fill="none" stroke="#5a3608" stroke-width="1.5"/>' +
+    '<rect x="2" y="2" width="296" height="396" rx="21" fill="none" stroke="#2a1608" stroke-width="3"/>' +
+    pkcaEsquina(14, 14, 1, 1) + pkcaEsquina(286, 14, -1, 1) + pkcaEsquina(14, 386, 1, -1) + pkcaEsquina(286, 386, -1, -1) +
+    '<path d="M150 4 L162 16 L150 28 L138 16 Z" fill="' + P[0] + '" stroke="url(#oro)" stroke-width="4"/><path d="M150 10 L156 16 L150 22 L144 16 Z" fill="' + P[1] + '" opacity=".85"/>' +
+    '<path d="M24 322 H276 V376 Q276 382 270 382 H30 Q24 382 24 376 Z" fill="#1e1024" stroke="url(#oro)" stroke-width="2.5"/>' +
+    '<path d="M40 330 H260" stroke="url(#oro)" stroke-width="1" opacity=".6"/>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400">' + defs +
+    '<rect x="6" y="6" width="288" height="388" rx="18" fill="url(#cielo)"/>' + cuerpo + marco + '</svg>';
+}
+function pkcaImg(id) {                                                        // la lámina de un cromo, como imagen (o null si aún no tiene)
+  if (PKCA.cache[id]) return PKCA.cache[id];
+  var f = PKCA.arte[id]; if (!f) return null;
+  var s = ''; try { s = f(); } catch (e) { return null; }
+  return (PKCA.cache[id] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s));
+}
+
+/* ================================================================
+   COSTUMBRES
+   ================================================================ */
+/* el Barong Ket: la máscara de frente, roja, con los ojos saltones de aro de oro, la boca abierta con colmillos, la corona alta de oro con
+   espejitos, las orejas de hoja, la barba de pelo con dos filas de flores blancas, y su melena blanca a los lados; detrás, el halo de llamas */
+PKCA.arte.barong = function () {
+  var r = pkcaRnd('barong'), c = '', i, j, a, L;
+  var defs = '<radialGradient id="cara" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#f0603f"/><stop offset=".55" stop-color="#c8372d"/><stop offset="1" stop-color="#7c1a12"/></radialGradient>' +
+    '<radialGradient id="ojo" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f6efd8"/><stop offset="1" stop-color="#cdbd94"/></radialGradient>' +
+    '<radialGradient id="fondoB" cx=".5" cy=".42" r=".6"><stop offset="0" stop-color="#6a2f7a"/><stop offset=".6" stop-color="#3a1d52"/><stop offset="1" stop-color="#1c0f33"/></radialGradient>';
+  c += '<circle cx="150" cy="170" r="160" fill="url(#luz)"/>';
+  c += pkcaEstrellas(r, 30, 140, '#fff4c8');
+  c += pkcaNube(50, 66, 0.55, '#33236a', '#e9b949') + pkcaNube(258, 52, 0.48, '#33236a', '#e9b949');
+  /* el halo: dos coronas de llamas y el disco de detrás */
+  c += pkcaLlamas(150, 168, 112, 22, '#d9862a', '#6b3f0c', 0.14, 30);
+  c += pkcaLlamas(150, 168, 102, 22, 'url(#oroV)', '#6b3f0c', 0, 36);
+  c += '<circle cx="150" cy="168" r="100" fill="url(#fondoB)" stroke="url(#oro)" stroke-width="4"/>';
+  c += '<circle cx="150" cy="168" r="91" fill="none" stroke="#e9b949" stroke-width="1" stroke-dasharray="2 5" opacity=".7"/>';
+  /* la melena: las fibras blancas del cuerpo, cayendo a los lados */
+  c += '<path d="M96 140 C 60 170 46 250 48 334 L 112 334 Q 96 240 104 170 Z" fill="#e8dcc0" opacity=".9"/><path d="M204 140 C 240 170 254 250 252 334 L 188 334 Q 204 240 196 170 Z" fill="#e8dcc0" opacity=".9"/>';
+  c += pkcaPelo(r, [100, 84], [136, 186], [92, 44], [318, 336], 34, '#f6efdc', '#9c8a66', 2.2, 9);
+  c += pkcaPelo(r, [200, 216], [136, 186], [208, 256], [318, 336], 34, '#f6efdc', '#9c8a66', 2.2, 9);
+  /* la corona (gelungan): un abanico de cuero dorado con llamas en el borde, filigrana, espejitos y piedras rojas */
+  c += pkcaAbanico(150, 140, 30, 88, -1.22, 1.22, 13);
+  var ar = '';
+  [52, 70].forEach(function (rr) { ar += '<path d="M' + pkcaN(150 + Math.sin(-1.15) * rr) + ' ' + pkcaN(140 - Math.cos(-1.15) * rr) + 'A' + rr + ' ' + rr + ' 0 0 1 ' + pkcaN(150 + Math.sin(1.15) * rr) + ' ' + pkcaN(140 - Math.cos(1.15) * rr) + '"/>'; });
+  c += '<g fill="none" stroke="#7a4a10" stroke-width="1.6">' + ar + '</g>';
+  for (a = -1.0; a <= 1.01; a += 0.25) c += pkcaEspejo(150 + Math.sin(a) * 61, 140 - Math.cos(a) * 61, 4.4);
+  for (a = -1.1; a <= 1.11; a += 0.275) c += '<circle cx="' + pkcaN(150 + Math.sin(a) * 79) + '" cy="' + pkcaN(140 - Math.cos(a) * 79) + '" r="3" fill="#d8312a" stroke="#5a3608" stroke-width=".8"/>';
+  for (a = -0.9; a <= 0.91; a += 0.45) c += pkcaRizo(150 + Math.sin(a) * 42, 140 - Math.cos(a) * 42, 4.5, a, '#7a4a10', 1.4);
+  c += pkcaEspejo(150, 82, 7) + '<circle cx="150" cy="82" r="9.5" fill="none" stroke="#7a4a10" stroke-width="2"/>';
+  /* la diadema */
+  c += '<path d="M92 128 Q150 98 208 128 L203 146 Q150 120 97 146 Z" fill="url(#oro)" stroke="#5a3608" stroke-width="1.8"/>';
+  for (i = 0; i < 7; i++) { var dx = 106 + i * 14.7, dy = 129 - Math.sin((i + 0.5) / 7 * Math.PI) * 10; c += i % 2 ? pkcaEspejo(dx, dy + 2, 3.6) : '<circle cx="' + pkcaN(dx) + '" cy="' + pkcaN(dy + 2) + '" r="3.4" fill="#d8312a" stroke="#5a3608" stroke-width=".9"/>'; }
+  /* las orejas de hoja, con su flor */
+  c += '<g fill="url(#oro)" stroke="#5a3608" stroke-width="1.6"><path d="M100 152 C 74 128 50 142 58 172 C 66 162 78 164 98 182 Z"/><path d="M200 152 C 226 128 250 142 242 172 C 234 162 222 164 202 182 Z"/></g>';
+  c += pkcaRizo(76, 156, 6, 0.5, '#7a4a10', 1.4) + pkcaRizo(224, 156, 6, 2.6, '#7a4a10', 1.4);
+  c += pkcaFlor(64, 150, 6, '#fffaf0') + pkcaFlor(236, 150, 6, '#fffaf0');
+  /* la cara roja, ancha */
+  c += '<path d="M98 140 Q150 126 202 140 Q216 176 200 212 Q150 228 100 212 Q84 176 98 140 Z" fill="url(#cara)" stroke="#2a0a06" stroke-width="2.6"/>';
+  c += '<g fill="none" stroke="url(#oro)" stroke-width="2.2" stroke-linecap="round" opacity=".95"><path d="M104 190 q-4 -12 6 -18 q8 -4 10 4"/><path d="M196 190 q4 -12 -6 -18 q-8 -4 -10 4"/></g>';
+  /* las cejas: llamitas de oro */
+  c += '<g fill="url(#oroV)" stroke="#5a3608" stroke-width="1.2"><path d="M104 152 Q112 134 132 138 Q142 140 146 150 Q134 144 122 148 Q112 150 104 152 Z"/><path d="M196 152 Q188 134 168 138 Q158 140 154 150 Q166 144 178 148 Q188 150 196 152 Z"/></g>';
+  /* los ojos saltones: aro de oro, el ojo blanco, la niña oscura y el párpado */
+  [[125, 168, 1], [175, 168, -1]].forEach(function (e) {
+    c += '<circle cx="' + e[0] + '" cy="' + e[1] + '" r="19" fill="url(#oro)" stroke="#2a0a06" stroke-width="2.2"/>';
+    c += '<circle cx="' + e[0] + '" cy="' + e[1] + '" r="14.5" fill="url(#ojo)" stroke="#6b3f0c" stroke-width="1"/>';
+    c += '<circle cx="' + (e[0] + e[2] * 2.5) + '" cy="' + (e[1] + 1) + '" r="7.5" fill="#5a1208"/><circle cx="' + (e[0] + e[2] * 2.5) + '" cy="' + (e[1] + 1) + '" r="5" fill="#120804"/>';
+    c += '<circle cx="' + (e[0] + e[2] * 0.5) + '" cy="' + (e[1] - 2.5) + '" r="2.4" fill="#fff"/>';
+    c += '<path d="M' + (e[0] - 16) + ' ' + (e[1] - 6) + ' Q' + e[0] + ' ' + (e[1] - 22) + ' ' + (e[0] + 16) + ' ' + (e[1] - 6) + '" fill="none" stroke="#2a0a06" stroke-width="2.2"/>';
+  });
+  /* la nariz ancha con las aletas de oro */
+  c += '<path d="M136 178 Q150 168 164 178 Q174 190 162 196 Q150 191 138 196 Q126 190 136 178 Z" fill="#a82a22" stroke="#2a0a06" stroke-width="1.8"/>';
+  c += '<g fill="url(#oro)" stroke="#5a3608" stroke-width=".9"><path d="M131 190 q5 -9 13 -3 q-6 1 -7 8 z"/><path d="M169 190 q-5 -9 -13 -3 q6 1 7 8 z"/></g><g fill="#2a0a06"><ellipse cx="143" cy="190" rx="3.2" ry="2.1"/><ellipse cx="157" cy="190" rx="3.2" ry="2.1"/></g>';
+  /* la boca: labio de oro, la lengua, los dientes y los colmillos curvos */
+  c += '<path d="M106 202 Q150 194 194 202 Q190 246 150 250 Q110 246 106 202 Z" fill="#2a0a06" stroke="url(#oro)" stroke-width="4.5"/>';
+  c += '<path d="M124 228 Q150 246 176 228 Q170 246 150 248 Q130 246 124 228 Z" fill="#d84a3e"/><path d="M150 232 v12" stroke="#a82a22" stroke-width="1.4"/>';
+  c += '<g fill="#fffdf2" stroke="#6b5a4a" stroke-width=".8">';
+  for (i = 0; i < 6; i++) c += '<rect x="' + pkcaN(128 + i * 7.6) + '" y="203" width="6.8" height="9" rx="1.6"/>';
+  c += '<path d="M112 204 Q118 214 116 228 Q122 218 122 204 Z"/><path d="M188 204 Q182 214 184 228 Q178 218 178 204 Z"/><path d="M124 244 Q126 230 132 224 Q130 234 132 242 Z"/><path d="M176 244 Q174 230 168 224 Q170 234 168 242 Z"/></g>';
+  /* la barba de pelo dorado, con dos filas de flores blancas y el espejo redondo */
+  c += '<path d="M114 244 Q150 252 186 244 Q192 300 178 334 L122 334 Q108 300 114 244 Z" fill="#c98f2c"/>';
+  c += pkcaPelo(r, [116, 184], [244, 244], [116, 184], [322, 336], 30, '#efc25a', '#8a5a12', 2.6, 7);
+  [[124, 268], [141, 272], [159, 272], [176, 268], [130, 292], [146, 296], [154, 296], [170, 292]].forEach(function (f) { c += pkcaFlor(f[0], f[1], 4.6, '#fffaf0'); });
+  c += pkcaEspejo(150, 252, 7.5) + '<circle cx="150" cy="252" r="10" fill="none" stroke="url(#oro)" stroke-width="3"/>';
+  /* el humo del incienso y unas chispas */
+  c += pkcaHumo(40, 312, 120, 1, 0.3) + pkcaHumo(262, 312, 110, -1, 0.3);
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="150" cy="22" r="4"/><circle cx="58" cy="122" r="3"/><circle cx="244" cy="118" r="3"/></g>';
+  return pkcaSVG('costumbres', ['#120b2a', '#43204a'], c, { luz: '#ffcf6a', defs: defs });
+};
+
+/* el canang sari: la bandejita de hoja de coco (vista desde arriba, de lado), con las flores por los puntos cardinales —blanco al este, rojo al
+   sur, amarillo al oeste, azul al norte—, en medio el porosan y la moneda (kepeng), y la varita de incienso con su humo que sube en espiral */
+PKCA.arte.canang = function () {
+  var r = pkcaRnd('canang'), c = '', i, k;
+  var defs = '<linearGradient id="hoja" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9ec8a"/><stop offset="1" stop-color="#a9b83c"/></linearGradient>' +
+    '<linearGradient id="piedra" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f6a78"/><stop offset="1" stop-color="#3a3644"/></linearGradient>';
+  c += pkcaEstrellas(r, 24, 150, '#fff4c8');
+  c += pkcaNube(240, 70, 0.55, '#2b3d6e', '#e9b949') + pkcaNube(60, 110, 0.42, '#2b3d6e', '#e9b949');
+  /* el altar de piedra: tres escalones */
+  c += '<path d="M30 258 H270 V340 H30 Z" fill="url(#piedra)" stroke="#1d1a24" stroke-width="2"/><path d="M50 238 H250 V258 H50 Z" fill="#7a7584" stroke="#1d1a24" stroke-width="2"/><path d="M30 258 H270" stroke="#9a95a6" stroke-width="2"/>';
+  for (i = 0; i < 6; i++) c += '<path d="M' + (44 + i * 42) + ' 300 h26 M' + (60 + i * 42) + ' 318 h22" stroke="#2a2632" stroke-width="2" opacity=".5"/>';
+  for (i = 0; i < 9; i++) c += pkcaRizo(46 + i * 26, 278, 6, i % 2 ? 0.6 : 3.7, '#a9a3b6', 1.6);
+  c += '<path d="M30 266 H270 M30 290 H270" stroke="#2a2632" stroke-width="1.6" opacity=".6"/><path d="M30 336 Q80 326 120 336 M190 336 Q230 328 270 336" stroke="#4f7a3a" stroke-width="5" opacity=".7"/>';
+  c += '<ellipse cx="150" cy="232" rx="120" ry="40" fill="url(#luz)"/>';
+  /* la bandeja: un rombo de hoja con su borde recortado en picos */
+  var cx = 150, cy = 214, A = 100, B = 47, H = 14;
+  c += '<path d="M' + (cx - A) + ' ' + cy + 'L' + cx + ' ' + (cy - B) + 'L' + (cx + A) + ' ' + cy + 'L' + cx + ' ' + (cy + B) + 'Z" fill="#8d9c2c" transform="translate(0 ' + H + ')"/>';
+  c += '<path d="M' + (cx - A) + ' ' + cy + 'L' + cx + ' ' + (cy + B) + 'L' + (cx + A) + ' ' + cy + 'L' + (cx + A) + ' ' + (cy + H) + 'L' + cx + ' ' + (cy + B + H) + 'L' + (cx - A) + ' ' + (cy + H) + 'Z" fill="url(#hoja)" stroke="#5f6c18" stroke-width="1.6"/>';
+  var pic = '';
+  for (k = 0; k < 10; k++) { var t = k / 10, x1 = cx - A + A * t, y1 = cy + B * t, x2 = cx - A + A * (t + 0.1), y2 = cy + B * (t + 0.1); pic += 'M' + pkcaN(x1) + ' ' + pkcaN(y1 + H) + 'L' + pkcaN((x1 + x2) / 2) + ' ' + pkcaN((y1 + y2) / 2 + H + 6) + 'L' + pkcaN(x2) + ' ' + pkcaN(y2 + H); pic += 'M' + pkcaN(2 * cx - x1) + ' ' + pkcaN(y1 + H) + 'L' + pkcaN(2 * cx - (x1 + x2) / 2) + ' ' + pkcaN((y1 + y2) / 2 + H + 6) + 'L' + pkcaN(2 * cx - x2) + ' ' + pkcaN(y2 + H); }
+  c += '<path d="' + pic + '" fill="#c9d65a" stroke="#5f6c18" stroke-width="1.2" stroke-linejoin="round"/>';
+  c += '<path d="M' + (cx - A) + ' ' + cy + 'L' + cx + ' ' + (cy - B) + 'L' + (cx + A) + ' ' + cy + 'L' + cx + ' ' + (cy + B) + 'Z" fill="#6f7f22" stroke="#5f6c18" stroke-width="1.8"/>';
+  /* el fondo: tiras de pandan */
+  var pan = '';
+  for (i = 0; i < 40; i++) { var px = cx + (r() - 0.5) * A * 1.3, py = cy + (r() - 0.5) * B * 1.2; if (Math.abs(px - cx) / A + Math.abs(py - cy) / B > 0.85) continue; var aa = r() * 6.28; pan += '<path d="M' + pkcaN(px) + ' ' + pkcaN(py) + 'l' + pkcaN(Math.cos(aa) * 12) + ' ' + pkcaN(Math.sin(aa) * 5) + '"/>'; }
+  c += '<g stroke="#3f8f3a" stroke-width="2.4" stroke-linecap="round">' + pan + '</g>';
+  /* las flores, cada color hacia su punto */
+  function monton(x, y, col, cen, n, s) { var h = ''; for (var q = 0; q < n; q++) h += pkcaFlor(x + (r() - 0.5) * 34, y + (r() - 0.5) * 14, s * (0.8 + r() * 0.4), col, cen); return h; }
+  c += monton(cx, cy - B * 0.52, '#4f78e0', '#f5f0c0', 6, 6.2);                // norte: azul
+  c += monton(cx - A * 0.5, cy, '#f6c330', '#e07a1a', 6, 6.4);                // oeste: amarillo
+  c += monton(cx + A * 0.5, cy, '#fffaf0', '#f2c14e', 6, 6.4);                // este: blanco
+  c += monton(cx, cy + B * 0.5, '#d8312a', '#ffd76a', 6, 6.2);                // sur: rojo
+  /* el porosan (hoja doblada) y la moneda con su agujero */
+  c += '<path d="M140 206 L160 206 L150 190 Z" fill="#4f9a3a" stroke="#2c5a1e" stroke-width="1.2"/><circle cx="150" cy="213" r="10" fill="url(#oro)" stroke="#5a3608" stroke-width="1.4"/><rect x="146" y="209" width="8" height="8" fill="#3a2a18"/>';
+  /* la varita de incienso, su brasa y el humo que sube enroscándose hasta una espiral dorada */
+  c += '<path d="M180 212 L210 120" stroke="#6b3a1a" stroke-width="2.4" stroke-linecap="round"/><path d="M196 162 L210 120" stroke="#a8603a" stroke-width="2.6" stroke-linecap="round"/><circle cx="210" cy="119" r="3.4" fill="#ff5a2a" filter="url(#brilla)"/><circle cx="210" cy="119" r="2" fill="#ffd27a"/>';
+  c += '<path d="M210 116 C 196 96 228 86 214 66 C 200 46 232 40 220 22" fill="none" stroke="#f3eeff" stroke-opacity=".45" stroke-width="7" stroke-linecap="round" filter="url(#brilla)"/>';
+  c += '<path d="M210 116 C 196 96 228 86 214 66 C 200 46 232 40 220 22" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.6" stroke-linecap="round"/>';
+  c += pkcaRizo(224, 70, 10, 1.2, '#f2c14e', 1.6) + pkcaRizo(206, 40, 7, 4, '#f2c14e', 1.4);
+  /* flores de frangipani sueltas por el altar */
+  [[54, 250, 1], [246, 250, 1.1], [76, 300, 0.9], [226, 304, 1]].forEach(function (f) { c += pkcaFlor(f[0], f[1], 7 * f[2], '#fffaf0', '#f6c330'); });
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="150" cy="196" r="5" opacity=".8"/><circle cx="96" cy="190" r="2.5"/><circle cx="210" cy="196" r="2.5"/></g>';
+  return pkcaSVG('costumbres', ['#0e1530', '#2a2a55'], c, { luz: '#ffd98a', defs: defs });
+};
+
+/* el penjor: la caña de bambú alta que se curva en la punta, con sus adornos de hoja de coco joven, el sampian colgando, frutas, espigas de
+   arroz y pasteles; abajo, su altarcito con el lamak; detrás, el atardecer, la puerta partida del templo y otro penjor */
+PKCA.arte.penjor = function () {
+  var r = pkcaRnd('penjor'), c = '', i;
+  var defs = '<linearGradient id="bambu" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9a8a3a"/><stop offset=".5" stop-color="#e8d98a"/><stop offset="1" stop-color="#a8963e"/></linearGradient>' +
+    '<linearGradient id="sol" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a0"/><stop offset="1" stop-color="#ff8a3a"/></linearGradient>';
+  c += pkcaEstrellas(r, 14, 90, '#fff4c8');
+  c += '<circle cx="214" cy="236" r="46" fill="url(#sol)" opacity=".95"/><circle cx="214" cy="236" r="70" fill="url(#luz)"/>';
+  c += pkcaNube(80, 150, 0.5, '#7a3a6a', '#f2c14e') + pkcaNube(250, 120, 0.42, '#7a3a6a', '#f2c14e');
+  /* el templo: la puerta partida (candi bentar), en sombra */
+  function mitad(x, sd) {
+    var h = '', w = 30, y = 232;
+    for (var k = 0; k < 6; k++) { var ww = w - k * 4, hh = 14 - k; h += '<rect x="' + (sd > 0 ? x : x - ww) + '" y="' + (y - hh) + '" width="' + ww + '" height="' + hh + '"/>'; y -= hh; }
+    return h + '<rect x="' + (sd > 0 ? x : x - w) + '" y="232" width="' + w + '" height="80"/>';
+  }
+  c += '<g fill="#3a1c3a">' + mitad(196, -1) + mitad(232, 1) + '</g>';
+  c += '<path d="M14 300 Q150 286 286 302 V340 H14 Z" fill="#2a1630"/>';
+  /* otro penjor, lejos */
+  c += '<path d="M262 300 C 262 220 262 170 250 140 Q 240 124 226 132" fill="none" stroke="#5a3a4a" stroke-width="2.4"/><path d="M226 132 v14" stroke="#5a3a4a" stroke-width="1.5"/>';
+  /* el penjor: la caña, de gruesa a fina, con sus nudos */
+  var P = [[78, 330], [80, 250], [86, 170], [98, 104], [124, 62], [166, 48], [206, 62], [228, 92]];
+  function camino(pts) { var d = 'M' + pts[0][0] + ' ' + pts[0][1]; for (var k = 1; k < pts.length - 1; k++) { var mx = (pts[k][0] + pts[k + 1][0]) / 2, my = (pts[k][1] + pts[k + 1][1]) / 2; d += 'Q' + pts[k][0] + ' ' + pts[k][1] + ' ' + mx + ' ' + my; } return d + 'L' + pts[pts.length - 1][0] + ' ' + pts[pts.length - 1][1]; }
+  var D = camino(P);
+  c += '<path d="' + D + '" fill="none" stroke="#5a4a18" stroke-width="10" stroke-linecap="round"/><path d="' + D + '" fill="none" stroke="url(#bambu)" stroke-width="7" stroke-linecap="round"/>';
+  /* los adornos de hoja (janur) a lo largo: lazos y flecos */
+  var sig = '';
+  for (i = 0; i < 9; i++) { var t = i / 9, x = 80 + Math.pow(t, 1.6) * 60 + (t > 0.6 ? (t - 0.6) * 160 : 0), y = 300 - t * 250; if (y < 56) break;
+    sig += '<g transform="translate(' + pkcaN(x) + ' ' + pkcaN(y) + ')"><path d="M0 0 l-12 6 l4 -10 z M0 0 l12 6 l-4 -10 z" fill="#e9e27a" stroke="#7a7420" stroke-width="1"/>' +
+      '<path d="M-3 4 v' + pkcaN(10 + r() * 8) + ' M0 5 v' + pkcaN(12 + r() * 8) + ' M3 4 v' + pkcaN(10 + r() * 8) + '" stroke="#d6cf5a" stroke-width="1.6" stroke-linecap="round"/></g>'; }
+  c += sig;
+  var gan = '';                                                                 // los colgantes de hoja a lo largo de la curva
+  for (i = 0; i < 12; i++) { var tt = 0.18 + i / 11 * 0.8, q1 = Math.pow(1 - tt, 2), q2 = 2 * (1 - tt) * tt, q3 = tt * tt, gx = q1 * 98 + q2 * 150 + q3 * 214, gy = q1 * 104 + q2 * 30 + q3 * 72;
+    if (i % 3 === 1) continue; var Lg = 8 + (i % 2) * 6;
+    gan += '<path d="M' + pkcaN(gx) + ' ' + pkcaN(gy) + ' v' + Lg + '" stroke="#7a7420" stroke-width="1"/><path d="M' + pkcaN(gx) + ' ' + pkcaN(gy + Lg) + ' l-5 4 l5 10 l5 -10 z" fill="#efe78a" stroke="#7a7420" stroke-width="1"/><path d="M' + pkcaN(gx - 2) + ' ' + pkcaN(gy + Lg + 14) + ' v8 M' + pkcaN(gx + 2) + ' ' + pkcaN(gy + Lg + 14) + ' v10" stroke="#d6cf5a" stroke-width="1.3"/>'; }
+  c += gan;
+  c += '<g fill="#efe78a" stroke="#7a7420" stroke-width="1.2"><circle cx="86" cy="196" r="10"/><circle cx="92" cy="136" r="8"/></g><g fill="none" stroke="#a8963e" stroke-width="1.2"><circle cx="86" cy="196" r="6"/><circle cx="92" cy="136" r="4.5"/></g><g fill="#d8312a"><circle cx="86" cy="196" r="2.4"/><circle cx="92" cy="136" r="2"/></g>';
+  /* lo que cuelga de la curva: plátanos, un coco, espigas de arroz y pasteles de colores */
+  function cuelga(x, y, L) { return '<path d="M' + x + ' ' + y + ' v' + L + '" stroke="#7a7420" stroke-width="1.2"/>'; }
+  c += cuelga(118, 70, 22) + '<g fill="#f6d33a" stroke="#7a5a10" stroke-width="1"><path d="M112 92 q6 16 2 22 q-6 -8 -2 -22z"/><path d="M118 92 q6 16 2 22 q-6 -8 -2 -22z"/><path d="M124 92 q6 16 2 22 q-6 -8 -2 -22z"/></g>';
+  c += cuelga(146, 54, 26) + '<circle cx="146" cy="86" r="8" fill="#6a8a2a" stroke="#2f4a12" stroke-width="1.4"/>';
+  c += cuelga(176, 52, 20) + '<g stroke="#d9a63a" stroke-width="1.6" stroke-linecap="round"><path d="M176 72 q-6 14 -10 22"/><path d="M176 72 q0 14 0 24"/><path d="M176 72 q6 14 10 22"/></g><g fill="#e8be4a">' + [[168, 86], [172, 92], [176, 90], [180, 94], [184, 88]].map(function (q) { return '<ellipse cx="' + q[0] + '" cy="' + q[1] + '" rx="1.8" ry="3"/>'; }).join('') + '</g>';
+  c += cuelga(200, 58, 18) + '<g stroke="#2a1608" stroke-width="1"><rect x="193" y="76" width="7" height="7" fill="#e2452f"/><rect x="200" y="76" width="7" height="7" fill="#3fa36a"/><rect x="196" y="83" width="8" height="6" fill="#fff0c0"/></g>';
+  /* el sampian de la punta: una estrella de hoja con flecos largos */
+  c += '<path d="M228 92 v10" stroke="#7a7420" stroke-width="1.4"/>';
+  var est = ''; for (i = 0; i < 8; i++) { var a = i / 8 * Math.PI * 2; est += '<path transform="translate(228 112) rotate(' + pkcaN(a * 57.3) + ')" d="M0 0 L4 -4 L0 -14 L-4 -4 Z"/>'; }
+  c += '<g fill="#efe78a" stroke="#7a7420" stroke-width="1">' + est + '</g><circle cx="228" cy="112" r="4.5" fill="#d8312a" stroke="#5a1a10"/>';
+  var fle = ''; for (i = 0; i < 9; i++) fle += '<path d="M' + (222 + i * 1.5) + ' 120 q' + pkcaN((r() - 0.5) * 10) + ' 30 ' + pkcaN((i - 4) * 2) + ' ' + pkcaN(56 + r() * 30) + '"/>';
+  c += '<g fill="none" stroke="#e2da7a" stroke-width="1.6" stroke-linecap="round">' + fle + '</g>';
+  /* el altarcito de bambú, con su tejado de paja, y el lamak colgando con su dibujo */
+  c += '<path d="M54 270 H106 L98 256 H62 Z" fill="#8a6a2a" stroke="#3a2808" stroke-width="1.6"/><path d="M50 258 L80 238 L110 258 Z" fill="#c9a24a" stroke="#5a3a10" stroke-width="1.6"/>';
+  c += '<g stroke="#5a3a10" stroke-width="1" opacity=".6"><path d="M62 252 L80 240 M70 256 L84 244 M90 256 L80 248 M98 252 L84 242"/></g>';
+  c += '<path d="M70 270 H90 V326 L80 336 L70 326 Z" fill="#e9e27a" stroke="#6a6418" stroke-width="1.4"/>';
+  c += '<g fill="#3f8f3a"><path d="M80 278 l6 8 l-6 8 l-6 -8 z"/><path d="M80 300 l5 7 l-5 7 l-5 -7 z"/></g><g fill="#d8312a"><circle cx="80" cy="286" r="2"/><circle cx="80" cy="307" r="1.8"/></g><path d="M72 274 h16 M72 320 h16" stroke="#6a6418" stroke-width="1.2"/>';
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="228" cy="112" r="4" opacity=".8"/><circle cx="146" cy="40" r="2.5"/></g>';
+  return pkcaSVG('costumbres', ['#24133e', '#c8603e'], c, { luz: '#ffd98a', defs: defs });
+};
+
+/* el ogoh-ogoh: un gigante (bhuta kala) de la víspera de Nyepi, verde, con el pelo blanco de llamas, cuernos, los ojos saltones, colmillos y la
+   lengua fuera, garras y la barriga, con su sarong de cuadros; lo llevan en una parrilla de bambú, entre antorchas */
+PKCA.arte.ogoh = function () {
+  var r = pkcaRnd('ogoh'), c = '', i;
+  var defs = '<radialGradient id="piel" cx=".45" cy=".35" r=".7"><stop offset="0" stop-color="#7fd06a"/><stop offset=".6" stop-color="#3f9a5a"/><stop offset="1" stop-color="#1f5a36"/></radialGradient>' +
+    '<radialGradient id="fuego" cx=".5" cy=".7" r=".6"><stop offset="0" stop-color="#ffd25a" stop-opacity=".9"/><stop offset=".5" stop-color="#ff6a2a" stop-opacity=".45"/><stop offset="1" stop-color="#ff6a2a" stop-opacity="0"/></radialGradient>' +
+    '<pattern id="poleng" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#f4efe2"/><rect width="6" height="6" fill="#1a1414"/><rect x="6" y="6" width="6" height="6" fill="#1a1414"/></pattern>';
+  c += pkcaEstrellas(r, 18, 110, '#ffe2c0');
+  c += '<ellipse cx="150" cy="300" rx="170" ry="120" fill="url(#fuego)"/>';
+  c += pkcaNube(56, 60, 0.5, '#4a1f3a', '#f2a03a') + pkcaNube(250, 84, 0.45, '#4a1f3a', '#f2a03a');
+  /* el pelo: llamas blancas alrededor de la cabeza */
+  c += pkcaLlamas(150, 110, 52, 16, '#f4efe2', '#6a5a4a', 0, 40);
+  c += '<circle cx="150" cy="110" r="54" fill="#efe8d8" stroke="#6a5a4a" stroke-width="1.6"/>';
+  /* los cuernos */
+  c += '<g fill="url(#oroV)" stroke="#5a3608" stroke-width="1.6"><path d="M112 76 Q90 40 104 22 Q104 46 124 70 Z"/><path d="M188 76 Q210 40 196 22 Q196 46 176 70 Z"/></g>';
+  /* el cuerpo: los brazos en alto con garras, el pecho y la barriga */
+  c += '<g fill="url(#piel)" stroke="#123a20" stroke-width="2.2" stroke-linejoin="round">' +
+    '<path d="M108 168 Q70 160 54 120 Q46 100 40 84 L54 80 Q64 104 76 120 Q90 140 116 146 Z"/><path d="M192 168 Q230 160 246 120 Q254 100 260 84 L246 80 Q236 104 224 120 Q210 140 184 146 Z"/>' +
+    '<path d="M104 150 Q150 130 196 150 Q214 200 200 246 Q150 268 100 246 Q86 200 104 150 Z"/></g>';
+  c += '<g fill="#fffaf0" stroke="#5a4a3a" stroke-width="1"><path d="M38 84 l-6 -14 l10 8z"/><path d="M44 80 l-2 -16 l8 12z"/><path d="M52 78 l4 -14 l2 14z"/><path d="M262 84 l6 -14 l-10 8z"/><path d="M256 80 l2 -16 l-8 12z"/><path d="M248 78 l-4 -14 l-2 14z"/></g>';
+  c += '<path d="M118 196 Q150 228 182 196" fill="none" stroke="#123a20" stroke-width="2" opacity=".6"/><circle cx="150" cy="222" r="4" fill="#1f5a36"/>';
+  /* el collar de oro */
+  c += '<path d="M112 152 Q150 176 188 152" fill="none" stroke="url(#oro)" stroke-width="6"/><g fill="#d8312a" stroke="#5a1a10" stroke-width=".8"><circle cx="128" cy="162" r="3"/><circle cx="150" cy="167" r="3.5"/><circle cx="172" cy="162" r="3"/></g>';
+  /* la cara */
+  c += '<path d="M112 92 Q150 74 188 92 Q200 124 186 150 Q150 166 114 150 Q100 124 112 92 Z" fill="url(#piel)" stroke="#123a20" stroke-width="2.4"/>';
+  [[132, 108, 1], [168, 108, -1]].forEach(function (e) {
+    c += '<circle cx="' + e[0] + '" cy="' + e[1] + '" r="13" fill="#ffe25a" stroke="#123a20" stroke-width="2"/><circle cx="' + (e[0] + e[2] * 2) + '" cy="' + (e[1] + 1) + '" r="6.5" fill="#d8312a"/><circle cx="' + (e[0] + e[2] * 2) + '" cy="' + (e[1] + 1) + '" r="3.4" fill="#120804"/><circle cx="' + (e[0] - 1) + '" cy="' + (e[1] - 4) + '" r="2" fill="#fff"/>';
+    c += '<path d="M' + (e[0] - 15) + ' ' + (e[1] - 14) + ' L' + (e[0] + 13) + ' ' + (e[1] - 8 + e[2] * 0) + '" stroke="#123a20" stroke-width="4" stroke-linecap="round" transform="rotate(' + (e[2] * 14) + ' ' + e[0] + ' ' + e[1] + ')"/>';
+  });
+  c += '<path d="M142 118 Q150 112 158 118 Q160 128 150 128 Q140 128 142 118 Z" fill="#2f7a46" stroke="#123a20" stroke-width="1.6"/>';
+  c += '<path d="M120 132 Q150 126 180 132 Q176 156 150 158 Q124 156 120 132 Z" fill="#2a0a06" stroke="#123a20" stroke-width="2"/>';
+  c += '<path d="M140 146 Q150 192 160 146 Z" fill="#e2453a" stroke="#7a1a10" stroke-width="1.4"/>';
+  c += '<g fill="#fffdf2" stroke="#5a4a3a" stroke-width=".8"><path d="M124 132 L130 132 L126 148 Z"/><path d="M176 132 L170 132 L174 148 Z"/><path d="M134 156 L139 156 L136 140 Z"/><path d="M166 156 L161 156 L164 140 Z"/></g>';
+  /* el sarong de cuadros (poleng) */
+  c += '<path d="M100 240 Q150 260 200 240 L210 286 Q150 300 90 286 Z" fill="url(#poleng)" stroke="#1a1414" stroke-width="2"/><path d="M100 240 Q150 260 200 240" fill="none" stroke="url(#oro)" stroke-width="5"/>';
+  /* la parrilla de bambú y quien la lleva */
+  c += '<g stroke="#d9b65a" stroke-width="5" stroke-linecap="round"><path d="M30 296 H270"/><path d="M40 312 H260"/></g><g stroke="#8a6a2a" stroke-width="4"><path d="M70 290 V318 M110 290 V318 M150 290 V318 M190 290 V318 M230 290 V318"/></g>';
+  var gente = '';
+  for (i = 0; i < 7; i++) { var gx = 36 + i * 38; gente += '<circle cx="' + gx + '" cy="' + (318 - (i % 2) * 3) + '" r="8"/><path d="M' + (gx - 11) + ' 340 Q' + gx + ' ' + (318 + 4) + ' ' + (gx + 11) + ' 340 Z"/><path d="M' + (gx - 7) + ' 326 L' + (gx - 4) + ' 312 M' + (gx + 7) + ' 326 L' + (gx + 4) + ' 312" stroke="#1a0e12" stroke-width="3"/>'; }
+  c += '<g fill="#1a0e12">' + gente + '</g>';
+  /* antorchas */
+  [[22, 250], [278, 244]].forEach(function (t) {
+    c += '<path d="M' + t[0] + ' ' + (t[1] + 6) + ' V340" stroke="#4a2a12" stroke-width="4"/><ellipse cx="' + t[0] + '" cy="' + t[1] + '" rx="22" ry="30" fill="url(#fuego)"/>';
+    c += '<path d="M' + (t[0] - 7) + ' ' + (t[1] + 6) + ' Q' + (t[0] - 10) + ' ' + (t[1] - 10) + ' ' + t[0] + ' ' + (t[1] - 24) + ' Q' + (t[0] + 10) + ' ' + (t[1] - 10) + ' ' + (t[0] + 7) + ' ' + (t[1] + 6) + ' Z" fill="#ff8a2a"/><path d="M' + (t[0] - 3) + ' ' + (t[1] + 6) + ' Q' + (t[0] - 4) + ' ' + (t[1] - 4) + ' ' + t[0] + ' ' + (t[1] - 12) + ' Q' + (t[0] + 4) + ' ' + (t[1] - 4) + ' ' + (t[0] + 3) + ' ' + (t[1] + 6) + ' Z" fill="#ffe27a"/>';
+  });
+  c += pkcaHumo(60, 230, 120, 1, 0.22) + pkcaHumo(240, 226, 110, -1, 0.22);
+  return pkcaSVG('costumbres', ['#14081e', '#4a1a28'], c, { luz: '#ff9a4a', defs: defs });
+};
+
+/* Nyepi: la noche del silencio, sin luna (es luna nueva) y sin una luz: la Vía Láctea sobre el Agung, el mar quieto con las estrellas, y la puerta
+   partida del templo en sombra; un perrito dormido */
+PKCA.arte.nyepi = function () {
+  var r = pkcaRnd('nyepi'), c = '', i;
+  var defs = '<linearGradient id="via" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bda8ff" stop-opacity="0"/><stop offset=".5" stop-color="#e8dcff" stop-opacity=".55"/><stop offset="1" stop-color="#bda8ff" stop-opacity="0"/></linearGradient>' +
+    '<filter id="nieb" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>';
+  /* la Vía Láctea: una banda de luz en diagonal, llena de estrellas */
+  c += '<path d="M-10 250 C 60 170 180 110 320 30 L 320 90 C 190 160 80 220 -10 300 Z" fill="url(#via)" filter="url(#nieb)"/>';
+  c += '<path d="M10 236 C 80 170 180 120 300 56" fill="none" stroke="#fff6e8" stroke-opacity=".25" stroke-width="10" filter="url(#nieb)"/>';
+  for (i = 0; i < 90; i++) { var t = r(), x = 10 + t * 290, y = 236 - t * 180 + (r() - 0.5) * 60; c += '<circle cx="' + pkcaN(x) + '" cy="' + pkcaN(y) + '" r="' + pkcaN(0.4 + r() * 1.1) + '" fill="#fff" opacity="' + pkcaN(0.4 + r() * 0.6) + '"/>'; }
+  c += pkcaEstrellas(r, 60, 230, '#fff8e0');
+  c += '<path d="M60 70 l60 22" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/><circle cx="120" cy="92" r="2.4" fill="#fff" filter="url(#brilla)"/>';
+  /* el Agung y el mar */
+  c += '<path d="M14 236 L96 216 L150 150 Q158 142 166 150 L214 206 L286 222 V250 H14 Z" fill="#1a1f4a"/><path d="M150 150 Q158 142 166 150 L176 162 Q164 158 156 166 Q150 158 142 160 Z" fill="#2c3570"/>';
+  c += '<rect x="14" y="248" width="272" height="90" fill="#0d1230"/>';
+  for (i = 0; i < 40; i++) { var sx = 20 + r() * 260, sy = 254 + r() * 66; c += '<path d="M' + pkcaN(sx) + ' ' + pkcaN(sy) + 'h' + pkcaN(3 + r() * 9) + '" stroke="#cfd8ff" stroke-width="1" opacity="' + pkcaN(0.2 + r() * 0.5) + '"/>'; }
+  /* la puerta partida, en sombra, con sus escalones de adorno */
+  function mitad(x, sd) {
+    var h = '<rect x="' + (sd > 0 ? x : x - 46) + '" y="214" width="46" height="130"/>', y = 214;
+    for (var k = 0; k < 7; k++) { var ww = 46 - k * 5, hh = 16 - k; h += '<rect x="' + (sd > 0 ? x : x - ww) + '" y="' + (y - hh) + '" width="' + ww + '" height="' + hh + '"/>'; if (k % 2 === 0) h += '<path d="M' + (sd > 0 ? x + ww : x - ww) + ' ' + (y - hh) + ' q' + (sd * 8) + ' -4 ' + (sd * 6) + ' -12 q' + (-sd * 4) + ' 2 ' + (-sd * 6) + ' 6 z"/>'; y -= hh; }
+    return h;
+  }
+  c += '<g fill="#3a4280" transform="translate(1.5 -1.5)">' + mitad(70, -1) + mitad(230, 1) + '</g><g fill="#05060f">' + mitad(70, -1) + mitad(230, 1) + '</g>';
+  c += '<g fill="none" stroke="#3a3f7a" stroke-width="1.2" opacity=".7"><path d="M24 214 V330 M70 214 V330 M230 214 V330 M276 214 V330"/></g>';
+  c += '<path d="M70 320 H230 V340 H70 Z" fill="#070914"/><path d="M84 320 l10 -10 h112 l10 10" fill="#0c0f20"/>';
+  /* el perrito dormido en el escalón */
+  c += '<g fill="#2a2a3a" stroke="#4a4a6a" stroke-width="1"><ellipse cx="150" cy="312" rx="20" ry="8"/><circle cx="134" cy="309" r="6"/><path d="M130 305 l-3 -5 l6 2z"/></g><path d="M162 312 q10 2 8 -6" fill="none" stroke="#4a4a6a" stroke-width="2"/>';
+  c += '<text x="146" y="298" font-family="Georgia,serif" font-size="9" fill="#cfd8ff" opacity=".7">z</text><text x="152" y="290" font-family="Georgia,serif" font-size="7" fill="#cfd8ff" opacity=".5">z</text>';
+  return pkcaSVG('costumbres', ['#050818', '#1a1648'], c, { luz: '#cfd8ff', defs: defs });
+};
+
+/* el kecak: al atardecer, junto al acantilado de Uluwatu, decenas de hombres sentados en círculo con su sarong de cuadros y una flor roja en la
+   oreja, los brazos en alto y los dedos abiertos («¡chak!»), alrededor de la lámpara de muchas llamas */
+PKCA.arte.kecak = function () {
+  var r = pkcaRnd('kecak'), c = '', i;
+  var defs = '<radialGradient id="fuego" cx=".5" cy=".6" r=".55"><stop offset="0" stop-color="#fff0a0" stop-opacity=".95"/><stop offset=".4" stop-color="#ff9a3a" stop-opacity=".55"/><stop offset="1" stop-color="#ff5a2a" stop-opacity="0"/></radialGradient>' +
+    '<pattern id="poleng" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#f4efe2"/><rect width="4" height="4" fill="#1a1414"/><rect x="4" y="4" width="4" height="4" fill="#1a1414"/></pattern>';
+  /* el cielo del atardecer, el mar y el acantilado con su templo */
+  c += '<circle cx="230" cy="120" r="30" fill="#ffd27a" opacity=".9"/><circle cx="230" cy="120" r="60" fill="url(#luz)"/>';
+  c += pkcaNube(80, 70, 0.55, '#7a2a4a', '#ffc04a') + pkcaNube(240, 60, 0.4, '#7a2a4a', '#ffc04a');
+  c += '<path d="M14 150 H286 V200 H14 Z" fill="#5a2a5a"/><path d="M180 150 h100" stroke="#ffd27a" stroke-width="2" opacity=".6"/><path d="M196 158 h70 M210 166 h44" stroke="#ffd27a" stroke-width="1.4" opacity=".4"/>';
+  c += '<path d="M14 110 L40 104 L62 112 L70 150 L74 200 H14 Z" fill="#2a1428"/>';
+  c += '<g fill="#2a1428"><rect x="30" y="92" width="14" height="14"/><path d="M26 92 L37 76 L48 92 Z"/><path d="M28 80 L37 66 L46 80 Z"/><path d="M31 68 L37 58 L43 68 Z"/></g>';
+  /* el patio de piedra, con la luz del fuego */
+  c += '<path d="M14 200 H286 V340 H14 Z" fill="#2a1418"/><ellipse cx="150" cy="236" rx="140" ry="62" fill="#4a2420"/><ellipse cx="150" cy="226" rx="120" ry="70" fill="url(#fuego)"/>';
+  /* el círculo de atrás: cabezas y brazos en alto, con el borde encendido por el fuego */
+  var at = '';
+  for (i = 0; i < 17; i++) { var a = Math.PI + 0.12 + i / 16 * (Math.PI - 0.24), x = 150 + Math.cos(a) * 100, y = 214 + Math.sin(a) * 30, s2 = 0.9 + Math.sin(a) * -0.1;
+    at += '<g transform="translate(' + pkcaN(x) + ' ' + pkcaN(y) + ') scale(' + pkcaN(s2) + ')"><path d="M-7 16 Q0 4 7 16 Z"/><circle cx="0" cy="0" r="5"/><path d="M-3 3 l-7 -15 M3 3 l7 -15" stroke="#1a0c0c" stroke-width="2.6" stroke-linecap="round"/><path d="M-10 -12 l-2 -4 M-10 -12 l1 -5 M10 -12 l2 -4 M10 -12 l-1 -5" stroke="#1a0c0c" stroke-width="1.4" stroke-linecap="round"/></g>'; }
+  c += '<g fill="#1a0c0c" stroke="#ff9a4a" stroke-width=".8">' + at + '</g>';
+  /* la lámpara de muchas llamas */
+  c += '<path d="M150 252 V196 M138 214 Q150 206 162 214 M132 202 Q150 190 168 202" fill="none" stroke="#6a4a2a" stroke-width="3"/><path d="M140 252 h20 l-4 -6 h-12 z" fill="#6a4a2a"/>';
+  [[150, 192, 1.3], [132, 198, 1], [168, 198, 1], [138, 210, 0.85], [162, 210, 0.85]].forEach(function (f) {
+    c += '<path d="M' + (f[0] - 5 * f[2]) + ' ' + f[1] + ' Q' + (f[0] - 7 * f[2]) + ' ' + (f[1] - 12 * f[2]) + ' ' + f[0] + ' ' + (f[1] - 24 * f[2]) + ' Q' + (f[0] + 7 * f[2]) + ' ' + (f[1] - 12 * f[2]) + ' ' + (f[0] + 5 * f[2]) + ' ' + f[1] + ' Z" fill="#ff8a2a"/><path d="M' + (f[0] - 2.5 * f[2]) + ' ' + f[1] + ' Q' + (f[0] - 3 * f[2]) + ' ' + (f[1] - 7 * f[2]) + ' ' + f[0] + ' ' + (f[1] - 13 * f[2]) + ' Q' + (f[0] + 3 * f[2]) + ' ' + (f[1] - 7 * f[2]) + ' ' + (f[0] + 2.5 * f[2]) + ' ' + f[1] + ' Z" fill="#fff0a0"/>';
+  });
+  c += '<g fill="#fff4c8" filter="url(#brilla)"><circle cx="150" cy="172" r="6"/></g>';
+  for (i = 0; i < 12; i++) c += '<circle cx="' + pkcaN(130 + r() * 40) + '" cy="' + pkcaN(120 + r() * 60) + '" r="' + pkcaN(0.8 + r()) + '" fill="#ffd27a" opacity="' + pkcaN(0.4 + r() * 0.6) + '"/>';
+  /* los de delante, de espaldas: los brazos en alto, los dedos abiertos, la flor roja en la oreja y el sarong de cuadros; el fuego les dibuja el borde */
+  function hombre(x, y, s, lado) {
+    var h = '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')">', piel = '#7a4428', luz = '#ffb060';
+    h += '<path d="M-14 16 Q-30 -6 -36 -34" fill="none" stroke="#2a120a" stroke-width="11" stroke-linecap="round"/><path d="M14 16 Q30 -6 36 -34" fill="none" stroke="#2a120a" stroke-width="11" stroke-linecap="round"/>';
+    h += '<path d="M-14 16 Q-30 -6 -36 -34" fill="none" stroke="' + piel + '" stroke-width="8" stroke-linecap="round"/><path d="M14 16 Q30 -6 36 -34" fill="none" stroke="' + piel + '" stroke-width="8" stroke-linecap="round"/>';
+    [-1, 1].forEach(function (sd) { for (var d = 0; d < 5; d++) { var aa = -Math.PI / 2 + sd * 0.35 + (d - 2) * 0.26; h += '<path d="M' + (sd * 36) + ' -34 l' + pkcaN(Math.cos(aa) * 11) + ' ' + pkcaN(Math.sin(aa) * 11) + '" stroke="' + piel + '" stroke-width="3.2" stroke-linecap="round"/>'; } });
+    h += '<path d="M-22 58 Q-24 30 -14 14 Q0 6 14 14 Q24 30 22 58 Z" fill="' + piel + '" stroke="#2a120a" stroke-width="2"/>';
+    h += '<path d="M' + (-lado * 14) + ' 14 Q' + (-lado * 24) + ' 30 ' + (-lado * 22) + ' 50" fill="none" stroke="' + luz + '" stroke-width="2" opacity=".8"/>';
+    h += '<path d="M0 10 V48" stroke="#4a2414" stroke-width="2" opacity=".6"/>';
+    h += '<path d="M-24 48 Q0 40 24 48 L28 70 H-28 Z" fill="url(#poleng)" stroke="#1a0c08" stroke-width="2"/><path d="M-24 48 Q0 40 24 48" fill="none" stroke="#d8312a" stroke-width="3"/>';
+    h += '<circle cx="0" cy="2" r="12" fill="#1a0c08"/><path d="M' + (-lado * 10) + ' -6 Q' + (-lado * 14) + ' 2 ' + (-lado * 9) + ' 10" fill="none" stroke="' + luz + '" stroke-width="1.6" opacity=".8"/>';
+    h += pkcaFlor(lado * 12, -1, 4.2, '#e2312a', '#ffd76a');
+    return h + '</g>';
+  }
+  c += hombre(54, 270, 1, -1) + hombre(246, 270, 1, 1) + hombre(110, 288, 1.12, 1) + hombre(190, 288, 1.12, -1);
+  return pkcaSVG('costumbres', ['#3a1440', '#e0603a'], c, { luz: '#ffd27a', defs: defs });
+};
+
+/* la cometa janggan: la gran cometa de pájaro-dragón, con su cabeza de naga coronada de oro y la cola larguísima de tela blanca y negra que
+   ondea por todo el cielo; abajo, los arrozales y los chicos que la sujetan */
+PKCA.arte.cometa = function () {
+  var r = pkcaRnd('cometa'), c = '', i;
+  var defs = '<linearGradient id="campo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7cc25a"/><stop offset="1" stop-color="#2f7a3a"/></linearGradient>';
+  c += '<circle cx="70" cy="70" r="80" fill="url(#luz)"/><circle cx="70" cy="70" r="24" fill="#fff6c8"/>';
+  c += pkcaNube(220, 70, 0.6, '#fef8ec', '#e2a83a') + pkcaNube(70, 180, 0.5, '#fef8ec', '#e2a83a') + pkcaNube(250, 230, 0.45, '#fef8ec', '#e2a83a');
+  /* la cola: una cinta larguísima, a franjas blancas y negras, que hace eses */
+  var cola = 'M160 158 C 120 186 230 200 190 228 C 150 256 60 236 80 274 C 96 302 40 302 20 292';
+  c += '<path d="' + cola + '" fill="none" stroke="#1a1414" stroke-width="13" stroke-linecap="round"/>';
+  c += '<path d="' + cola + '" fill="none" stroke="#f4efe2" stroke-width="10" stroke-dasharray="16 16" stroke-linecap="butt"/>';
+  c += '<path d="' + cola + '" fill="none" stroke="#d8312a" stroke-width="2" opacity=".8"/>';
+  /* el cuerpo: alas anchas de tela, con la caña y los bordes de oro */
+  c += '<g transform="translate(0 18) rotate(-12 160 120)">';
+  c += '<path d="M160 96 C 120 80 70 84 40 104 C 70 112 100 126 128 140 L160 148 L192 140 C 220 126 250 112 280 104 C 250 84 200 80 160 96 Z" fill="#d8312a" stroke="#4a0e08" stroke-width="2.2"/>';
+  c += '<path d="M160 104 C 126 94 88 98 64 108 C 90 114 112 124 134 134 L160 140 L186 134 C 208 124 230 114 256 108 C 232 98 194 94 160 104 Z" fill="#f4efe2"/>';
+  c += '<path d="M64 108 C 90 114 112 124 134 134 L160 140 L186 134 C 208 124 230 114 256 108" fill="none" stroke="url(#oro)" stroke-width="3"/>';
+  c += '<g fill="#1a1414">' + [[100, 114], [124, 122], [196, 122], [220, 114]].map(function (q) { return '<path d="M' + q[0] + ' ' + q[1] + ' l6 -6 l6 6 l-6 6 z"/>'; }).join('') + '</g>';
+  c += '<path d="M40 104 Q160 70 280 104" fill="none" stroke="#8a6a2a" stroke-width="2.4"/><path d="M160 92 V152" stroke="#8a6a2a" stroke-width="2.4"/>';
+  /* la cabeza de naga: la corona de oro, el morro, el ojo y los colmillos */
+  c += '<path d="M146 92 C 146 70 156 56 172 52 C 186 50 196 58 194 70 C 192 82 180 88 170 92 Z" fill="#2f8a5a" stroke="#123a20" stroke-width="2"/>';
+  c += pkcaAbanico(170, 62, 8, 30, -1.1, 1.1, 7).replace(/url\(#oroV\)/g, 'url(#oro)');
+  c += '<circle cx="178" cy="68" r="5" fill="#ffe25a" stroke="#123a20" stroke-width="1.4"/><circle cx="179" cy="68" r="2.4" fill="#120804"/>';
+  c += '<path d="M186 76 Q198 80 194 88 Q186 86 180 84 Z" fill="#d8312a" stroke="#4a0e08" stroke-width="1.2"/><path d="M188 80 l-2 8 M192 80 l0 8" stroke="#fffdf2" stroke-width="1.6"/>';
+  c += pkcaRizo(156, 80, 5, 0.3, '#f2c14e', 1.6);
+  c += '</g>';
+  /* la cuerda, los arrozales y los chicos */
+  c += '<path d="M164 168 Q 212 236 236 292" fill="none" stroke="#fffaf0" stroke-width="1.2" opacity=".9"/>';
+  c += '<path d="M14 270 Q80 256 150 266 Q220 276 286 262 V340 H14 Z" fill="url(#campo)"/><path d="M14 292 Q90 282 160 290 Q230 298 286 288" fill="none" stroke="#a8e07a" stroke-width="2" opacity=".7"/><path d="M14 312 Q90 304 160 312 Q230 318 286 310" fill="none" stroke="#a8e07a" stroke-width="2" opacity=".6"/>';
+  var ch = ''; [[236, 296], [252, 300], [222, 302]].forEach(function (p) { ch += '<circle cx="' + p[0] + '" cy="' + (p[1] - 14) + '" r="4.5"/><path d="M' + (p[0] - 5) + ' ' + p[1] + ' Q' + p[0] + ' ' + (p[1] - 12) + ' ' + (p[0] + 5) + ' ' + p[1] + ' Z"/><path d="M' + p[0] + ' ' + (p[1] - 8) + ' l-8 -8" stroke="#2a1a10" stroke-width="2" stroke-linecap="round"/>'; });
+  c += '<g fill="#2a1a10">' + ch + '</g>';
+  return pkcaSVG('costumbres', ['#3a8ad8', '#bfe6f6'], c, { luz: '#fff2b0', defs: defs });
+};
+
+/* ---------- el cromo, con su lámina ---------- */
+if (PKCA.vivo) {
+  var pkoCromoHTMLPKCA = pkoCromoHTML;
+  pkoCromoHTML = function (C, cls) {
+    var src = pkcaImg(C[0]); if (!src) return pkoCromoHTMLPKCA(C, cls);
+    var P = pkoPag(C[1]), L3 = pkoL();
+    var nom = C[3][L3];
+    return '<div class="pko-cromo pkca ' + (cls || '') + '" style="--pc:' + P[3] + '"><img class="pkca-img" alt="" src="' + src + '"><b' + (nom.length > 12 ? ' class="largo"' : '') + '>' + nom + '</b><small>' + P[1] + ' ' + TT(P[2]) + '</small></div>';
+  };
+  (function () {
+    var css = '.pko-cromo.pkca{display:block;padding:0;border:0;border-radius:6%/4.5%;background:#1a0e24;box-shadow:0 3px 0 #2a1a0c,0 0 0 1px rgba(255,220,140,.25);overflow:hidden;container-type:inline-size}' +
+      '.pko-cromo.pkca .pkca-img{display:block;width:100%;height:100%;object-fit:cover}' +
+      '.pko-cromo.pkca b{position:absolute;left:9%;right:9%;top:81.6%;background:none;padding:0;color:#ffe9a8;font:900 8px/1.05 system-ui,sans-serif;font-size:9.6cqw;text-shadow:0 1px 0 #2a1608;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.pko-cromo.pkca b.largo{font-size:7.4cqw;top:82.6%}' +
+      '.pko-cromo.pkca small{position:absolute;left:9%;right:9%;top:89.8%;color:#f6d7e4;font:800 6px/1 system-ui,sans-serif;font-size:6cqw;text-shadow:0 1px 0 #2a1608;white-space:nowrap;overflow:hidden}' +
+      '.pko-cromo.pkca::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,245,210,.32) 45%,transparent 60%);background-size:250% 100%;background-position:120% 0;pointer-events:none}' +
+      '.pko-cromo.pkca.gira::after,.pko-cromo.pkca.gr::after{animation:pkcaBrillo 2.6s ease-in-out .5s infinite}@keyframes pkcaBrillo{0%{background-position:120% 0}55%,100%{background-position:-60% 0}}';
+    var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  })();
+}
 /*#pieza nucleo/495_ganchos_arranque.js*/
 /* ganchos para pruebas automáticas */
 window.__BR = {
