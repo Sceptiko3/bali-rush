@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5a3a">
-<title>Bali Rush Poki v32</title>
+<title>Bali Rush Poki v33</title>
 <style>
 /*#pieza pagina/010_estilos.css*/
 :root{
@@ -111723,7 +111723,7 @@ menuAct = function (a) {
   };
   for (var k in N) if (!D[k]) D[k] = N[k];
 })();
-if (POK.vivo) VERSION = 'Poki v32 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
+if (POK.vivo) VERSION = 'Poki v33 · V231';                                            // la línea de Poki: su número (sobre la versión del juego de la que sale)
 /*#pieza nucleo/632_poki_intro.js*/
 /* ================================================================
    POKI V2 · LA INTRO JUGABLE: EL CANANG Y EL MONO
@@ -118435,6 +118435,10 @@ if (PTS.vivo) {
      la minicarrera, EL GAS VA SOLO: solo hay que girar (FRENO, para
      frenar).
    PGC.vivo = false (o ?nopg6): el Playground como la v27.
+   (v33) La carrera sirve para cualquier pista (PGC.T: el circuito,
+   pgcPistaCir, u otra; la del motocross, en 698), con sus enganches:
+   prepRiv, empieza, rivVel, rivPaso; los rivales pueden ir en alto (R.z,
+   R.cab).
    ================================================================ */
 var PGC = {
   vivo: PG6.vivo && PG2.vivo && !/[?&#]nopg6/.test(location.search + location.hash),
@@ -118454,35 +118458,40 @@ var PGC = {
   quadV: 0.88, quadRiv: 0.88, cruK: 1.12, cruFuera: 85,                    // (cruK, cruFuera: el gas solo del quad: lo que aprieta en las curvas, y fuera de la pista)
                                                  // el quad: su punta (de la de tu moto) y lo que corren los rivales cuando vas en quad
   cerca: 270, max3: 1, nombre: 360,                                          // los rivales en 3D (el más cercano en el móvil, dos en el ordenador: medido, con tres en 3D la carrera costaba un 40 % más que el Playground; así, lo mismo) y su nombre encima
-  car: null, abierto: false, fuera: false, dicho: 0, yoDib: false, cestaPitik: false, golT: -9, kap: null
+  car: null, abierto: false, fuera: false, dicho: 0, yoDib: false, cestaPitik: false, golT: -9,
+  T: null, cir: null                                                         // (v32) la pista de la carrera: el circuito (PGC.cir) o la que ponga otra pieza (el motocross)
 };
 function pgcQuad() { return PGC.vivo && SAVE.pgQuad === 1; }
 function pgcEnCarrera() { return !!(PGC.car && pgOn()); }
 
-/* ---------- la pista: la curvatura de cada punto (para que los rivales frenen antes de las curvas) ---------- */
-function pgcCurvas() {
-  if (PGC.kap) return;
-  pg2Prepara();
-  var L = PG2.loop, A = PG2.acc, n = L.length, K = [], i;
+/* ---------- la pista (v32: el circuito u otra; PGC.T): la curvatura de cada punto (para que los rivales frenen antes de las curvas) ---------- */
+function pgcPistaCir() {                                                     // el circuito de la v23
+  if (!PGC.cir) { pg2Prepara(); PGC.cir = { id: 'cir', loop: PG2.loop, acc: PG2.acc, L: PG2.L, sIni: PG2.sIni, punto: pg2Punto, trafico: true, parrilla: PGC.parrilla, yo0: PGC.yo0, vueltas: PGC.vueltas }; }
+  return PGC.cir;
+}
+function pgcT() { return PGC.T || (PGC.T = pgcPistaCir()); }
+function pgcCurvas(T) {
+  if (T.vCurva) return;
+  var L = T.loop, A = T.acc, n = L.length, K = [], i, aL = T.aLat || PGC.aLat;
   function h(i) { var a = L[(i + n) % n], b = L[(i + 1 + n) % n]; return Math.atan2(b[0] - a[0], b[1] - a[1]); }
   for (i = 0; i < n; i++) {
-    var prev = i ? A[i - 1] : A[n - 1] - PG2.L, dh = Math.abs(adiff(h(i + 1), h(i - 1)));
+    var prev = i ? A[i - 1] : A[n - 1] - T.L, dh = Math.abs(adiff(h(i + 1), h(i - 1)));
     K.push(dh / Math.max(20, A[i + 1] - prev));
   }
-  PGC.kap = K;
-  PGC.vCurva = K.map(function (k) { return Math.sqrt(PGC.aLat / Math.max(k, 1e-5)); });
+  T.kap = K;
+  T.vCurva = K.map(function (k) { return Math.sqrt(aL / Math.max(k, 1e-5)); });
 }
 function pgcIdx(s) {                                                         // el punto de la pista de antes de s (s en [0, L))
-  var A = PG2.acc, lo = 0, hi = PG2.loop.length - 1;
+  var T = pgcT(), A = T.acc, lo = 0, hi = T.loop.length - 1;
   while (lo < hi) { var m = (lo + hi + 1) >> 1; if (A[m] <= s) lo = m; else hi = m - 1; }
   return lo;
 }
 function pgcEn(prog, u) {                                                    // de lo recorrido desde la salida (y a un lado) al mundo
-  var q = pg2Punto(PG2.sIni + prog);
+  var T = pgcT(), q = T.punto(T.sIni + prog);
   return { x: q.x + Math.cos(q.h) * u, y: q.y - Math.sin(q.h) * u, h: q.h };
 }
 function pgcProy(x, y, i0, win, atras) {                                     // dónde cae (x, y) en la pista, buscando cerca del punto i0 (atras: hasta cuántos puntos hacia atrás; si no, como hacia delante)
-  var L = PG2.loop, A = PG2.acc, n = L.length, best = null, k;
+  var T = pgcT(), L = T.loop, A = T.acc, n = L.length, best = null, k;
   for (k = -(atras == null ? win : atras); k <= win; k++) {
     var i = ((i0 + k) % n + n) % n, a = L[i], b = L[(i + 1) % n], r = segDist(x, y, a[0], a[1], b[0], b[1]);
     if (!best || r.d < best.d) best = { i: i, d: r.d, s: A[i] + r.t * (A[i + 1] - A[i]), qx: r.qx, qy: r.qy, h: Math.atan2(b[0] - a[0], b[1] - a[1]) };
@@ -118539,30 +118548,33 @@ function pgcTrafFuera(C) {                                                   // 
     CITY.streets.forEach(function (st, i) {
       if (pg2EsCir(i)) { PGC.calles[i] = 1; return; }
       var p0 = st.pts[0], p1 = st.pts[st.pts.length - 1];
-      [p0, p1].forEach(function (p) { var x = p[0] != null ? p[0] : p.x, y = p[1] != null ? p[1] : p.y, r = pgcProy(x, y, 0, PG2.loop.length); if (r.d < 45) PGC.calles[i] = 1; });
+      [p0, p1].forEach(function (p) { var x = p[0] != null ? p[0] : p.x, y = p[1] != null ? p[1] : p.y, r = pgcProy(x, y, 0, pgcT().loop.length); if (r.d < 45) PGC.calles[i] = 1; });
     });
   }
   for (var i = TRAF.length - 1; i >= 0; i--) if (PGC.calles[TRAF[i].si]) { C.traf.push(TRAF[i]); TRAF.splice(i, 1); }
 }
-function pgcEmpieza() {
+function pgcEmpieza(T) {
   pgcLimpia();
+  T = PGC.T = T || PGC.T || pgcPistaCir();
   SFX.pick(2);
-  pgcCurvas();
+  pgcCurvas(T);
   var q = pgcQuad(), cols = pgcColores(), vYo = MK().vmax;
-  var C = PGC.car = { fase: 'parrilla', t: 0, tYa: 0, cuenta: 3.4, quad: q, R: [], traf: [], fin: [], yo: { prog: PGC.yo0[0], i: null, s: null, fin: null, puesto: 4, mal: 0 }, vuelta: 1, puestoAnt: 0, finT: 0, ord: [] };
+  var C = PGC.car = { T: T, fase: 'parrilla', t: 0, tYa: 0, cuenta: 3.4, quad: q, R: [], traf: [], fin: [], yo: { prog: T.yo0[0], i: null, s: null, fin: null, puesto: 4, mal: 0 }, vuelta: 1, puestoAnt: 0, finT: 0, ord: [] };
   PGC.riv.forEach(function (D, j) {
-    var pr = PGC.parrilla[j], piel = PAL.skin[D.piel % PAL.skin.length], w = pgcEn(pr[0], pr[1]);
+    var pr = T.parrilla[j], piel = PAL.skin[D.piel % PAL.skin.length], w = pgcEn(pr[0], pr[1]);
     var R = { i: j, nom: D.nom, prog: pr[0], u: pr[1], uT: pr[1], v: 0, vmax: vYo * D.k * (q ? PGC.quadRiv : 1), x: w.x, y: w.y, h: w.h, lean: 0, rod: 0, giro: 0, bote: 0, fin: null, toc: -9, reac: 0.15 + j * 0.12,
       col: COL_MOTO[cols[j]], look: { moto: cols[j], tubo: 0, cabeza: 0, cinta: 0, camisa: 0 }, vest: { camisa: D.camisa, udeng: D.udeng, kamben: D.kamben }, piel: piel, nuca: darken(piel, 0.88), pas: null, cart: {}, m3: false };
     if (q) R.look.quad = 1;
+    if (T.prepRiv) T.prepRiv(R);
     R.it = { k: 'pgcR', R: R, x: R.x, y: R.y };
     C.R.push(R); VILLA_IT.push(R.it);
   });
-  pgcTrafFuera(C);
-  var w0 = pgcEn(PGC.yo0[0], PGC.yo0[1]);
+  if (T.trafico) pgcTrafFuera(C);
+  var w0 = pgcEn(T.yo0[0], T.yo0[1]);
   P.x = w0.x; P.y = w0.y; P.h = P.ht = w0.h; P.speed = 0; P.z = 0; P.si = null; P.steer = 0; P.lean = 0; P.state = 'ride';
   CAM.yaw = P.h; V.camX = P.x - Math.sin(P.h) * 30; V.camY = P.y - Math.cos(P.h) * 30;
-  C.yo.i = pgcProy(P.x, P.y, 0, PG2.loop.length).i;
+  C.yo.i = pgcProy(P.x, P.y, 0, T.loop.length).i;
+  if (T.empieza) T.empieza(C);
   hideScr(); G.state = 'play'; G.card = false; PGC.abierto = false; pokiStart();
   PGH.cola.length = 0; PGH.prog.length = 0;
   pgDice('car_hola');
@@ -118600,7 +118612,7 @@ function pgcFinTarjeta() {
 
 /* ---------- cada fotograma ---------- */
 function pgcCarrera(dt) {
-  var C = PGC.car, yo = C.yo, Lp = PG2.L, meta = PGC.vueltas * Lp, i;
+  var C = PGC.car, T = C.T, yo = C.yo, Lp = T.L, meta = T.vueltas * Lp, i;
   C.t += dt;
   if (C.fase === 'parrilla') {
     var c0 = Math.ceil(C.cuenta - 0.4); C.cuenta -= dt; var c1 = Math.ceil(C.cuenta - 0.4);
@@ -118608,7 +118620,7 @@ function pgcCarrera(dt) {
     P.speed = 0;
   }
   if (C.verde > 0) C.verde -= dt;
-  for (i = TRAF.length - 1; i >= 0; i--) if (PGC.calles[TRAF[i].si]) { C.traf.push(TRAF[i]); TRAF.splice(i, 1); }   // (y si llega alguno, fuera)
+  if (T.trafico) for (i = TRAF.length - 1; i >= 0; i--) if (PGC.calles[TRAF[i].si]) { C.traf.push(TRAF[i]); TRAF.splice(i, 1); }   // (y si llega alguno, fuera)
   /* tú: dónde vas en la pista (lo recorrido, nunca más deprisa que la moto) */
   if (P.state === 'ride') {
     var pr = pgcProy(P.x, P.y, yo.i, 4, 2);                                  // (poco hacia atrás: en la horquilla, el otro lado de la curva queda cerca)
@@ -118622,20 +118634,21 @@ function pgcCarrera(dt) {
     yo.lejos = pr.d;
   }
   if (C.fase === 'corre' && yo.fin == null) {
-    var v = clamp(Math.floor(yo.prog / Lp) + 1, 1, PGC.vueltas);
-    if (v !== C.vuelta) { C.vuelta = v; SFX.tlin(); pop('🏁 ' + TT(v === PGC.vueltas ? '¡Última vuelta!' : 'Vuelta ' + v), P.x, P.y + 56, '#ffe27a', 1.3); pgDice(v === PGC.vueltas ? 'car_ultima' : 'car_vuelta'); }
+    var v = clamp(Math.floor(yo.prog / Lp) + 1, 1, T.vueltas);
+    if (v !== C.vuelta) { C.vuelta = v; SFX.tlin(); pop('🏁 ' + TT(v === T.vueltas ? '¡Última vuelta!' : 'Vuelta ' + v), P.x, P.y + 56, '#ffe27a', 1.3); pgDice(v === T.vueltas ? 'car_ultima' : 'car_vuelta'); }
     if (yo.prog >= meta) pgcMeta();
   }
   /* los rivales */
   var todos = C.R.concat([{ yo: true, prog: yo.prog, u: yo.u || 0, v: P.speed }]);
   C.R.forEach(function (R) {
     if (C.fase === 'parrilla' || C.t - C.tYa < R.reac) return;                         // (cada uno reacciona a su ritmo al ¡YA!)
-    var sl = ((PG2.sIni + R.prog) % Lp + Lp) % Lp, k0 = pgcIdx(sl), n = PG2.loop.length, vC = 1e9, k;
-    for (k = 0; k <= 3; k++) vC = Math.min(vC, PGC.vCurva[(k0 + k) % n]);
+    var sl = ((T.sIni + R.prog) % Lp + Lp) % Lp, k0 = pgcIdx(sl), n = T.loop.length, vC = 1e9, k;
+    for (k = 0; k <= 3; k++) vC = Math.min(vC, T.vCurva[(k0 + k) % n]);
     var gap = R.prog - yo.prog, f = 1;                                                    // para niños: los de delante esperan, los de detrás aprietan
     if (yo.fin == null) { if (gap > 90) f = Math.max(0.62, 1 - (gap - 90) / 520); else if (gap < -180) f = Math.min(1.14, 1 + (-gap - 180) / 900); }
     var vT = Math.min(vC, R.vmax * f);
     if (R.fin != null) vT = Math.min(vT, 70);                                              // ya ha llegado: una vuelta de paseo
+    if (T.rivVel) vT = T.rivVel(R, vT);                                                    // (v32: lo que tenga la pista: el barro)
     var lib = true;
     todos.forEach(function (O) {                                                          // alguien delante, en su carril: se aparta (o espera)
       if (O === R) return;
@@ -118653,12 +118666,13 @@ function pgcCarrera(dt) {
     R.lean += (clamp(giro * R.v / 520, -0.42, 0.42) - R.lean) * expo(6, dt);
     R.giro = clamp(giro * 0.12, -0.4, 0.4);
     R.x = w.x; R.y = w.y; R.rod += R.v * dt; R.it.x = R.x; R.it.y = R.y;
+    if (T.rivPaso) T.rivPaso(R, dt);                                                       // (v32: los saltos)
     if (R.bote > 0) R.bote -= dt;
     if (R.fin == null && R.prog >= meta) { R.fin = C.t; if (yo.fin == null) pop('🏁 ' + R.nom, R.x, R.y + 50, '#ffffff', 0.9); }
     /* contigo: se toca, se aparta (y tú también, un poco) */
     if (P.state === 'ride') {
       var dx = P.x - R.x, dy = P.y - R.y, dd = Math.hypot(dx, dy), rc = C.quad ? 19 : 15;
-      if (dd < rc && dd > 0.01) {
+      if (dd < rc && dd > 0.01 && Math.abs((P.z || 0) - (R.z || 0)) < 14) {
         var nx = dx / dd, ny = dy / dd, m = rc - dd;
         P.x += nx * m * 0.6; P.y += ny * m * 0.6;
         R.uT = clamp(R.u + (yo.u > R.u ? -10 : 10), -16, 16); R.u += (yo.u > R.u ? -1 : 1) * m * 0.4;
@@ -118678,14 +118692,14 @@ function pgcCarrera(dt) {
 
 /* el gas solo del quad: la velocidad a la que va (la de las curvas de delante, como los rivales, algo más alegre; fuera de la pista, despacito) */
 function pgcCrucero(C) {
-  var yo = C.yo, Lp = PG2.L, n = PG2.loop.length, sl = ((PG2.sIni + yo.prog) % Lp + Lp) % Lp, k0 = pgcIdx(sl), v = 1e9, k;
-  for (k = 0; k <= 4; k++) v = Math.min(v, PGC.vCurva[(k0 + k) % n] * PGC.cruK);
+  var T = C.T, yo = C.yo, Lp = T.L, n = T.loop.length, sl = ((T.sIni + yo.prog) % Lp + Lp) % Lp, k0 = pgcIdx(sl), v = 1e9, k;
+  for (k = 0; k <= 4; k++) v = Math.min(v, T.vCurva[(k0 + k) % n] * PGC.cruK);
   if (yo.lejos > 40 || yo.mal > 0) v = Math.min(v, PGC.cruFuera);
   return Math.max(55, v);
 }
 
 /* ---------- los rivales, pintados (como los de la liga de los ojek: de cerca en 3D, de lejos su cartón) ---------- */
-function pgcOpc(R, o) { lgOpc(R, o); if (R.look.quad) o.cesta = 'no'; return o; }
+function pgcOpc(R, o) { lgOpc(R, o); if (R.look.quad || R.look.modelo === 3) o.cesta = 'no'; return o; }   // (v33: en moto de campo, sin cesta)
 function pgcCarton(R, vista) {
   var s = R.cart[vista]; if (s) return s;
   if (PGC.cartT === G.t && R.cart0 && R.cart0[vista]) return R.cart0[vista];
@@ -118706,15 +118720,15 @@ function pgcDibuja(g, R) {
   shadow(g, R.x, R.y, R.look.quad ? 14 : 11, 17.5, R.h);
   if (R.m3) {
     scr(g);
-    motoGuiri3D(g, R.x, R.y, 0, R.h, pgcOpc(R, { incl: R.look.quad ? R.lean * 0.35 : R.lean, giro: R.giro, bote: R.bote > 0 ? Math.sin(R.bote / 0.24 * Math.PI) : 0, rot: -R.rod / (6.2 * MG3.k), t: G.t + R.i * 1.7, v: Math.min(1, R.v / MAXV), gas: R.v > 5, frena: false }));
+    motoGuiri3D(g, R.x, R.y, R.z || 0, R.h, pgcOpc(R, { incl: R.look.quad ? R.lean * 0.35 : R.lean, cab: R.cab || 0, giro: R.giro, bote: R.bote > 0 ? Math.sin(R.bote / 0.24 * Math.PI) : 0, rot: -R.rod / (6.2 * MG3.k), t: G.t + R.i * 1.7, v: Math.min(1, R.v / MAXV), gas: R.v > 5, frena: false }));
   } else {
     var rel = adiff(R.h, CAM.yaw), a = Math.abs(rel);
-    if (a > 2.1) k3Bill(g, pgcCarton(R, 'f'), R.x, R.y, 0, MG3.k, -R.lean, false);
-    else if (a < 1.05) k3Bill(g, pgcCarton(R, 'r'), R.x, R.y, 0, MG3.k, R.lean, false);
-    else k3Bill(g, pgcCarton(R, 'l'), R.x, R.y, 0, MG3.k, 0, rel < 0);
+    if (a > 2.1) k3Bill(g, pgcCarton(R, 'f'), R.x, R.y, R.z || 0, MG3.k, -R.lean, false);
+    else if (a < 1.05) k3Bill(g, pgcCarton(R, 'r'), R.x, R.y, R.z || 0, MG3.k, R.lean, false);
+    else k3Bill(g, pgcCarton(R, 'l'), R.x, R.y, R.z || 0, MG3.k, (R.cab || 0) * (rel < 0 ? 1 : -1), rel < 0);
   }
   if (d < PGC.nombre) {                                                      // su nombre, encima
-    proj(R.x, R.y, 78 * MG3.k); scr(g);
+    proj(R.x, R.y, 78 * MG3.k + (R.z || 0)); scr(g);
     var s = clamp(PS, 0.75, 1.25), txt = R.nom;
     g.globalAlpha = clamp((PGC.nombre - d) / 70, 0, 1);
     g.font = '900 ' + (11 * s).toFixed(1) + 'px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
@@ -118735,7 +118749,7 @@ function pgcHUD(g) {
   rrect(g, bx, by, bw, bh, 10, 'rgba(255,253,244,.96)', INK, 2.6);
   pgEmoji(g, '🏁', bx + 20, mid, 21);
   g.fillStyle = INK; g.textAlign = 'left'; g.font = '900 16px ' + FONT;
-  var vt = C.fase === 'parrilla' ? TT('¡Preparados!') : yo.fin != null ? TT('¡Meta!') : TT('Vuelta') + ' ' + C.vuelta + '/' + PGC.vueltas;
+  var vt = C.fase === 'parrilla' ? TT('¡Preparados!') : yo.fin != null ? TT('¡Meta!') : TT('Vuelta') + ' ' + C.vuelta + '/' + C.T.vueltas;
   g.fillText(vt, bx + 36, mid, bw - 90);
   g.textAlign = 'right'; g.font = '900 18px ' + FONT; g.fillStyle = yo.puesto === 1 ? '#c98a00' : INK; g.fillText(pgcOrd(yo.puesto), bx + bw - 10, mid);
   /* el puesto, grande, bajo el plano */
@@ -118817,7 +118831,7 @@ if (PGC.vivo) {
   menuAct = function (a) {
     if (typeof a === 'string' && a.indexOf('pgc:') === 0) {
       if (a === 'pgc:moto' || a === 'pgc:quad') { SAVE.pgQuad = a === 'pgc:quad' ? 1 : 0; writeSave(); pgcPregunta(); return true; }
-      if (a === 'pgc:go') { pgcEmpieza(); return true; }
+      if (a === 'pgc:go') { pgcEmpieza(pgcPistaCir()); return true; }
       if (a === 'pgc:no') { pgcSigue(); if (pgcQuad()) pgDice('car_quadsi'); return true; }
       if (a === 'pgc:otra') { pgcEmpieza(); return true; }
       if (a === 'pgc:sigue') { pgcLimpia(); pgcSigue(); pgDice('car_sigue'); return true; }
@@ -119648,6 +119662,20 @@ if (PKMH.vivo) {
      tarjeta tiene ahora los tres).
    - En el plano, la pista (marrón) y los aros 🏍️ con su halo.
    PGMX.vivo = false (o ?nopg8): el Playground como la v31.
+   ----------------------------------------------------------------
+   POKI V33 · LA CARRERA EN EL BARRO
+   Jose Javier (25-10-2026), al ver la v32: «pero el barro tiene que
+   jugar contra gente, ¿no?».
+   - En el aro, «▶ ¡A correr!»: la minicarrera de la v28 (690, que ahora
+     sirve para cualquier pista: pgmxPista) en el motocross: 3 vueltas
+     contra Made, Komang y Ketut, con su parrilla en la salida, el
+     semáforo, el puesto, la meta y el podio con sus flores.
+   - Los rivales, en moto de campo (sin cesta) o en quad si vas en quad,
+     SALTAN como tú en los montículos (pgmxVuelo: la misma cuenta para
+     todos), con el morro según la cuesta; en el barro van más despacio
+     (rivBarro) y salpican; tiran los conos y la paja que pillan.
+   - La vuelta libre de antes (con su crono y su récord) sigue, en otro
+     botón: «⏱ Vuelta libre, contra el reloj».
    ================================================================ */
 var PGMX = {
   vivo: PGB.vivo && PGC.vivo && PGX.vivo && !/[?&#]nopg8/.test(location.search + location.hash),
@@ -119670,6 +119698,7 @@ var PGMX = {
   conos: [[1590, -1440], [1640, -1442], [1690, -1446], [1760, -1440], [2075, -1250], [2075, -1300], [2075, -1350]],
   neum: [[2160, -1140], [2165, -1500], [1300, -1290], [1540, -1600]],
   K: 2.0, g: 300, vMin: 40,
+  vueltas: 3, rivBarro: 62, T: null, cosas: null,                            // (v33) la carrera: vueltas y lo que corren los rivales en el barro
   loop: null, acc: null, L: 0, montes: [], z: 0, vz: 0, t: 0, aire: false, rateP: 0, zPrev: 0, premioT: -9,
   cr: null, abierto: false, fuera: false, dicho: {}, yoDib: false, chof: false, chofT: -9
 };
@@ -119782,29 +119811,33 @@ function pgmxGenera() {
   PG.gente.push({ t: 'pgw', k: 'pgw', Q: GE3_Q.lib_ketut, fijo: true, x: S0.qx + 50, y: S0.qy + 60, x0: S0.qx + 50, y0: S0.qy + 60, a: Math.PI, a0: Math.PI, v: 0, paso: 0, pose: 'pie', huye: 0, saluda: 0 });
   PG.gente.push({ t: 'pgw', k: 'pgw', Q: GE3_Q.lib_sari, fijo: true, x: S0.qx + 90, y: S0.qy + 64, x0: S0.qx + 90, y0: S0.qy + 64, a: Math.PI, a0: Math.PI, v: 0, paso: 0, pose: 'pie', huye: 0, saluda: 0 });
   /* lo que se rompe (v29): paja y conos por fuera de las curvas */
-  function cosa(t, x, y) { var o = { t: t, x: x, y: y, roto: false, rotoT: 0, trozos: [], v: PGX.cosas.length }; PGX.cosas.push(o); items.push({ k: 'pgx', m: 'cosa', o: o, x: x, y: y }); }
+  PGMX.cosas = [];
+  function cosa(t, x, y) { var o = { t: t, x: x, y: y, roto: false, rotoT: 0, trozos: [], v: PGX.cosas.length }; PGX.cosas.push(o); PGMX.cosas.push(o); items.push({ k: 'pgx', m: 'cosa', o: o, x: x, y: y }); }
   PGMX.paja.forEach(function (q) { cosa('paja', q[0], q[1]); });
   PGMX.conos.forEach(function (q) { cosa('cono', q[0], q[1]); });
 }
 function pgmxPunto(s) { var L = PGMX.loop, A = PGMX.acc, n = L.length, i = 0; s = ((s % PGMX.L) + PGMX.L) % PGMX.L; while (i < n - 1 && A[i + 1] < s) i++; var a = L[i], b = L[(i + 1) % n], t = (s - A[i]) / ((A[i + 1] - A[i]) || 1); return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, h: Math.atan2(b[0] - a[0], b[1] - a[1]) }; }
 
 /* ---------- cada fotograma: el suelo (los montículos y el vuelo), el barro, el crono ---------- */
+function pgmxVuelo(S, x, y, v, dt) {                                            // el suelo y el vuelo de una moto (la tuya o un rival; S guarda z, vz, t, aire, zPrev, rateP): 'despega', 'aterriza' o nada
+  var Hg = pgmxAlto(x, y);
+  if (S.aire) {
+    S.vz -= PGMX.g * dt; S.z += S.vz * dt; S.t += dt;
+    if (S.z > Hg) return null;
+    S.imp = -S.vz; S.aire = false; S.zPrev = Hg; S.rateP = 0; S.z = Hg; return 'aterriza';
+  }
+  var rate = (Hg - S.zPrev) / Math.max(dt, 1e-3);
+  if (S.rateP * PGMX.K > 25 && rate < S.rateP * 0.4 && v > PGMX.vMin && S.zPrev > 2) {   // el borde: ¡a volar!
+    S.aire = true; S.vz = Math.min(230, S.rateP * PGMX.K); S.z = S.zPrev + S.rateP * dt; S.t = 0; S.rateP = 0; return 'despega';
+  }
+  S.rateP = rate > 0 ? rate : 0; S.zPrev = Hg; S.z = Hg; return null;
+}
 function pgmxSuelo(dt) {
   if (!pgOn() || P.state !== 'ride' || (typeof PGX !== 'undefined' && (PGX.salto || PGX.rampaYa))) { PGMX.aire = false; PGMX.zPrev = 0; PGMX.rateP = 0; return; }
   if (!pgmxDentro(P.x, P.y, 30) && !PGMX.aire) { PGMX.zPrev = 0; PGMX.rateP = 0; return; }
-  var Hg = pgmxAlto(P.x, P.y);
-  if (PGMX.aire) {
-    PGMX.vz -= PGMX.g * dt; PGMX.z += PGMX.vz * dt; PGMX.t += dt;
-    if (PGMX.z > Hg) { P.z = PGMX.z; return; }
-    pgmxAterriza(-PGMX.vz, PGMX.t); PGMX.aire = false; PGMX.zPrev = Hg; PGMX.rateP = 0; P.z = Hg; return;
-  }
-  var rate = (Hg - PGMX.zPrev) / Math.max(dt, 1e-3);
-  if (PGMX.rateP * PGMX.K > 25 && rate < PGMX.rateP * 0.4 && P.speed > PGMX.vMin && PGMX.zPrev > 2) {   // el borde: ¡a volar!
-    PGMX.aire = true; PGMX.vz = Math.min(230, PGMX.rateP * PGMX.K); PGMX.z = PGMX.zPrev + PGMX.rateP * dt; PGMX.t = 0; P.z = PGMX.z; PGMX.rateP = 0;
-    if (PGMX.vz > 70) { SFX.jump ? SFX.jump() : SFX.whoosh(); pgSalta('feliz'); }
-    return;
-  }
-  PGMX.rateP = rate > 0 ? rate : 0; PGMX.zPrev = Hg; P.z = Hg;
+  var r = pgmxVuelo(PGMX, P.x, P.y, P.speed, dt); P.z = PGMX.z;
+  if (r === 'despega' && PGMX.vz > 70) { SFX.jump ? SFX.jump() : SFX.whoosh(); pgSalta('feliz'); }
+  else if (r === 'aterriza') pgmxAterriza(PGMX.imp, PGMX.t);
 }
 function pgmxAterriza(imp, tA) {
   dust(P.x, P.y, imp > 150 ? 16 : 8); shake(Math.min(0.4, 0.1 + imp / 900)); SFX.land ? SFX.land() : SFX.thud();
@@ -119830,11 +119863,13 @@ function pgmxBarro(dt) {
   var n = P.speed > 30 ? dt * 60 : dt * 10;
   for (var k = 0; k < n; k++) if (Math.random() < 0.6) part({ k: 'dust', x: P.x + rr(-6, 6) - Math.sin(P.h) * 6, y: P.y + rr(-6, 6) - Math.cos(P.h) * 6, vx: rr(-40, 40), vy: rr(-40, 40), t: 0, m: rr(0.35, 0.7), s: rr(2, 4.2), c: '96,62,34' });
 }
-function pgmxPegotes(x, y, n) {                                                  // pegotes de barro que saltan (y caen)
-  for (var i = 0; i < n; i++) { var a = Math.random() * TAU, v = rr(20, 75); part({ k: 'drop', x: x + rr(-5, 5), y: y + rr(-5, 5), z: rr(1, 5), vx: Math.cos(a) * v - Math.sin(P.h) * P.speed * 0.15, vy: Math.sin(a) * v - Math.cos(P.h) * P.speed * 0.15, vz: rr(70, 170), t: 0, m: rr(0.55, 0.9), s: rr(1.3, 2.6), c: pickM(['#5a3a1e', '#6e4a28', '#4a2f19', '#7d5732']) }); }
+function pgmxPegotes(x, y, n) { pgmxPegotesEn(x, y, P.h, P.speed, n); }         // pegotes de barro que saltan (y caen)
+function pgmxPegotesEn(x, y, h, v0, n) {
+  for (var i = 0; i < n; i++) { var a = Math.random() * TAU, v = rr(20, 75); part({ k: 'drop', x: x + rr(-5, 5), y: y + rr(-5, 5), z: rr(1, 5), vx: Math.cos(a) * v - Math.sin(h) * v0 * 0.15, vy: Math.sin(a) * v - Math.cos(h) * v0 * 0.15, vz: rr(70, 170), t: 0, m: rr(0.55, 0.9), s: rr(1.3, 2.6), c: pickM(['#5a3a1e', '#6e4a28', '#4a2f19', '#7d5732']) }); }
 }
 function pgmxCrono(dt) {
   if (!pgOn() || P.state !== 'ride') return;
+  if (typeof PGC !== 'undefined' && PGC.car) { PGMX.cr = null; return; }         // (en la carrera, las vueltas son las de la carrera)
   if (!pgmxDentro(P.x, P.y, 0)) { PGMX.cr = null; return; }
   var C = PGMX.cr;
   if (!C) { var p0 = pgmxProy(P.x, P.y, 0, PGMX.loop.length); C = PGMX.cr = { i: p0.i, s: p0.s, prog: ((p0.s - PGMX.sal.s) % PGMX.L + PGMX.L * 1.5) % PGMX.L - PGMX.L / 2, t0: null, meta: 0, lejosT: 0, n: 0 }; if (C.prog > 0) C.meta = PGMX.L; }
@@ -119942,13 +119977,48 @@ function pgmxBotones(pre) {
 }
 function pgmxPregunta() {
   PGMX.abierto = true; pokiStop(); G.state = 'pause'; IN.gas = IN.brake = IN.left = IN.right = 0; P.speed = 0;
-  var rec = SAVE.pgMxBest ? '<p class="pkr-lin pgc-nota">🏆 ' + TT('Tu récord') + ': <b>' + pgmxT(SAVE.pgMxBest) + '</b></p>' : '';
+  var q = pgmxVeh(), nom = PGC.riv.map(function (r) { return r.nom; });
+  var rec = SAVE.pgMxBest ? ' · 🏆 <b>' + pgmxT(SAVE.pgMxBest) + '</b>' : '';
   card('<div class="pg6-ico pgmx-ico">' + pgmxIcoCampo(78) + '</div><h2 class="stk">' + TT('Motocross de barro') + '</h2>' +
-    '<p class="pkr-lin">' + TT('Saltos de tierra, olas y charcos de barro. ¡Haz tu mejor vuelta!') + '</p>' + pgmxBotones('pgmx') + rec +
-    '<div class="acc clara"><button class="b1" data-act="pgmx:go">▶ ' + TT('¡Al barro!') + '</button><button class="b3" data-act="pgmx:no">' + TT('Ahora no') + '</button></div>', 'ready pkr-ready pg6 pgc pgmx');
+    '<p class="pkr-lin">' + TT('3 vueltas por el barro contra') + ' ' + nom[0] + ', ' + nom[1] + ' ' + TT('y') + ' ' + nom[2] + '</p>' + pgmxBotones('pgmx') +
+    '<p class="pkr-lin pgc-nota">' + TT(q === 'quad' ? 'Con el quad no te caes y el gas va solo: ¡solo hay que girar!' : 'Saltos de tierra, olas y charcos de barro') + '</p>' +
+    '<div class="acc clara"><button class="b1" data-act="pgmx:go">▶ ' + TT('¡A correr!') + '</button><button class="b3" data-act="pgmx:libre">⏱ ' + TT('Vuelta libre, contra el reloj') + rec + '</button><button class="b3" data-act="pgmx:no">' + TT('Ahora no') + '</button></div>', 'ready pkr-ready pg6 pgc pgmx');
 }
 function pgmxSigue() { hideScr(); G.state = 'play'; G.card = false; PGMX.abierto = false; pokiStart(); PGMX.fuera = true; }
 function pgmxVeh2(v) { SAVE.pgCampo = v === 'campo' ? 1 : 0; SAVE.pgQuad = v === 'quad' ? 1 : 0; writeSave(); }
+
+/* ---------- (v33) la carrera en el barro: la pista para la minicarrera de la v28 (690), y lo que hacen los rivales aquí ---------- */
+function pgmxPista() {
+  if (PGMX.T) return PGMX.T;
+  pgmxPrepara();
+  return (PGMX.T = {
+    id: 'mx', loop: PGMX.loop, acc: PGMX.acc, L: PGMX.L, sIni: PGMX.sal.s, punto: pgmxPunto, trafico: false, vueltas: PGMX.vueltas,
+    parrilla: [[-30, -11], [-30, 11], [-62, 11]], yo0: [-62, -11],
+    prepRiv: function (R) {                                                      // en moto de campo (o en quad, si vas en quad)
+      if (!R.look.quad) R.look.modelo = 3;
+      R.zs = { z: 0, vz: 0, t: 0, aire: false, zPrev: 0, rateP: 0 }; R.z = 0; R.cab = 0; R.barroT = -9;
+    },
+    empieza: function () { PGMX.cr = null; PGMX.aire = false; PGMX.zPrev = 0; PGMX.rateP = 0; PGMX.chof = false; PGH.cola.length = 0; },
+    rivVel: function (R, vT) { return pgmxEnBarro(R.x, R.y) ? Math.min(vT, PGMX.rivBarro) : vT; },
+    rivPaso: pgmxRivPaso
+  });
+}
+function pgmxRivPaso(R, dt) {
+  var S = R.zs, r = pgmxVuelo(S, R.x, R.y, R.v, dt), f = fwd(R.x, R.y), cerca = f > -60 && f < 520;
+  R.z = S.z;
+  if (S.aire) R.cab = clamp(S.vz / 520, -0.32, 0.38);
+  else { var fx = Math.sin(R.h) * 3, fy = Math.cos(R.h) * 3, sl = (pgmxAlto(R.x + fx, R.y + fy) - pgmxAlto(R.x - fx, R.y - fy)) / 6; R.cab = Math.abs(sl) > 0.02 ? Math.atan(sl) : 0; }
+  if (r === 'aterriza' && cerca) { dust(R.x, R.y, S.imp > 150 ? 10 : 5); if (S.t > 0.5) pop(pickM(['¡Hala!', '¡Uau!', '¡Yuju!']), R.x, R.y + 50, '#ffffff', 0.85); }
+  if (r === 'despega' && cerca && S.vz > 90 && f < 300) SFX.whoosh && SFX.whoosh();
+  if (!S.aire && pgmxEnBarro(R.x, R.y)) {                                         // el barro: también salpica a los rivales
+    if (cerca && R.v > 25 && Math.random() < dt * 10) pgmxPegotesEn(R.x - Math.sin(R.h) * 8, R.y - Math.cos(R.h) * 8, R.h, R.v, 2);
+    if (G.t - R.barroT > 2) { R.barroT = G.t; if (cerca) { pgmxPegotesEn(R.x, R.y, R.h, R.v, 10); if (f < 320) SFX.splash && SFX.splash(); } }
+  }
+  if (!S.aire && PGMX.cosas) for (var i = 0; i < PGMX.cosas.length; i++) {        // y tiran los conos y la paja que pillan
+    var o = PGMX.cosas[i]; if (o.roto) continue;
+    var dx = o.x - R.x, dy = o.y - R.y; if (dx * dx + dy * dy < 200) pgxRompe(o, Math.sin(R.h) * R.v, Math.cos(R.h) * R.v, 'riv');
+  }
+}
 
 /* ---------- los enganches ---------- */
 if (PGMX.vivo) {
@@ -120026,7 +120096,8 @@ if (PGMX.vivo) {
       var m = /^(pgc|pgmx):(campo|quad|moto)$/.exec(a);
       if (m) { pgmxVeh2(m[2]); if (m[1] === 'pgc') pgcPregunta(); else pgmxPregunta(); return true; }
       if (a === 'pgmx:no') { pgmxSigue(); return true; }
-      if (a === 'pgmx:go') {
+      if (a === 'pgmx:go') { PGMX.abierto = false; PGMX.fuera = false; pgcEmpieza(pgmxPista()); return true; }
+      if (a === 'pgmx:libre') {
         pgmxSigue(); PGMX.fuera = false;
         var w = pgmxPunto(PGMX.sal.s - 70); P.x = w.x; P.y = w.y; P.h = P.ht = w.h; P.speed = 0; P.z = 0; P.si = null; PGMX.cr = null; PGMX.aire = false;
         CAM.yaw = P.h; V.camX = P.x - Math.sin(P.h) * 30; V.camY = P.y - Math.cos(P.h) * 30;
@@ -120050,7 +120121,7 @@ if (PGMX.vivo) {
 
 /* ---------- Pitik y los textos ---------- */
 if (PGMX.vivo) {
-  PG_DICE.pgx_mx_cerca = [['🏍️', '¡Motocross de barro! Entra en el aro marrón']];
+  PG_DICE.pgx_mx_cerca = [['🏍️', '¡Carrera de motocross en el barro! Entra en el aro marrón']];
   PG_DICE.pgx_mx_go = [['🏍️', '¡Al barro! Cruza la línea y empieza el crono']];
   PG_DICE.pgx_barro = [['🟤', '¡CHOF! ¡Qué barro!'], ['🟤', '¡Puaj! ¡Barro hasta las orejas!']];
   PG_DICE.pgx_vuelta = [['🏁', '¡Vuelta! ¡Otra más rápido!']];
@@ -120062,6 +120133,9 @@ if (PGMX.vivo) {
   var css = '.pgc .pgmx-veh button{max-width:120px;font-size:13px}.pgc .pgmx-veh .pgc-e{font-size:30px}.pgmx .pgmx-ico img.ic{width:78px!important;height:auto}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   var N = {
+    '3 vueltas por el barro contra': ['3 laps through the mud against', '3 putaran di lumpur melawan'], 'Saltos de tierra, olas y charcos de barro': ['Dirt jumps, whoops and mud puddles', 'Lompatan tanah, gundukan, dan kubangan lumpur'],
+    'Vuelta libre, contra el reloj': ['Free lap, against the clock', 'Putaran bebas, lawan waktu'], '¡Hala!': ['Whoa!', 'Wah!'], '¡Uau!': ['Wow!', 'Wow!'], '¡Yuju!': ['Woohoo!', 'Yuhuu!'],
+    '¡Carrera de motocross en el barro! Entra en el aro marrón': ['A motocross race in the mud! Ride into the brown ring', 'Balapan motokros di lumpur! Masuk lingkaran cokelat'],
     'Motocross de barro': ['Mud motocross', 'Motokros lumpur'], 'Saltos de tierra, olas y charcos de barro. ¡Haz tu mejor vuelta!': ['Dirt jumps, whoops and mud puddles. Set your best lap!', 'Lompatan tanah, gundukan, dan kubangan lumpur. Catat putaran terbaikmu!'],
     'De campo': ['Dirt bike', 'Trail'], 'Tu moto': ['Your bike', 'Motormu'], '¡Al barro!': ['Into the mud!', 'Ke lumpur!'], 'Tu récord': ['Your record', 'Rekormu'],
     '¡Vuelta!': ['Lap!', 'Putaran!'], '¡RÉCORD!': ['RECORD!', 'REKOR!'], '¡CHOF!': ['SPLAT!', 'CROT!'], '¡CHAPOTEO!': ['SPLASH!', 'CIPRAT!'], '¡SPLOSH!': ['SPLOSH!', 'BYUR!'],
